@@ -8,6 +8,7 @@
 
 import Foundation
 import OSLog
+import FoundationModels
 
 // MARK: - Flashcard Generation Result
 
@@ -83,76 +84,50 @@ extension FMClient {
             throw FMError.unsupportedOS
         }
 
-        // TODO: Replace with actual Foundation Models content tagging API when iOS 26 SDK is available
-        // Example from Apple's docs:
-        //
-        // let taggingModel = SystemLanguageModel(useCase: .contentTagging)
-        // guard taggingModel.isAvailable else {
-        //     throw FMError.modelUnavailable
-        // }
-        //
-        // let session = LanguageModelSession(model: taggingModel)
-        //
-        // let request = LanguageModelRequest(
-        //     systemPrompt: """
-        //         Extract important entities (names, places, dates, key terms) from the text.
-        //         Also identify the main topic category (e.g., Travel, Work, Health, History).
-        //         Format: Entities: term1, term2, term3 | Topic: category
-        //         """,
-        //     userPrompt: text
-        // )
-        //
-        // let response = try await session.respond(to: request)
-        //
-        // // Parse response to extract entities and topic
-        // let components = response.text.components(separatedBy: "|")
-        // let entitiesStr = components.first?.replacingOccurrences(of: "Entities:", with: "").trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        // let topicStr = components.last?.replacingOccurrences(of: "Topic:", with: "").trimmingCharacters(in: .whitespacesAndNewlines) ?? "General"
-        //
-        // let entities = entitiesStr.split(separator: ",").map { String($0.trimmingCharacters(in: .whitespacesAndNewlines)) }
-        //
-        // return (entities, topicStr)
-
-        // Placeholder implementation for testing
-        return try await extractEntitiesPlaceholder(from: text)
-    }
-
-    private func extractEntitiesPlaceholder(from text: String) async throws -> ([String], String) {
-        try await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
-
-        // Simple keyword extraction (placeholder until real API is available)
-        let words = text.components(separatedBy: .whitespacesAndNewlines)
-            .filter { $0.count > 4 }
-            .filter { !commonWords.contains($0.lowercased()) }
-
-        let uniqueWords = Array(Set(words)).prefix(5)
-
-        // Simple topic inference
-        let topic = inferTopic(from: text)
-
-        return (Array(uniqueWords), topic)
-    }
-
-    private func inferTopic(from text: String) -> String {
-        let lowercased = text.lowercased()
-
-        let topicKeywords: [(String, [String])] = [
-            ("Work", ["work", "meeting", "project", "deadline", "client", "office"]),
-            ("Travel", ["travel", "trip", "vacation", "visit", "explore", "city", "country"]),
-            ("Health", ["health", "exercise", "workout", "fitness", "doctor", "medical"]),
-            ("Personal", ["feeling", "thought", "reflection", "mood", "emotion"]),
-            ("Learning", ["learn", "study", "course", "book", "reading", "education"]),
-            ("Family", ["family", "parent", "child", "sibling", "relative"]),
-            ("Food", ["food", "restaurant", "cooking", "meal", "dinner", "lunch"])
-        ]
-
-        for (topic, keywords) in topicKeywords {
-            if keywords.contains(where: { lowercased.contains($0) }) {
-                return topic
-            }
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            flashcardLog.error("Model not available for entity extraction")
+            throw FMError.modelUnavailable
         }
 
-        return "General"
+        flashcardLog.info("Extracting entities and topics...")
+
+        do {
+            let instructions = """
+                Extract important entities (names, places, dates, key terms) from the text.
+                Also identify the main topic category (e.g., Travel, Work, Health, History, Learning).
+                Focus on terms that would be valuable for creating flashcards.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.2
+            )
+
+            let response = try await session.respond(
+                to: "Extract entities and topic from this text:\n\n\(text)",
+                generating: EntityExtractionResult.self,
+                options: options
+            )
+
+            let entities = response.content.entities
+            let topic = response.content.topicTag
+
+            flashcardLog.info("Extracted \(entities.count) entities with topic: \(topic)")
+            return (entities, topic)
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            flashcardLog.error("Guardrail violation during entity extraction")
+            throw FMError.processingFailed
+        } catch LanguageModelSession.GenerationError.refusal {
+            flashcardLog.error("Model refused entity extraction request")
+            throw FMError.processingFailed
+        } catch {
+            flashcardLog.error("Entity extraction failed: \(error.localizedDescription)")
+            throw FMError.processingFailed
+        }
     }
 
     // MARK: - Format-Specific Generation
@@ -201,52 +176,64 @@ extension FMClient {
         topicTag: String,
         maxCards: Int
     ) async throws -> [Flashcard] {
-        var cards: [Flashcard] = []
+        guard #available(iOS 26.0, *) else {
+            throw FMError.unsupportedOS
+        }
 
-        // For each entity, find a sentence containing it and create a cloze deletion
-        for entity in entities.prefix(maxCards) {
-            if let clozeCard = createClozeCard(
-                forEntity: entity,
-                inText: text,
-                linkedEntryID: linkedEntryID,
-                topicTag: topicTag
-            ) {
-                cards.append(clozeCard)
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            throw FMError.modelUnavailable
+        }
+
+        flashcardLog.info("Generating cloze deletion cards...")
+
+        do {
+            let instructions = """
+                Create cloze deletion flashcards from the text.
+                A cloze card has a sentence with an important term replaced by ______.
+                Choose sentences that contain key concepts, names, dates, or important details.
+                Replace the most important term in each sentence with ______.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.3
+            )
+
+            let entityList = entities.joined(separator: ", ")
+            let prompt = """
+                Create \(maxCards) cloze deletion flashcards from this text.
+                Focus on these key entities: \(entityList)
+
+                Text:
+                \(text)
+                """
+
+            let response = try await session.respond(
+                to: prompt,
+                generating: ClozeCardBatch.self,
+                options: options
+            )
+
+            let flashcards = response.content.cards.map { clozeCard in
+                clozeCard.toFlashcard(linkedEntryID: linkedEntryID, tags: [topicTag])
             }
+
+            flashcardLog.info("Generated \(flashcards.count) cloze cards")
+            return flashcards
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            flashcardLog.error("Guardrail violation during cloze generation")
+            return []
+        } catch LanguageModelSession.GenerationError.refusal {
+            flashcardLog.warning("Model refused cloze generation request")
+            return []
+        } catch {
+            flashcardLog.error("Cloze generation failed: \(error.localizedDescription)")
+            return []
         }
-
-        return cards
-    }
-
-    private func createClozeCard(
-        forEntity entity: String,
-        inText text: String,
-        linkedEntryID: UUID,
-        topicTag: String
-    ) -> Flashcard? {
-        // Find sentence containing the entity
-        let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-
-        guard let sentence = sentences.first(where: { $0.localizedCaseInsensitiveContains(entity) }) else {
-            return nil
-        }
-
-        // Create cloze deletion by replacing entity with blank
-        let clozeQuestion = sentence.replacingOccurrences(
-            of: entity,
-            with: "______",
-            options: .caseInsensitive
-        )
-
-        return Flashcard(
-            type: .cloze,
-            question: clozeQuestion,
-            answer: entity,
-            linkedEntryID: linkedEntryID,
-            tags: [topicTag]
-        )
     }
 
     // MARK: - Q&A Cards
@@ -261,65 +248,56 @@ extension FMClient {
             throw FMError.unsupportedOS
         }
 
-        // TODO: Replace with actual Foundation Models API
-        // Example prompt:
-        //
-        // let model = SystemLanguageModel.default
-        // guard model.isAvailable else { throw FMError.modelUnavailable }
-        //
-        // let session = LanguageModelSession()
-        //
-        // let systemPrompt = """
-        //     You are a flashcard generation assistant.
-        //     Generate question-and-answer pairs from journal text.
-        //     Each Q&A should focus on a specific fact or detail.
-        //     Format each as: Q: [question] | A: [answer]
-        //     Generate \(maxCards) flashcards.
-        //     """
-        //
-        // let request = LanguageModelRequest(
-        //     systemPrompt: systemPrompt,
-        //     userPrompt: "Text: \(text)",
-        //     temperature: 0.3,
-        //     maxTokens: 300
-        // )
-        //
-        // let response = try await session.respond(to: request)
-        //
-        // // Parse Q&A pairs from response
-        // return parseQAPairs(response.text, linkedEntryID: linkedEntryID, topicTag: topicTag)
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            throw FMError.modelUnavailable
+        }
 
-        // Placeholder implementation
-        return try await generateQACardsPlaceholder(
-            text: text,
-            linkedEntryID: linkedEntryID,
-            topicTag: topicTag,
-            maxCards: maxCards
-        )
-    }
+        flashcardLog.info("Generating Q&A cards...")
 
-    private func generateQACardsPlaceholder(
-        text: String,
-        linkedEntryID: UUID,
-        topicTag: String,
-        maxCards: Int
-    ) async throws -> [Flashcard] {
-        try await Task.sleep(nanoseconds: 800_000_000) // 0.8 seconds
+        do {
+            let instructions = """
+                Create question-and-answer flashcards from the text.
+                Each Q&A should focus on a specific fact, detail, or concept.
+                Questions should be clear and specific.
+                Answers should be concise and factual.
+                """
 
-        // Generate simple Q&A from first sentences
-        let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .prefix(maxCards)
+            let session = LanguageModelSession(instructions: instructions)
 
-        return sentences.enumerated().map { index, sentence in
-            Flashcard(
-                type: .qa,
-                question: "What is mentioned in the entry about point \(index + 1)?",
-                answer: sentence,
-                linkedEntryID: linkedEntryID,
-                tags: [topicTag]
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.3
             )
+
+            let prompt = """
+                Create \(maxCards) question-and-answer flashcards from this text:
+
+                \(text)
+                """
+
+            let response = try await session.respond(
+                to: prompt,
+                generating: QACardBatch.self,
+                options: options
+            )
+
+            let flashcards = response.content.cards.map { qaCard in
+                qaCard.toFlashcard(linkedEntryID: linkedEntryID, tags: [topicTag])
+            }
+
+            flashcardLog.info("Generated \(flashcards.count) Q&A cards")
+            return flashcards
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            flashcardLog.error("Guardrail violation during Q&A generation")
+            return []
+        } catch LanguageModelSession.GenerationError.refusal {
+            flashcardLog.warning("Model refused Q&A generation request")
+            return []
+        } catch {
+            flashcardLog.error("Q&A generation failed: \(error.localizedDescription)")
+            return []
         }
     }
 
@@ -332,37 +310,63 @@ extension FMClient {
         topicTag: String,
         maxCards: Int
     ) async throws -> [Flashcard] {
-        var cards: [Flashcard] = []
+        guard #available(iOS 26.0, *) else {
+            throw FMError.unsupportedOS
+        }
 
-        for entity in entities.prefix(maxCards) {
-            if let definition = try await generateDefinition(for: entity, inContext: text) {
-                let card = Flashcard(
-                    type: .definition,
-                    question: "What is \(entity)?",
-                    answer: definition,
-                    linkedEntryID: linkedEntryID,
-                    tags: [topicTag]
-                )
-                cards.append(card)
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            throw FMError.modelUnavailable
+        }
+
+        flashcardLog.info("Generating definition cards...")
+
+        do {
+            let instructions = """
+                Create term-definition flashcards from the text.
+                Each card should define a key term, concept, or entity based on the context.
+                Definitions should be concise (1-2 sentences) and based only on information in the text.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.3
+            )
+
+            let entityList = entities.joined(separator: ", ")
+            let prompt = """
+                Create \(maxCards) term-definition flashcards from this text.
+                Focus on these key entities: \(entityList)
+
+                Text:
+                \(text)
+                """
+
+            let response = try await session.respond(
+                to: prompt,
+                generating: DefinitionCardBatch.self,
+                options: options
+            )
+
+            let flashcards = response.content.cards.map { defCard in
+                defCard.toFlashcard(linkedEntryID: linkedEntryID, tags: [topicTag])
             }
+
+            flashcardLog.info("Generated \(flashcards.count) definition cards")
+            return flashcards
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            flashcardLog.error("Guardrail violation during definition generation")
+            return []
+        } catch LanguageModelSession.GenerationError.refusal {
+            flashcardLog.warning("Model refused definition generation request")
+            return []
+        } catch {
+            flashcardLog.error("Definition generation failed: \(error.localizedDescription)")
+            return []
         }
-
-        return cards
-    }
-
-    private func generateDefinition(for term: String, inContext text: String) async throws -> String? {
-        // Find sentence(s) containing the term as context
-        let sentences = text.components(separatedBy: CharacterSet(charactersIn: ".!?"))
-            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-            .filter { $0.localizedCaseInsensitiveContains(term) }
-
-        guard let context = sentences.first else {
-            return nil
-        }
-
-        // For now, use the context sentence as the definition
-        // TODO: Use Foundation Models to generate a concise definition
-        return context
     }
 
     // MARK: - Deduplication
@@ -394,66 +398,54 @@ extension FMClient {
             throw FMError.unsupportedOS
         }
 
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            flashcardLog.error("Model not available for clarification")
+            throw FMError.modelUnavailable
+        }
+
         flashcardLog.info("Generating clarification for flashcard")
 
-        // TODO: Replace with actual Foundation Models API
-        // Example:
-        //
-        // let model = SystemLanguageModel.default
-        // guard model.isAvailable else { throw FMError.modelUnavailable }
-        //
-        // let session = LanguageModelSession()
-        //
-        // let systemPrompt = """
-        //     You are a helpful tutor assistant.
-        //     Explain flashcard answers clearly and concisely.
-        //     Use simple terms and provide context when helpful.
-        //     """
-        //
-        // let contextPrompt = """
-        //     Flashcard Q: \(flashcard.question)
-        //     Flashcard A: \(flashcard.answer)
-        //
-        //     User asks: \(userQuestion)
-        //
-        //     Provide a clear explanation:
-        //     """
-        //
-        // let request = LanguageModelRequest(
-        //     systemPrompt: systemPrompt,
-        //     userPrompt: contextPrompt,
-        //     temperature: 0.7,
-        //     maxTokens: 150
-        // )
-        //
-        // let response = try await session.respond(to: request)
-        // return response.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            let instructions = """
+                You are a helpful tutor assistant.
+                Explain flashcard answers clearly and concisely.
+                Use simple terms and provide context when helpful.
+                Keep explanations to 2-3 sentences.
+                ALWAYS be respectful and supportive.
+                """
 
-        // Placeholder implementation
-        return try await clarifyFlashcardPlaceholder(flashcard, userQuestion: userQuestion)
-    }
+            let session = LanguageModelSession(instructions: instructions)
 
-    private func clarifyFlashcardPlaceholder(_ flashcard: Flashcard, userQuestion: String) async throws -> String {
-        try await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.7
+            )
 
-        let explanations = [
-            "This flashcard helps you remember key information from your journal entry. The answer '\(flashcard.answer)' is important because it's a central detail you recorded.",
-            "The question '\(flashcard.question)' is designed to test your recall of '\(flashcard.answer)', which was mentioned in your notes.",
-            "Understanding '\(flashcard.answer)' in context with '\(flashcard.question)' helps reinforce the concepts you've been learning about."
-        ]
+            let prompt = """
+                Flashcard Question: \(flashcard.question)
+                Flashcard Answer: \(flashcard.answer)
 
-        return explanations.randomElement() ?? explanations[0]
-    }
+                User asks: \(userQuestion)
 
-    // MARK: - Helper Data
+                Provide a clear explanation:
+                """
 
-    private var commonWords: Set<String> {
-        Set([
-            "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for",
-            "of", "with", "is", "was", "are", "were", "been", "be", "have", "has",
-            "had", "do", "does", "did", "will", "would", "could", "should", "may",
-            "might", "can", "i", "you", "we", "they", "my", "your", "our", "their",
-            "this", "that", "these", "those", "it", "its", "from", "by", "about"
-        ])
+            let response = try await session.respond(
+                to: prompt,
+                options: options
+            )
+
+            let explanation = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            flashcardLog.info("Clarification generated")
+            return explanation
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            flashcardLog.error("Guardrail violation during clarification")
+            throw FMError.processingFailed
+        } catch {
+            flashcardLog.error("Clarification failed: \(error.localizedDescription)")
+            throw FMError.processingFailed
+        }
     }
 }
