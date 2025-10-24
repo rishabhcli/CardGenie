@@ -174,44 +174,21 @@ struct FlashcardStudyView: View {
     // MARK: - Summary View
 
     private var summaryView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            SessionSummaryView(
-                totalCards: sessionStats.totalCards,
-                againCount: sessionStats.againCount,
-                goodCount: sessionStats.goodCount,
-                easyCount: sessionStats.easyCount
-            )
-
-            VStack(spacing: 12) {
-                Button {
-                    dismiss()
-                } label: {
-                    Text("Done")
-                        .font(.headline)
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.aiAccent)
-                        .cornerRadius(12)
-                }
-
-                if sessionStats.againCount > 0 {
-                    Button {
-                        restartFailedCards()
-                    } label: {
-                        Text("Review Failed Cards")
-                            .font(.subheadline)
-                            .foregroundStyle(Color.aiAccent)
-                    }
-                }
+        StudyResultsView(
+            correct: sessionStats.goodCount + sessionStats.easyCount,
+            total: sessionStats.totalCards,
+            streak: getCurrentStreak(),
+            onDismiss: {
+                dismiss()
             }
-            .padding(.horizontal)
+        )
+    }
 
-            Spacer()
-        }
-        .padding()
+    /// Get current study streak (placeholder - will be enhanced with proper tracking)
+    private func getCurrentStreak() -> Int {
+        // TODO: Implement proper streak tracking with UserDefaults or SwiftData
+        // For now, return 1 if they completed the session, 0 otherwise
+        return sessionStats.totalCards > 0 ? 1 : 0
     }
 
     // MARK: - Empty State

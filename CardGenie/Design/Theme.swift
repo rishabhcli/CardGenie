@@ -159,24 +159,130 @@ extension Color {
         Color(.tertiaryLabel)
     }
 
+    // MARK: - Genie Theme Colors ✨
+
+    /// Cosmic Purple - Primary brand color
+    static var cosmicPurple: Color {
+        Color(hex: "6B46C1")
+    }
+
+    /// Magic Gold - Accents and achievements
+    static var magicGold: Color {
+        Color(hex: "F59E0B")
+    }
+
+    /// Mystic Blue - Information and progress
+    static var mysticBlue: Color {
+        Color(hex: "3B82F6")
+    }
+
+    /// Genie Green - Success states
+    static var genieGreen: Color {
+        Color(hex: "10B981")
+    }
+
+    /// Enchanted Pink - Special highlights
+    static var enchantedPink: Color {
+        Color(hex: "EC4899")
+    }
+
+    /// Dark Magic - Dark mode background
+    static var darkMagic: Color {
+        Color(hex: "0F172A")
+    }
+
+    /// Light Magic - Light mode background
+    static var lightMagic: Color {
+        Color(hex: "F8FAFC")
+    }
+
+    // MARK: - Gradients
+
+    /// Main magic gradient (Purple → Blue)
+    static var magicGradient: LinearGradient {
+        LinearGradient(
+            colors: [.cosmicPurple, .mysticBlue],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    /// Gold shimmer gradient
+    static var goldShimmer: LinearGradient {
+        LinearGradient(
+            colors: [.magicGold, .yellow.opacity(0.8), .magicGold],
+            startPoint: .leading,
+            endPoint: .trailing
+        )
+    }
+
+    /// Success gradient (Green → Blue)
+    static var successGradient: LinearGradient {
+        LinearGradient(
+            colors: [.genieGreen, .mysticBlue],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    /// Celebration gradient (Pink → Gold)
+    static var celebrationGradient: LinearGradient {
+        LinearGradient(
+            colors: [.enchantedPink, .magicGold],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    // MARK: - Semantic Colors
+
     /// AI feature accent color (sparkles, magic)
     static var aiAccent: Color {
-        Color.blue
+        cosmicPurple
     }
 
     /// Success/positive color
     static var success: Color {
-        Color.green
+        genieGreen
     }
 
     /// Warning color
     static var warning: Color {
-        Color.orange
+        magicGold
     }
 
     /// Error/destructive color
     static var destructive: Color {
         Color.red
+    }
+
+    // MARK: - Hex Color Helper
+
+    /// Initialize a Color from a hex string
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+
+        let r, g, b, a: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (r, g, b, a) = ((int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17, 255)
+        case 6: // RGB (24-bit)
+            (r, g, b, a) = (int >> 16, int >> 8 & 0xFF, int & 0xFF, 255)
+        case 8: // RGBA (32-bit)
+            (r, g, b, a) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (r, g, b, a) = (0, 0, 0, 255)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue: Double(b) / 255,
+            opacity: Double(a) / 255
+        )
     }
 }
 

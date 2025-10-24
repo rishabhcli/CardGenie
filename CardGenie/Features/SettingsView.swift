@@ -16,7 +16,7 @@ struct SettingsView: View {
 
     @StateObject private var fmClient = FMClient()
 
-    @Query private var entries: [JournalEntry]
+    @Query private var allContent: [StudyContent]
 
     @State private var showClearDataConfirmation = false
 
@@ -109,9 +109,9 @@ struct SettingsView: View {
                 // Data Section
                 Section {
                     HStack {
-                        Text("Total Entries")
+                        Text("Study Materials")
                         Spacer()
-                        Text("\(entries.count)")
+                        Text("\(allContent.count)")
                             .foregroundStyle(Color.secondaryText)
                     }
 
@@ -175,7 +175,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will permanently delete all \(entries.count) journal entries. This action cannot be undone.")
+                Text("This will permanently delete all \(allContent.count) study materials. This action cannot be undone.")
             }
         }
     }
@@ -198,7 +198,7 @@ struct SettingsView: View {
     }
 
     private var totalCharacterCount: Int {
-        entries.reduce(0) { $0 + $1.text.count }
+        allContent.reduce(0) { $0 + $1.displayText.count }
     }
 
     // MARK: - Actions
@@ -210,8 +210,8 @@ struct SettingsView: View {
     }
 
     private func clearAllData() {
-        for entry in entries {
-            modelContext.delete(entry)
+        for content in allContent {
+            modelContext.delete(content)
         }
         try? modelContext.save()
     }
@@ -268,13 +268,16 @@ private struct FeatureRow: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: JournalEntry.self, configurations: config)
+    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
     let context = ModelContext(container)
 
-    // Add some sample entries
+    // Add some sample content
     for i in 1...5 {
-        let entry = JournalEntry(text: "Sample entry \(i) with some text content for testing.")
-        context.insert(entry)
+        let content = StudyContent(
+            source: .text,
+            rawContent: "Sample study content \(i) with some text for testing."
+        )
+        context.insert(content)
     }
 
     return SettingsView()

@@ -27,14 +27,14 @@ extension FMClient {
 
     // MARK: - Main Generation Method
 
-    /// Generate flashcards from a journal entry using on-device AI
+    /// Generate flashcards from study content using on-device AI
     /// - Parameters:
-    ///   - entry: The journal entry to generate flashcards from
+    ///   - content: The study content to generate flashcards from
     ///   - formats: Flashcard formats to generate (cloze, Q&A, definition)
     ///   - maxPerFormat: Maximum flashcards per format (default: 3)
     /// - Returns: Array of generated flashcards with topic information
     func generateFlashcards(
-        from entry: JournalEntry,
+        from content: StudyContent,
         formats: Set<FlashcardType>,
         maxPerFormat: Int = 3
     ) async throws -> FlashcardGenerationResult {
@@ -42,10 +42,10 @@ extension FMClient {
             throw FMError.unsupportedOS
         }
 
-        flashcardLog.info("Starting flashcard generation for entry: \(entry.id)")
+        flashcardLog.info("Starting flashcard generation for content: \(content.id)")
 
         // Step 1: Extract entities and topics using content tagging
-        let (entities, topicTag) = try await extractEntitiesAndTopics(from: entry.text)
+        let (entities, topicTag) = try await extractEntitiesAndTopics(from: content.displayText)
 
         flashcardLog.info("Extracted \(entities.count) entities and topic: \(topicTag)")
 
@@ -55,9 +55,9 @@ extension FMClient {
         for format in formats {
             let cards = try await generateFlashcardsForFormat(
                 format,
-                text: entry.text,
+                text: content.displayText,
                 entities: entities,
-                linkedEntryID: entry.id,
+                linkedEntryID: content.id,
                 topicTag: topicTag,
                 maxCards: maxPerFormat
             )

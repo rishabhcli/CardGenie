@@ -12,11 +12,11 @@ import SwiftData
 @main
 struct CardGenieApp: App {
     /// SwiftData container configured for local storage only
-    /// All journal entries and flashcards are stored in the app's private sandbox
+    /// All study content and flashcards are stored in the app's private sandbox
     /// with no iCloud sync or external file access.
     var modelContainer: ModelContainer = {
         let schema = Schema([
-            JournalEntry.self,
+            StudyContent.self,
             Flashcard.self,
             FlashcardSet.self
         ])
@@ -41,8 +41,8 @@ struct CardGenieApp: App {
     var body: some Scene {
         WindowGroup {
             MainTabView()
-                .environment(\.font, .body) // Default readable font
-                .tint(.blue) // App accent color
+                .environment(\.font, .system(.body, design: .rounded)) // Rounded font for genie theme
+                .tint(.cosmicPurple) // Genie theme accent color
                 .onAppear {
                     // Setup notifications on first launch
                     Task {
@@ -56,16 +56,16 @@ struct CardGenieApp: App {
 
 // MARK: - Main Tab View
 
-/// Main navigation with Journal and Flashcards tabs
+/// Main navigation with Study Materials, Flashcards, and Settings tabs
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
 
     var body: some View {
         TabView {
-            JournalListView()
+            ContentListView()
                 .tabItem {
-                    Label("Journal", systemImage: "book.fill")
+                    Label("Study", systemImage: "sparkles")
                 }
                 .tag(0)
 
@@ -73,10 +73,11 @@ struct MainTabView: View {
 
             SettingsView()
                 .tabItem {
-                    Label("Settings", systemImage: "gear")
+                    Label("Settings", systemImage: "gearshape.fill")
                 }
                 .tag(2)
         }
+        .accentColor(.cosmicPurple)
     }
 
     @ViewBuilder

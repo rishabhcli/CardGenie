@@ -227,6 +227,148 @@ final class FMClient: ObservableObject {
         }
     }
 
+    // MARK: - Study Coach
+
+    /// Generate encouraging message based on study performance
+    /// - Parameters:
+    ///   - correctCount: Number of correct answers
+    ///   - totalCount: Total number of questions
+    ///   - streak: Current study streak in days
+    /// - Returns: Encouraging message for the student
+    /// - Throws: Error if the model is unavailable or processing fails
+    func generateEncouragement(
+        correctCount: Int,
+        totalCount: Int,
+        streak: Int
+    ) async throws -> String {
+        guard #available(iOS 26.0, *) else {
+            throw FMError.unsupportedOS
+        }
+
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            // Provide fallback encouragement based on accuracy
+            let accuracy = totalCount > 0 ? Double(correctCount) / Double(totalCount) : 0.0
+            return fallbackEncouragement(accuracy: accuracy)
+        }
+
+        log.info("Generating study encouragement...")
+
+        let accuracy = totalCount > 0 ? Double(correctCount) / Double(totalCount) : 0.0
+
+        do {
+            let instructions = """
+                You are CardGenie, a supportive and enthusiastic AI study coach.
+                Encourage students with warmth and positivity.
+                Keep messages brief (1-2 sentences maximum).
+                Use encouraging emojis sparingly (0-1 per message).
+                Celebrate progress and effort, not just perfection.
+                Be specific about their performance when possible.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let prompt = """
+                Generate an encouraging message for a student who just completed a study session.
+
+                Performance:
+                - Correct: \(correctCount) out of \(totalCount)
+                - Accuracy: \(Int(accuracy * 100))%
+                - Study streak: \(streak) days
+
+                The message should be personal, warm, and motivating. One or two sentences maximum.
+                """
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.8 // More creative/warm responses
+            )
+
+            let response = try await session.respond(to: prompt, options: options)
+            let message = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+            log.info("Encouragement generated")
+            return message
+
+        } catch {
+            log.error("Encouragement generation failed: \(error.localizedDescription)")
+            return fallbackEncouragement(accuracy: accuracy)
+        }
+    }
+
+    /// Generate insight about study patterns
+    /// - Parameters:
+    ///   - totalReviews: Total number of card reviews
+    ///   - averageAccuracy: Average accuracy across all sessions
+    ///   - longestStreak: Longest study streak achieved
+    /// - Returns: Actionable study insight
+    /// - Throws: Error if the model is unavailable or processing fails
+    func generateStudyInsight(
+        totalReviews: Int,
+        averageAccuracy: Double,
+        longestStreak: Int
+    ) async throws -> String {
+        guard #available(iOS 26.0, *) else {
+            throw FMError.unsupportedOS
+        }
+
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            return "You've reviewed \(totalReviews) cards - that's dedication! 🎯"
+        }
+
+        log.info("Generating study insight...")
+
+        do {
+            let instructions = """
+                You are CardGenie, an AI study coach.
+                Provide brief, actionable insights about study patterns.
+                Be encouraging and specific.
+                One sentence maximum.
+                Focus on positive observations or helpful tips.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let prompt = """
+                Generate a study insight for a student with these statistics:
+                - Total reviews: \(totalReviews)
+                - Average accuracy: \(Int(averageAccuracy * 100))%
+                - Longest streak: \(longestStreak) days
+
+                What's one positive observation or actionable tip? One sentence only.
+                """
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.7
+            )
+
+            let response = try await session.respond(to: prompt, options: options)
+            let insight = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+            log.info("Study insight generated")
+            return insight
+
+        } catch {
+            log.error("Insight generation failed: \(error.localizedDescription)")
+            return "You've reviewed \(totalReviews) cards - that's dedication! 🎯"
+        }
+    }
+
+    /// Fallback encouragement when AI is unavailable
+    private func fallbackEncouragement(accuracy: Double) -> String {
+        if accuracy >= 0.9 {
+            return "Outstanding work! You're mastering this material! ⭐️"
+        } else if accuracy >= 0.7 {
+            return "Great progress! Keep up the excellent work! 💪"
+        } else if accuracy >= 0.5 {
+            return "You're learning! Every review makes you stronger! 🌟"
+        } else {
+            return "Don't give up! Learning takes time and you're doing great! 💫"
+        }
+    }
+
     // MARK: - Streaming (Advanced)
 
     /// Stream a response token-by-token for real-time UI updates

@@ -2,7 +2,7 @@
 //  Store.swift
 //  CardGenie
 //
-//  Manages persistence and database operations for journal entries.
+//  Manages persistence and database operations for study content.
 //  All operations are local and offline.
 //
 
@@ -10,7 +10,7 @@ import Foundation
 import Combine
 import SwiftData
 
-/// Handles all data persistence operations for the journal.
+/// Handles all data persistence operations for study content.
 /// Uses SwiftData for local, offline storage in the app sandbox.
 @MainActor
 final class Store: ObservableObject {
@@ -23,19 +23,20 @@ final class Store: ObservableObject {
         self.modelContext = ModelContext(container)
     }
 
-    /// Create a new journal entry and persist it
-    /// - Returns: The newly created entry
-    func newEntry() -> JournalEntry {
-        let entry = JournalEntry(text: "")
-        modelContext.insert(entry)
+    /// Create new study content and persist it
+    /// - Parameter source: The source type of content (defaults to text)
+    /// - Returns: The newly created content
+    func newContent(source: ContentSource = .text) -> StudyContent {
+        let content = StudyContent(source: source, rawContent: "")
+        modelContext.insert(content)
         try? modelContext.save()
-        return entry
+        return content
     }
 
-    /// Delete a journal entry
-    /// - Parameter entry: The entry to delete
-    func delete(_ entry: JournalEntry) {
-        modelContext.delete(entry)
+    /// Delete study content
+    /// - Parameter content: The content to delete
+    func delete(_ content: StudyContent) {
+        modelContext.delete(content)
         try? modelContext.save()
     }
 
@@ -44,26 +45,35 @@ final class Store: ObservableObject {
         try? modelContext.save()
     }
 
-    /// Fetch all entries sorted by creation date (newest first)
-    /// - Returns: Array of all journal entries
-    func fetchAllEntries() -> [JournalEntry] {
-        let descriptor = FetchDescriptor<JournalEntry>(
+    /// Fetch all content sorted by creation date (newest first)
+    /// - Returns: Array of all study content
+    func fetchAllContent() -> [StudyContent] {
+        let descriptor = FetchDescriptor<StudyContent>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
         return (try? modelContext.fetch(descriptor)) ?? []
     }
 
-    /// Search entries by text content
-    /// - Parameter searchText: The text to search for
-    /// - Returns: Filtered array of matching entries
-    func search(_ searchText: String) -> [JournalEntry] {
-        guard !searchText.isEmpty else { return fetchAllEntries() }
+    /// Fetch content by source type
+    /// - Parameter source: The content source to filter by
+    /// - Returns: Array of matching content
+    func fetchContent(bySource source: ContentSource) -> [StudyContent] {
+        let allContent = fetchAllContent()
+        return allContent.filter { $0.source == source }
+    }
 
-        let allEntries = fetchAllEntries()
-        return allEntries.filter { entry in
-            entry.text.localizedCaseInsensitiveContains(searchText) ||
-            (entry.summary ?? "").localizedCaseInsensitiveContains(searchText) ||
-            entry.tags.contains { $0.localizedCaseInsensitiveContains(searchText) }
+    /// Search content by text
+    /// - Parameter searchText: The text to search for
+    /// - Returns: Filtered array of matching content
+    func search(_ searchText: String) -> [StudyContent] {
+        guard !searchText.isEmpty else { return fetchAllContent() }
+
+        let allContent = fetchAllContent()
+        return allContent.filter { content in
+            content.displayText.localizedCaseInsensitiveContains(searchText) ||
+            (content.summary ?? "").localizedCaseInsensitiveContains(searchText) ||
+            content.tags.contains { $0.localizedCaseInsensitiveContains(searchText) } ||
+            (content.topic ?? "").localizedCaseInsensitiveContains(searchText)
         }
     }
 }

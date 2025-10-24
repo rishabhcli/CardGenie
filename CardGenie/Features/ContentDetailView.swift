@@ -1,21 +1,22 @@
 //
-//  JournalDetailView.swift
+//  ContentDetailView.swift
 //  CardGenie
 //
-//  Detail view for creating and editing journal entries.
+//  Detail view for creating and editing study content.
 //  Integrates Apple Intelligence for on-device AI features:
 //  - Writing Tools (proofread, rewrite) via text selection
-//  - Custom AI actions (summarize, generate tags, reflection)
+//  - Custom AI actions (summarize, generate tags, insights)
+//  - Flashcard generation
 //
 
 import SwiftUI
 import SwiftData
 
-/// Detail view for a journal entry with AI-powered features
-struct JournalDetailView: View {
+/// Detail view for study content with AI-powered features
+struct ContentDetailView: View {
     // Data
     @Environment(\.modelContext) private var modelContext
-    @Bindable var entry: JournalEntry
+    @Bindable var content: StudyContent
 
     // AI
     @StateObject private var fmClient = FMClient()
@@ -23,7 +24,7 @@ struct JournalDetailView: View {
     // UI State
     @State private var isSummarizing = false
     @State private var isGeneratingTags = false
-    @State private var isGeneratingReflection = false
+    @State private var isGeneratingInsights = false
     @State private var isGeneratingFlashcards = false
     @State private var showAIUnavailable = false
     @State private var error: Error?
@@ -37,11 +38,29 @@ struct JournalDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: Spacing.md) {
+                // Source indicator
+                HStack {
+                    Image(systemName: content.sourceIcon)
+                        .foregroundStyle(Color.mysticBlue)
+
+                    Text("Source: \(content.sourceLabel)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+                }
+                .padding(.horizontal)
+
                 // Text Editor with Writing Tools enabled
                 WritingTextEditor(
-                    text: $entry.text,
+                    text: Binding(
+                        get: { content.rawContent },
+                        set: { newValue in
+                            content.rawContent = newValue
+                            try? modelContext.save()
+                        }
+                    ),
                     onTextChange: { _ in
-                        // Auto-save on text change
                         try? modelContext.save()
                     }
                 )
@@ -52,7 +71,7 @@ struct JournalDetailView: View {
                 .padding(.horizontal)
 
                 // Character count
-                Text("\(entry.text.count) characters")
+                Text("\(content.displayText.count) characters")
                     .font(.metadata)
                     .foregroundStyle(Color.tertiaryText)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -65,7 +84,7 @@ struct JournalDetailView: View {
             }
             .padding(.vertical)
         }
-        .navigationTitle(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+        .navigationTitle(content.createdAt.formatted(date: .abbreviated, time: .shortened))
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -74,7 +93,8 @@ struct JournalDetailView: View {
                     Divider()
                     otherActionsMenu
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis.circle.fill")
+                        .foregroundStyle(Color.cosmicPurple)
                 }
             }
         }
@@ -84,16 +104,16 @@ struct JournalDetailView: View {
         } message: {
             Text(aiUnavailableMessage)
         }
-        .confirmationDialog("Delete Entry", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete", role: .destructive, action: deleteEntry)
+        .confirmationDialog("Delete Content", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
+            Button("Delete", role: .destructive, action: deleteContent)
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Are you sure you want to delete this entry? This action cannot be undone.")
+            Text("Are you sure you want to delete this content? This action cannot be undone.")
         }
-        .alert("Flashcards Generated", isPresented: $showFlashcardSuccess) {
+        .alert("Flashcards Generated ✨", isPresented: $showFlashcardSuccess) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Successfully generated \(generatedFlashcardCount) flashcard\(generatedFlashcardCount == 1 ? "" : "s"). View them in the Flashcards tab.")
+            Text("Successfully generated \(generatedFlashcardCount) flashcard\(generatedFlashcardCount == 1 ? "" : "s")! View them in the Flashcards tab.")
         }
         .errorAlert($error)
     }
@@ -104,10 +124,10 @@ struct JournalDetailView: View {
     private var aiGeneratedContent: some View {
         VStack(spacing: Spacing.md) {
             // Summary
-            if let summary = entry.summary, !summary.isEmpty {
+            if let summary = content.summary, !summary.isEmpty {
                 AISummaryCard(summary: summary) {
                     withAnimation(reduceMotion ? .none : .glassQuick) {
-                        entry.summary = nil
+                        content.summary = nil
                         try? modelContext.save()
                     }
                 }
@@ -116,14 +136,14 @@ struct JournalDetailView: View {
             }
 
             // Tags
-            if !entry.tags.isEmpty {
+            if !content.tags.isEmpty {
                 VStack(alignment: .leading, spacing: Spacing.sm) {
                     Label("Tags", systemImage: "tag.fill")
                         .font(.headline)
-                        .foregroundStyle(Color.secondaryText)
+                        .foregroundStyle(Color.cosmicPurple)
 
                     FlowLayout(spacing: Spacing.xs) {
-                        ForEach(entry.tags, id: \.self) { tag in
+                        ForEach(content.tags, id: \.self) { tag in
                             TagChip(text: tag)
                         }
                     }
@@ -135,11 +155,24 @@ struct JournalDetailView: View {
                 .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
 
-            // Reflection
-            if let reflection = entry.reflection, !reflection.isEmpty {
-                AIReflectionCard(reflection: reflection)
-                    .padding(.horizontal)
-                    .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
+            // AI Insights
+            if let insights = content.aiInsights, !insights.isEmpty {
+                VStack(alignment: .leading, spacing: Spacing.sm) {
+                    Label("AI Insights", systemImage: "lightbulb.fill")
+                        .font(.headline)
+                        .foregroundStyle(Color.magicGold)
+
+                    Text(insights)
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .padding()
+                .background(
+                    RoundedRectangle(cornerRadius: CornerRadius.lg)
+                        .fill(Color.magicGold.opacity(0.1))
+                )
+                .padding(.horizontal)
+                .transition(reduceMotion ? .opacity : .scale.combined(with: .opacity))
             }
         }
     }
@@ -151,32 +184,32 @@ struct JournalDetailView: View {
         Button {
             Task { await summarize() }
         } label: {
-            Label("Summarize", systemImage: "sparkles")
+            Label("Summarize ✨", systemImage: "sparkles")
         }
-        .disabled(isSummarizing || entry.text.isEmpty)
+        .disabled(isSummarizing || content.displayText.isEmpty)
 
         Button {
             Task { await generateTags() }
         } label: {
-            Label("Generate Tags", systemImage: "tag")
+            Label("Generate Tags", systemImage: "tag.fill")
         }
-        .disabled(isGeneratingTags || entry.text.isEmpty)
+        .disabled(isGeneratingTags || content.displayText.isEmpty)
 
         Button {
-            Task { await generateReflection() }
+            Task { await generateInsights() }
         } label: {
-            Label("Get Reflection", systemImage: "quote.bubble")
+            Label("Get AI Insights", systemImage: "lightbulb.fill")
         }
-        .disabled(isGeneratingReflection || entry.text.isEmpty)
+        .disabled(isGeneratingInsights || content.displayText.isEmpty)
 
         Divider()
 
         Button {
             Task { await generateFlashcards() }
         } label: {
-            Label(isGeneratingFlashcards ? "Generating..." : "Generate Flashcards", systemImage: "rectangle.on.rectangle.angled")
+            Label(isGeneratingFlashcards ? "Generating..." : "Generate Flashcards 🪄", systemImage: "rectangle.on.rectangle.angled")
         }
-        .disabled(isGeneratingFlashcards || entry.text.isEmpty)
+        .disabled(isGeneratingFlashcards || content.displayText.isEmpty)
     }
 
     // MARK: - Other Actions Menu
@@ -184,7 +217,7 @@ struct JournalDetailView: View {
     @ViewBuilder
     private var otherActionsMenu: some View {
         Button {
-            shareEntry()
+            shareContent()
         } label: {
             Label("Share", systemImage: "square.and.arrow.up")
         }
@@ -198,25 +231,24 @@ struct JournalDetailView: View {
 
     // MARK: - AI Actions
 
-    /// Summarize the entry using Foundation Models
+    /// Summarize the content using Foundation Models
     private func summarize() async {
-        // Check capability
         let capability = fmClient.capability()
         guard capability == .available else {
             showAIUnavailable = true
             return
         }
 
-        guard !entry.text.isEmpty else { return }
+        guard !content.displayText.isEmpty else { return }
 
         isSummarizing = true
         defer { isSummarizing = false }
 
         do {
-            let summary = try await fmClient.summarize(entry.text)
+            let summary = try await fmClient.summarize(content.displayText)
 
             withAnimation(reduceMotion ? .none : .glass) {
-                entry.summary = summary
+                content.summary = summary
                 try? modelContext.save()
             }
         } catch {
@@ -232,16 +264,19 @@ struct JournalDetailView: View {
             return
         }
 
-        guard !entry.text.isEmpty else { return }
+        guard !content.displayText.isEmpty else { return }
 
         isGeneratingTags = true
         defer { isGeneratingTags = false }
 
         do {
-            let tags = try await fmClient.tags(for: entry.text)
+            let tags = try await fmClient.tags(for: content.displayText)
 
             withAnimation(reduceMotion ? .none : .glass) {
-                entry.tags = tags
+                content.tags = tags
+                if let firstTag = tags.first {
+                    content.topic = firstTag
+                }
                 try? modelContext.save()
             }
         } catch {
@@ -249,24 +284,24 @@ struct JournalDetailView: View {
         }
     }
 
-    /// Generate a reflection using Foundation Models
-    private func generateReflection() async {
+    /// Generate AI insights using Foundation Models
+    private func generateInsights() async {
         let capability = fmClient.capability()
         guard capability == .available else {
             showAIUnavailable = true
             return
         }
 
-        guard !entry.text.isEmpty else { return }
+        guard !content.displayText.isEmpty else { return }
 
-        isGeneratingReflection = true
-        defer { isGeneratingReflection = false }
+        isGeneratingInsights = true
+        defer { isGeneratingInsights = false }
 
         do {
-            let reflection = try await fmClient.reflection(for: entry.text)
+            let insights = try await fmClient.reflection(for: content.displayText)
 
             withAnimation(reduceMotion ? .none : .glass) {
-                entry.reflection = reflection
+                content.aiInsights = insights
                 try? modelContext.save()
             }
         } catch {
@@ -274,7 +309,7 @@ struct JournalDetailView: View {
         }
     }
 
-    /// Generate flashcards from the journal entry
+    /// Generate flashcards from the content
     private func generateFlashcards() async {
         let capability = fmClient.capability()
         guard capability == .available else {
@@ -282,7 +317,7 @@ struct JournalDetailView: View {
             return
         }
 
-        guard !entry.text.isEmpty else { return }
+        guard !content.displayText.isEmpty else { return }
 
         isGeneratingFlashcards = true
         defer { isGeneratingFlashcards = false }
@@ -290,7 +325,7 @@ struct JournalDetailView: View {
         do {
             // Generate flashcards using all three formats
             let result = try await fmClient.generateFlashcards(
-                from: entry,
+                from: content,
                 formats: [.cloze, .qa, .definition],
                 maxPerFormat: 3
             )
@@ -298,11 +333,14 @@ struct JournalDetailView: View {
             // Find or create flashcard set for this topic
             let flashcardSet = findOrCreateSet(for: result.topicTag)
 
-            // Add flashcards to the set
+            // Add flashcards to the set and link to content
             for flashcard in result.flashcards {
                 flashcard.set = flashcardSet
                 modelContext.insert(flashcard)
             }
+
+            // Link flashcards to content
+            content.flashcards = result.flashcards
 
             // Save changes
             try modelContext.save()
@@ -335,16 +373,17 @@ struct JournalDetailView: View {
 
     // MARK: - Other Actions
 
-    /// Share the entry as plain text
-    private func shareEntry() {
+    /// Share the content as plain text
+    private func shareContent() {
         let text = """
-        Journal Entry
-        \(entry.createdAt.formatted(date: .long, time: .shortened))
+        Study Content
+        \(content.createdAt.formatted(date: .long, time: .shortened))
+        Source: \(content.sourceLabel)
 
-        \(entry.text)
+        \(content.displayText)
 
         ---
-        Written with CardGenie
+        Created with CardGenie ✨
         """
 
         let activityVC = UIActivityViewController(
@@ -358,11 +397,10 @@ struct JournalDetailView: View {
         }
     }
 
-    /// Delete the entry and go back
-    private func deleteEntry() {
-        modelContext.delete(entry)
+    /// Delete the content and go back
+    private func deleteContent() {
+        modelContext.delete(content)
         try? modelContext.save()
-        // Navigation will automatically pop back
     }
 
     /// Open Settings app
@@ -449,18 +487,22 @@ struct FlowLayout: Layout {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: JournalEntry.self, configurations: config)
+    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
     let context = ModelContext(container)
 
-    let entry = JournalEntry(text: "Today was an incredible day. I woke up early and went for a run in the park. The morning was beautiful – crisp air, golden sunlight filtering through the trees. It reminded me how important it is to start the day with intention.\n\nLater, I had a great conversation with a friend about our goals for the year. We talked about the importance of staying curious and open to new experiences. I'm feeling inspired and ready to take on new challenges.\n\nGrateful for days like this.")
-    entry.summary = "Had a wonderful morning run and an inspiring conversation with a friend about goals and staying curious."
-    entry.tags = ["gratitude", "goals", "friendship"]
-    entry.reflection = "It's beautiful how simple moments can bring such clarity and inspiration."
+    let content = StudyContent(
+        source: .text,
+        rawContent: "Today was an incredible day. I woke up early and went for a run in the park. The morning was beautiful – crisp air, golden sunlight filtering through the trees. It reminded me how important it is to start the day with intention.\n\nLater, I had a great conversation with a friend about our goals for the year. We talked about the importance of staying curious and open to new experiences. I'm feeling inspired and ready to take on new challenges.\n\nGrateful for days like this."
+    )
+    content.summary = "Had a wonderful morning run and an inspiring conversation with a friend about goals and staying curious."
+    content.tags = ["gratitude", "goals", "friendship"]
+    content.topic = "Personal Growth"
+    content.aiInsights = "It's beautiful how simple moments can bring such clarity and inspiration."
 
-    context.insert(entry)
+    context.insert(content)
 
     return NavigationStack {
-        JournalDetailView(entry: entry)
+        ContentDetailView(content: content)
     }
     .modelContainer(container)
 }

@@ -7,11 +7,12 @@
 
 import SwiftUI
 
-// MARK: - Entry Row
+// MARK: - Entry Row (Deprecated - use ContentRow)
 
 /// A row displaying a journal entry in a list
+/// Note: This component is deprecated. Use ContentRow for new code.
 struct EntryRow: View {
-    let entry: JournalEntry
+    let entry: StudyContent
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.sm) {
@@ -349,9 +350,15 @@ struct AvailabilityBadge: View {
 
 #Preview("Entry Row") {
     List {
-        EntryRow(entry: JournalEntry(text: "Today was a great day! I learned so much about SwiftUI and had a wonderful time exploring the new Liquid Glass design system. The translucent materials really make the interface come alive."))
+        EntryRow(entry: StudyContent(
+            source: .text,
+            rawContent: "Today was a great day! I learned so much about SwiftUI and had a wonderful time exploring the new Liquid Glass design system. The translucent materials really make the interface come alive."
+        ))
 
-        EntryRow(entry: JournalEntry(text: "Quick note about the meeting"))
+        EntryRow(entry: StudyContent(
+            source: .text,
+            rawContent: "Quick note about the meeting"
+        ))
     }
 }
 
