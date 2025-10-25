@@ -14,7 +14,7 @@ struct FlashcardStudyView: View {
     @Environment(\.modelContext) private var modelContext
 
     let flashcardSet: FlashcardSet
-    let cards: [Flashcard]
+    let sessionTitle: String?
 
     @State private var currentCardIndex = 0
     @State private var showAnswer = false
@@ -23,9 +23,19 @@ struct FlashcardStudyView: View {
     @State private var showingClarification = false
     @State private var clarificationText = ""
     @State private var isLoadingClarification = false
+    @State private var sessionCards: [Flashcard]
+    @State private var failedCards: [Flashcard] = []
+    @State private var sessionRecorded = false
+    @State private var streakValue = StudyStreakManager.shared.currentStreak()
 
     private let spacedRepetitionManager = SpacedRepetitionManager()
     private let fmClient = FMClient()
+
+    init(flashcardSet: FlashcardSet, sessionTitle: String? = nil, cards: [Flashcard]) {
+        self.flashcardSet = flashcardSet
+        self.sessionTitle = sessionTitle
+        _sessionCards = State(initialValue: cards)
+    }
 
     var body: some View {
         NavigationStack {
@@ -35,13 +45,13 @@ struct FlashcardStudyView: View {
 
                 if showingSummary {
                     summaryView
-                } else if cards.isEmpty {
+                } else if sessionCards.isEmpty {
                     emptyStateView
                 } else {
                     studyContent
                 }
             }
-            .navigationTitle(flashcardSet.topicLabel)
+            .navigationTitle(sessionTitle ?? flashcardSet.topicLabel)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -52,10 +62,10 @@ struct FlashcardStudyView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    if !showingSummary && !cards.isEmpty {
+                    if !showingSummary && !sessionCards.isEmpty {
                         StudyProgressBar(
                             current: currentCardIndex + 1,
-                            total: cards.count
+                            total: sessionCards.count
                         )
                     }
                 }
@@ -177,34 +187,30 @@ struct FlashcardStudyView: View {
         StudyResultsView(
             correct: sessionStats.goodCount + sessionStats.easyCount,
             total: sessionStats.totalCards,
-            streak: getCurrentStreak(),
+            streak: streakValue,
+            missedCount: failedCards.count,
+            onRetry: failedCards.isEmpty ? nil : { retryMissedCards() },
             onDismiss: {
                 dismiss()
             }
         )
     }
 
-    /// Get current study streak (placeholder - will be enhanced with proper tracking)
-    private func getCurrentStreak() -> Int {
-        // TODO: Implement proper streak tracking with UserDefaults or SwiftData
-        // For now, return 1 if they completed the session, 0 otherwise
-        return sessionStats.totalCards > 0 ? 1 : 0
-    }
-
     // MARK: - Empty State
 
     private var emptyStateView: some View {
         VStack(spacing: 16) {
-            Image(systemName: "checkmark.circle.fill")
+            Image(systemName: "sparkles")
                 .font(.system(size: 60))
-                .foregroundStyle(.green)
+                .foregroundStyle(Color.aiAccent)
+                .symbolEffect(.pulse)
 
-            Text("No Cards to Review")
+            Text("You're a Study Wizard! ✨")
                 .font(.title2)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.primaryText)
 
-            Text("All cards in this set are up to date. Come back later!")
+            Text("All caught up! Your brain is leveling up. Come back later for more magic.")
                 .font(.subheadline)
                 .foregroundStyle(Color.secondaryText)
                 .multilineTextAlignment(.center)
@@ -213,7 +219,7 @@ struct FlashcardStudyView: View {
             Button {
                 dismiss()
             } label: {
-                Text("Close")
+                Text("Awesome!")
                     .font(.headline)
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -310,41 +316,69 @@ struct FlashcardStudyView: View {
     // MARK: - Computed Properties
 
     private var currentCard: Flashcard {
-        cards[currentCardIndex]
+        sessionCards[currentCardIndex]
     }
 
     // MARK: - Actions
 
     private func handleReview(_ response: SpacedRepetitionManager.ReviewResponse) {
-        // Update spaced repetition schedule
-        spacedRepetitionManager.scheduleNextReview(for: currentCard, response: response)
+        processResponse(response)
+    }
 
-        // Update session statistics
+    private func processResponse(_ response: SpacedRepetitionManager.ReviewResponse) {
+        let card = currentCard
+
+        spacedRepetitionManager.scheduleNextReview(for: card, response: response)
+
         sessionStats.totalCards += 1
         switch response {
         case .again:
             sessionStats.againCount += 1
+            if !failedCards.contains(where: { $0.id == card.id }) {
+                failedCards.append(card)
+            }
         case .good:
             sessionStats.goodCount += 1
+            failedCards.removeAll { $0.id == card.id }
         case .easy:
             sessionStats.easyCount += 1
+            failedCards.removeAll { $0.id == card.id }
         }
 
-        // Save changes
         do {
             try modelContext.save()
         } catch {
             print("Error saving flashcard review: \(error)")
         }
 
-        // Move to next card or show summary
         withAnimation(.spring(response: 0.4)) {
-            if currentCardIndex < cards.count - 1 {
+            if currentCardIndex < sessionCards.count - 1 {
                 currentCardIndex += 1
                 showAnswer = false
             } else {
-                showingSummary = true
+                completeSession()
             }
+        }
+    }
+
+    private func completeSession() {
+        if !sessionRecorded {
+            streakValue = StudyStreakManager.shared.recordSessionCompletion()
+            sessionRecorded = true
+        }
+        showingSummary = true
+    }
+
+    private func retryMissedCards() {
+        guard !failedCards.isEmpty else { return }
+
+        withAnimation(.spring(response: 0.35)) {
+            sessionCards = failedCards
+            failedCards = []
+            currentCardIndex = 0
+            sessionStats = SessionStats()
+            showAnswer = false
+            showingSummary = false
         }
     }
 
@@ -373,22 +407,6 @@ struct FlashcardStudyView: View {
         }
     }
 
-    private func restartFailedCards() {
-        // Filter cards that were marked as "again"
-        let failedCards = cards.filter { card in
-            sessionStats.againCount > 0 && card.isDue
-        }
-
-        if !failedCards.isEmpty {
-            // Reset session
-            withAnimation {
-                currentCardIndex = 0
-                showAnswer = false
-                sessionStats = SessionStats()
-                showingSummary = false
-            }
-        }
-    }
 }
 
 // MARK: - Session Statistics
@@ -434,6 +452,6 @@ private struct SessionStats {
     set.cards = [card1, card2]
     container.mainContext.insert(set)
 
-    return FlashcardStudyView(flashcardSet: set, cards: [card1, card2])
+    return FlashcardStudyView(flashcardSet: set, sessionTitle: nil, cards: [card1, card2])
         .modelContainer(container)
 }

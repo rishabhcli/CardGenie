@@ -17,8 +17,14 @@ struct FlashcardListView: View {
     @State private var showingStudyView = false
     @State private var studyingDailyReview = false
     @State private var searchText = ""
+    @State private var sheetSessionTitle: String? = nil
+    @State private var showingSettings = false
+    @State private var showingStatistics = false
+    @State private var cachedDueCount: Int = 0
+    @State private var lastCacheUpdate = Date.distantPast
 
     private let spacedRepetitionManager = SpacedRepetitionManager()
+    private let cache = CacheManager.shared
 
     var body: some View {
         NavigationStack {
@@ -34,24 +40,44 @@ struct FlashcardListView: View {
             }
             .navigationTitle("Flashcards")
             .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    if !flashcardSets.isEmpty {
-                        Menu {
-                            Button {
-                                studyAllDueCards()
-                            } label: {
-                                Label("Study All Due", systemImage: "book.fill")
-                            }
-                            .disabled(totalDueCount == 0)
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showingSettings = true
+                    } label: {
+                        Image(systemName: "gearshape.fill")
+                            .foregroundStyle(Color.cosmicPurple)
+                    }
+                }
 
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 16) {
+                        if !flashcardSets.isEmpty {
                             Button {
-                                updateAllNotifications()
+                                showingStatistics = true
                             } label: {
-                                Label("Update Reminders", systemImage: "bell.fill")
+                                Image(systemName: "chart.bar.fill")
+                                    .foregroundStyle(Color.aiAccent)
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .foregroundStyle(Color.primaryText)
+                        }
+
+                        if !flashcardSets.isEmpty {
+                            Menu {
+                                Button {
+                                    studyAllDueCards()
+                                } label: {
+                                    Label("Study All Due", systemImage: "book.fill")
+                                }
+                                .disabled(totalDueCount == 0)
+
+                                Button {
+                                    updateAllNotifications()
+                                } label: {
+                                    Label("Update Reminders", systemImage: "bell.fill")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle")
+                                    .foregroundStyle(Color.primaryText)
+                            }
                         }
                     }
                 }
@@ -61,9 +87,16 @@ struct FlashcardListView: View {
                 if let set = selectedSet {
                     FlashcardStudyView(
                         flashcardSet: set,
+                        sessionTitle: sheetSessionTitle,
                         cards: studyingDailyReview ? dailyReviewQueue : getStudyCards(for: set)
                     )
                 }
+            }
+            .sheet(isPresented: $showingSettings) {
+                SettingsView()
+            }
+            .sheet(isPresented: $showingStatistics) {
+                StatisticsView()
             }
         }
     }
@@ -106,7 +139,7 @@ struct FlashcardListView: View {
                 Badge(count: totalDueCount, color: .red)
             }
 
-            Text("You have \(totalDueCount) card\(totalDueCount == 1 ? "" : "s") ready for review")
+            Text(dailyReviewMessage)
                 .font(.subheadline)
                 .foregroundStyle(Color.secondaryText)
 
@@ -185,12 +218,14 @@ struct FlashcardListView: View {
                         .onTapGesture {
                             selectedSet = set
                             studyingDailyReview = false
+                            sheetSessionTitle = nil
                             showingStudyView = true
                         }
                         .contextMenu {
                             Button {
                                 selectedSet = set
                                 studyingDailyReview = false
+                                sheetSessionTitle = nil
                                 showingStudyView = true
                             } label: {
                                 Label("Study", systemImage: "play.fill")
@@ -202,9 +237,14 @@ struct FlashcardListView: View {
                                 Label("Delete", systemImage: "trash")
                             }
                         }
+                        // MARK: - Accessibility
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel("\(set.topicLabel) flashcard set")
-                        .accessibilityHint("\(set.cardCount) cards, \(set.dueCount) due. Double tap to study.")
+                        .accessibilityValue("\(set.cardCount) total cards. \(set.dueCount) due for review. \(set.newCount) new cards.")
+                        .accessibilityHint("Double tap to start studying this set")
+                        .accessibilityAction(named: "Delete Set") {
+                            deleteSet(set)
+                        }
                 }
             }
         }
@@ -223,7 +263,21 @@ struct FlashcardListView: View {
     }
 
     private var totalDueCount: Int {
-        flashcardSets.reduce(0) { $0 + $1.dueCount }
+        let now = Date()
+
+        // Cache for 30 seconds to avoid recalculating on every view update
+        if now.timeIntervalSince(lastCacheUpdate) > 30 {
+            let setIDs = flashcardSets.map { $0.id }
+            cachedDueCount = cache.get(
+                key: CacheManager.dueCountKey(setIDs: setIDs),
+                maxAge: 30
+            ) {
+                flashcardSets.reduce(0) { $0 + $1.dueCount }
+            }
+            lastCacheUpdate = now
+        }
+
+        return cachedDueCount
     }
 
     private var totalCardCount: Int {
@@ -231,7 +285,12 @@ struct FlashcardListView: View {
     }
 
     private var dailyReviewQueue: [Flashcard] {
-        spacedRepetitionManager.getDailyReviewQueue(from: flashcardSets)
+        cache.get(
+            key: CacheManager.dailyQueueKey(date: Date()),
+            maxAge: 300 // 5 minutes
+        ) {
+            spacedRepetitionManager.getDailyReviewQueue(from: flashcardSets)
+        }
     }
 
     private var successRateText: String {
@@ -242,23 +301,42 @@ struct FlashcardListView: View {
         return "\(Int(avgSuccessRate * 100))%"
     }
 
+    private var dailyReviewMessage: String {
+        let messages = [
+            "Time to flex that brain! \(totalDueCount) card\(totalDueCount == 1 ? "" : "s") waiting",
+            "\(totalDueCount) card\(totalDueCount == 1 ? "" : "s") ready to boost your knowledge!",
+            "Level up time! \(totalDueCount) card\(totalDueCount == 1 ? " is" : "s are") calling your name",
+            "Your brain wants to party! \(totalDueCount) card\(totalDueCount == 1 ? "" : "s") ready to go"
+        ]
+        return messages.randomElement() ?? "You have \(totalDueCount) card\(totalDueCount == 1 ? "" : "s") ready"
+    }
+
     // MARK: - Actions
 
     private func studyAllDueCards() {
         guard totalDueCount > 0 else { return }
 
-        // Create a temporary "Daily Review" set for study view
-        selectedSet = flashcardSets.first
+        // Use the first set that actually has due cards for context
+        selectedSet = flashcardSets.first(where: { $0.dueCount > 0 }) ?? flashcardSets.first
         studyingDailyReview = true
+        sheetSessionTitle = "Daily Review"
         showingStudyView = true
     }
 
     private func getStudyCards(for set: FlashcardSet) -> [Flashcard] {
-        spacedRepetitionManager.getStudySession(
+        let studySession = spacedRepetitionManager.getStudySession(
             from: set,
             maxNew: 5,
             maxReview: 20
         )
+
+        // If no cards in study session, return ALL cards from the set
+        // This ensures tapping a set always shows something
+        if studySession.isEmpty && !set.cards.isEmpty {
+            return Array(set.cards.shuffled())
+        }
+
+        return studySession
     }
 
     private func deleteSet(_ set: FlashcardSet) {
@@ -275,7 +353,7 @@ struct FlashcardListView: View {
     private func updateAllNotifications() {
         Task {
             await NotificationManager.shared.setupNotificationsIfNeeded(dueCount: totalDueCount)
-            await NotificationManager.shared.updateBadgeCount(totalDueCount)
+            NotificationManager.shared.updateBadgeCount(totalDueCount)
         }
     }
 }

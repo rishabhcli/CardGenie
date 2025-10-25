@@ -1,8 +1,8 @@
 //
 //  StoreTests.swift
-//  CardGenie
+//  CardGenieTests
 //
-//  Unit tests for data persistence layer.
+//  Updated unit tests for the StudyContent store.
 //
 
 import XCTest
@@ -15,9 +15,8 @@ final class StoreTests: XCTestCase {
     var store: Store!
 
     override func setUp() async throws {
-        // Create an in-memory container for testing
-        let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        container = try ModelContainer(for: JournalEntry.self, configurations: config)
+        let configuration = ModelConfiguration(isStoredInMemoryOnly: true)
+        container = try ModelContainer(for: StudyContent.self, configurations: configuration)
         store = Store(container: container)
     }
 
@@ -26,359 +25,128 @@ final class StoreTests: XCTestCase {
         store = nil
     }
 
-    // MARK: - Creation Tests
+    func testNewContentDefaults() async throws {
+        let content = store.newContent()
 
-    func testCreateNewEntry() async throws {
-        // When: Creating a new entry
-        let entry = store.newEntry()
-
-        // Then: Entry should exist with defaults
-        XCTAssertNotNil(entry.id, "Entry should have an ID")
-        XCTAssertTrue(entry.text.isEmpty, "New entry should have empty text")
-        XCTAssertNil(entry.summary, "New entry should have no summary")
-        XCTAssertTrue(entry.tags.isEmpty, "New entry should have no tags")
-        XCTAssertNotNil(entry.createdAt, "Entry should have creation date")
+        XCTAssertFalse(content.rawContent.contains(where: { !$0.isWhitespace }))
+        XCTAssertTrue(content.tags.isEmpty)
+        XCTAssertNil(content.summary)
+        XCTAssertEqual(content.source, .text)
+        XCTAssertNotNil(content.createdAt)
     }
 
-    func testMultipleEntryCreation() async throws {
-        // Given: Creating multiple entries
-        let entry1 = store.newEntry()
-        let entry2 = store.newEntry()
-        let entry3 = store.newEntry()
+    func testFetchAllContentSortedByDate() async throws {
+        let first = store.newContent()
+        first.rawContent = "First item"
+        first.createdAt = Date().addingTimeInterval(-3600)
 
-        // Then: Each should have unique ID
-        XCTAssertNotEqual(entry1.id, entry2.id)
-        XCTAssertNotEqual(entry2.id, entry3.id)
-        XCTAssertNotEqual(entry1.id, entry3.id)
-    }
-
-    // MARK: - Fetch Tests
-
-    func testFetchAllEntries() async throws {
-        // Given: Multiple entries
-        _ = store.newEntry()
-        _ = store.newEntry()
-        _ = store.newEntry()
-
-        // When: Fetching all entries
-        let entries = store.fetchAllEntries()
-
-        // Then: Should return all entries
-        XCTAssertEqual(entries.count, 3, "Should fetch all 3 entries")
-    }
-
-    func testFetchEntriesSortedByDate() async throws {
-        // Given: Entries created at different times
-        let entry1 = store.newEntry()
-        entry1.text = "First"
-        entry1.createdAt = Date().addingTimeInterval(-3600) // 1 hour ago
-
-        let entry2 = store.newEntry()
-        entry2.text = "Second"
-        entry2.createdAt = Date().addingTimeInterval(-1800) // 30 min ago
-
-        let entry3 = store.newEntry()
-        entry3.text = "Third"
-        entry3.createdAt = Date() // Now
+        let second = store.newContent()
+        second.rawContent = "Second item"
+        second.createdAt = Date()
 
         store.save()
 
-        // When: Fetching entries
-        let entries = store.fetchAllEntries()
-
-        // Then: Should be sorted newest first
-        XCTAssertEqual(entries[0].text, "Third")
-        XCTAssertEqual(entries[1].text, "Second")
-        XCTAssertEqual(entries[2].text, "First")
-    }
-
-    func testFetchFromEmptyStore() async throws {
-        // Given: Empty store
-        // When: Fetching entries
-        let entries = store.fetchAllEntries()
-
-        // Then: Should return empty array
-        XCTAssertTrue(entries.isEmpty, "Empty store should return no entries")
-    }
-
-    // MARK: - Update Tests
-
-    func testUpdateEntryText() async throws {
-        // Given: An entry
-        let entry = store.newEntry()
-        let originalId = entry.id
-
-        // When: Updating text
-        entry.text = "Updated content"
-        store.save()
-
-        // Then: Changes should persist
-        let entries = store.fetchAllEntries()
-        XCTAssertEqual(entries.count, 1)
-        XCTAssertEqual(entries[0].id, originalId)
-        XCTAssertEqual(entries[0].text, "Updated content")
-    }
-
-    func testUpdateEntrySummary() async throws {
-        // Given: An entry with text
-        let entry = store.newEntry()
-        entry.text = "This is a long journal entry with lots of content."
-
-        // When: Adding a summary
-        entry.summary = "A summary of the entry"
-        store.save()
-
-        // Then: Summary should persist
-        let entries = store.fetchAllEntries()
-        XCTAssertEqual(entries[0].summary, "A summary of the entry")
-    }
-
-    func testUpdateEntryTags() async throws {
-        // Given: An entry
-        let entry = store.newEntry()
-
-        // When: Adding tags
-        entry.tags = ["work", "planning", "goals"]
-        store.save()
-
-        // Then: Tags should persist
-        let entries = store.fetchAllEntries()
-        XCTAssertEqual(entries[0].tags.count, 3)
-        XCTAssertTrue(entries[0].tags.contains("work"))
-        XCTAssertTrue(entries[0].tags.contains("planning"))
-    }
-
-    // MARK: - Delete Tests
-
-    func testDeleteEntry() async throws {
-        // Given: Multiple entries
-        let entry1 = store.newEntry()
-        let entry2 = store.newEntry()
-        let entry3 = store.newEntry()
-
-        // When: Deleting one entry
-        store.delete(entry2)
-
-        // Then: Should have 2 entries left
-        let entries = store.fetchAllEntries()
-        XCTAssertEqual(entries.count, 2)
-        XCTAssertTrue(entries.contains(where: { $0.id == entry1.id }))
-        XCTAssertFalse(entries.contains(where: { $0.id == entry2.id }))
-        XCTAssertTrue(entries.contains(where: { $0.id == entry3.id }))
-    }
-
-    func testDeleteAllEntries() async throws {
-        // Given: Multiple entries
-        _ = store.newEntry()
-        _ = store.newEntry()
-        _ = store.newEntry()
-
-        var entries = store.fetchAllEntries()
-        XCTAssertEqual(entries.count, 3)
-
-        // When: Deleting all
-        for entry in entries {
-            store.delete(entry)
-        }
-
-        // Then: Store should be empty
-        entries = store.fetchAllEntries()
-        XCTAssertTrue(entries.isEmpty)
-    }
-
-    // MARK: - Search Tests
-
-    func testSearchByText() async throws {
-        // Given: Entries with different content
-        let entry1 = store.newEntry()
-        entry1.text = "Today I went to the gym and had a great workout."
-
-        let entry2 = store.newEntry()
-        entry2.text = "Worked on the project all day. Made good progress."
-
-        let entry3 = store.newEntry()
-        entry3.text = "Relaxing evening with a good book."
-
-        store.save()
-
-        // When: Searching for "gym"
-        let results = store.search("gym")
-
-        // Then: Should find matching entry
-        XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].id, entry1.id)
-    }
-
-    func testSearchBySummary() async throws {
-        // Given: Entry with summary
-        let entry = store.newEntry()
-        entry.text = "A long journal entry about my day."
-        entry.summary = "Summary mentions workout and friends"
-        store.save()
-
-        // When: Searching for "workout"
-        let results = store.search("workout")
-
-        // Then: Should find entry by summary
-        XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].id, entry.id)
-    }
-
-    func testSearchByTags() async throws {
-        // Given: Entry with tags
-        let entry = store.newEntry()
-        entry.text = "Project planning session."
-        entry.tags = ["work", "planning", "meeting"]
-        store.save()
-
-        // When: Searching for a tag
-        let results = store.search("meeting")
-
-        // Then: Should find entry by tag
-        XCTAssertEqual(results.count, 1)
-        XCTAssertEqual(results[0].id, entry.id)
-    }
-
-    func testSearchCaseInsensitive() async throws {
-        // Given: Entry with mixed case text
-        let entry = store.newEntry()
-        entry.text = "Meeting with the Team about Project Alpha"
-        store.save()
-
-        // When: Searching with different cases
-        let results1 = store.search("team")
-        let results2 = store.search("TEAM")
-        let results3 = store.search("Team")
-
-        // Then: All should find the entry
-        XCTAssertEqual(results1.count, 1)
-        XCTAssertEqual(results2.count, 1)
-        XCTAssertEqual(results3.count, 1)
-    }
-
-    func testSearchWithEmptyQuery() async throws {
-        // Given: Multiple entries
-        _ = store.newEntry()
-        _ = store.newEntry()
-
-        // When: Searching with empty string
-        let results = store.search("")
-
-        // Then: Should return all entries
+        let results = store.fetchAllContent()
         XCTAssertEqual(results.count, 2)
+        XCTAssertEqual(results.first?.rawContent, "Second item")
+        XCTAssertEqual(results.last?.rawContent, "First item")
     }
 
-    func testSearchNoResults() async throws {
-        // Given: Entries
-        let entry = store.newEntry()
-        entry.text = "This is about coding"
+    func testDeleteContentRemovesFromStore() async throws {
+        let content = store.newContent()
+        content.rawContent = "Keep me safe"
         store.save()
 
-        // When: Searching for non-existent term
-        let results = store.search("unicorn")
+        var results = store.fetchAllContent()
+        XCTAssertEqual(results.count, 1)
 
-        // Then: Should return empty
+        store.delete(content)
+        results = store.fetchAllContent()
         XCTAssertTrue(results.isEmpty)
     }
 
-    // MARK: - Model Property Tests
+    func testFetchContentBySource() async throws {
+        let text = store.newContent(source: .text)
+        text.rawContent = "Notebook entry"
 
-    func testEntryFirstLine() async throws {
-        // Given: Entry with multi-line text
-        let entry = store.newEntry()
-        entry.text = "First line of the entry\nSecond line\nThird line"
+        let photo = store.newContent(source: .photo)
+        photo.rawContent = "Photo capture"
 
-        // Then: firstLine should return first line
-        XCTAssertEqual(entry.firstLine, "First line of the entry")
-    }
-
-    func testEntryFirstLineEmpty() async throws {
-        // Given: Entry with empty text
-        let entry = store.newEntry()
-        entry.text = ""
-
-        // Then: Should return default
-        XCTAssertEqual(entry.firstLine, "New entry")
-    }
-
-    func testEntryPreviewWithSummary() async throws {
-        // Given: Entry with summary
-        let entry = store.newEntry()
-        entry.text = "Long text here..."
-        entry.summary = "This is the summary"
-
-        // Then: Preview should use summary
-        XCTAssertEqual(entry.preview, "This is the summary")
-    }
-
-    func testEntryPreviewWithoutSummary() async throws {
-        // Given: Entry without summary
-        let entry = store.newEntry()
-        entry.text = "Short text"
-
-        // Then: Preview should use text
-        XCTAssertEqual(entry.preview, "Short text")
-    }
-
-    func testEntryPreviewTruncation() async throws {
-        // Given: Entry with long text
-        let entry = store.newEntry()
-        entry.text = String(repeating: "A", count: 200)
-
-        // Then: Preview should be truncated
-        let preview = entry.preview
-        XCTAssertTrue(preview.hasSuffix("…"))
-        XCTAssertLessThanOrEqual(preview.count, 125) // 120 chars + "…"
-    }
-
-    // MARK: - Persistence Tests
-
-    func testDataPersistsAfterSave() async throws {
-        // Given: An entry with data
-        let entry = store.newEntry()
-        entry.text = "Important journal entry"
-        entry.summary = "Summary of the entry"
-        entry.tags = ["important", "personal"]
         store.save()
 
-        // When: Creating a new store instance
-        let newStore = Store(container: container)
+        let textItems = store.fetchContent(bySource: .text)
+        XCTAssertEqual(textItems.count, 1)
+        XCTAssertEqual(textItems.first?.id, text.id)
 
-        // Then: Data should still exist
-        let entries = newStore.fetchAllEntries()
-        XCTAssertEqual(entries.count, 1)
-        XCTAssertEqual(entries[0].text, "Important journal entry")
-        XCTAssertEqual(entries[0].summary, "Summary of the entry")
-        XCTAssertEqual(entries[0].tags.count, 2)
+        let photoItems = store.fetchContent(bySource: .photo)
+        XCTAssertEqual(photoItems.count, 1)
+        XCTAssertEqual(photoItems.first?.id, photo.id)
     }
 
-    // MARK: - Performance Tests
+    func testSearchMatchesSummaryTagsAndTopic() async throws {
+        let content = store.newContent()
+        content.rawContent = "The mitochondria is the powerhouse of the cell."
+        content.summary = "Biology overview"
+        content.tags = ["science", "biology"]
+        content.topic = "Cellular Biology"
+        store.save()
+
+        XCTAssertEqual(store.search("biology").count, 1)      // matches summary + tag + topic
+        XCTAssertEqual(store.search("SCIENCE").count, 1)      // case-insensitive tag match
+        XCTAssertEqual(store.search("powerhouse").count, 1)   // raw content match
+        XCTAssertTrue(store.search("astronomy").isEmpty)
+    }
+
+    func testPreviewPrefersSummary() async throws {
+        let content = store.newContent()
+        content.rawContent = "Long-form content that should not be shown when a summary exists."
+        content.summary = "Concise summary"
+        store.save()
+
+        let fetched = store.fetchAllContent().first
+        XCTAssertEqual(fetched?.preview, "Concise summary")
+    }
+
+    func testPreviewFallsBackToRawContent() async throws {
+        let content = store.newContent()
+        content.rawContent = "This is the first sentence.\nHere is some additional detail."
+        store.save()
+
+        let fetched = store.fetchAllContent().first
+        XCTAssertEqual(fetched?.firstLine, "This is the first sentence.")
+        XCTAssertTrue(fetched?.preview.hasPrefix("This is the first sentence.") ?? false)
+    }
+
+    func testSearchWithEmptyQueryReturnsAll() async throws {
+        store.newContent().rawContent = "One"
+        store.newContent().rawContent = "Two"
+        store.save()
+
+        XCTAssertEqual(store.search("").count, 2)
+    }
 
     func testFetchPerformance() async throws {
-        // Given: Many entries
-        for i in 1...100 {
-            let entry = store.newEntry()
-            entry.text = "Entry number \(i)"
+        for index in 0..<200 {
+            let content = store.newContent()
+            content.rawContent = "Item \(index)"
         }
         store.save()
 
-        // When/Then: Measure fetch performance
         measure {
-            _ = store.fetchAllEntries()
+            _ = store.fetchAllContent()
         }
     }
 
     func testSearchPerformance() async throws {
-        // Given: Many entries with varied content
-        for i in 1...100 {
-            let entry = store.newEntry()
-            entry.text = "Entry \(i) with content about \(i % 10 == 0 ? "work" : "personal") matters"
+        for index in 0..<200 {
+            let content = store.newContent()
+            content.rawContent = "Physics concept \(index)"
+            content.tags = index.isMultiple(of: 2) ? ["physics"] : ["chemistry"]
         }
         store.save()
 
-        // When/Then: Measure search performance
         measure {
-            _ = store.search("work")
+            _ = store.search("physics")
         }
     }
 }

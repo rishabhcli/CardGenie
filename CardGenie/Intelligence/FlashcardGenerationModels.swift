@@ -7,10 +7,13 @@
 //
 
 import Foundation
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 // MARK: - Entity Extraction
 
+#if canImport(FoundationModels)
 @Generable
 struct EntityExtractionResult: Equatable {
     @Guide(description: "Important entities like names, places, dates, and key terms from the text.")
@@ -111,6 +114,59 @@ struct JournalTags: Equatable {
     @Guide(.count(1...3))
     let tags: [String]
 }
+#else
+struct EntityExtractionResult: Equatable {
+    let entities: [String]
+    let topicTag: String
+}
+
+struct GeneratedFlashcards: Equatable {
+    let cards: [GeneratedFlashcard]
+}
+
+struct GeneratedFlashcard: Equatable {
+    let type: FlashcardTypeEnum
+    let question: String
+    let answer: String
+}
+
+enum FlashcardTypeEnum {
+    case cloze
+    case qa
+    case definition
+}
+
+struct ClozeCardBatch: Equatable {
+    let cards: [ClozeCard]
+}
+
+struct ClozeCard: Equatable {
+    let sentence: String
+    let answer: String
+}
+
+struct QACardBatch: Equatable {
+    let cards: [QACard]
+}
+
+struct QACard: Equatable {
+    let question: String
+    let answer: String
+}
+
+struct DefinitionCardBatch: Equatable {
+    let cards: [DefinitionCard]
+}
+
+struct DefinitionCard: Equatable {
+    let term: String
+    let definition: String
+}
+
+struct JournalTags: Equatable {
+    let tags: [String]
+}
+#endif
 
 // MARK: - Conversion Helpers
 

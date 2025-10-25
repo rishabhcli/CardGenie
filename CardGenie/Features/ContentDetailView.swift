@@ -20,9 +20,11 @@ struct ContentDetailView: View {
 
     // AI
     @StateObject private var fmClient = FMClient()
+    @StateObject private var categorizer = AutoCategorizer()
 
     // UI State
     @State private var isSummarizing = false
+    @State private var isCategorizing = false
     @State private var isGeneratingTags = false
     @State private var isGeneratingInsights = false
     @State private var isGeneratingFlashcards = false
@@ -196,6 +198,13 @@ struct ContentDetailView: View {
         .disabled(isGeneratingTags || content.displayText.isEmpty)
 
         Button {
+            Task { await categorize() }
+        } label: {
+            Label(isCategorizing ? "Categorizing..." : "Auto-Categorize", systemImage: "folder.fill")
+        }
+        .disabled(isCategorizing || content.displayText.isEmpty)
+
+        Button {
             Task { await generateInsights() }
         } label: {
             Label("Get AI Insights", systemImage: "lightbulb.fill")
@@ -284,6 +293,31 @@ struct ContentDetailView: View {
         }
     }
 
+    /// Auto-categorize content
+    private func categorize() async {
+        let capability = fmClient.capability()
+        guard capability == .available else {
+            showAIUnavailable = true
+            return
+        }
+
+        guard !content.displayText.isEmpty else { return }
+
+        isCategorizing = true
+        defer { isCategorizing = false }
+
+        do {
+            let category = try await categorizer.categorize(content)
+
+            withAnimation(reduceMotion ? .none : .glass) {
+                content.topic = category
+                try? modelContext.save()
+            }
+        } catch {
+            self.error = error
+        }
+    }
+
     /// Generate AI insights using Foundation Models
     private func generateInsights() async {
         let capability = fmClient.capability()
@@ -335,12 +369,13 @@ struct ContentDetailView: View {
 
             // Add flashcards to the set and link to content
             for flashcard in result.flashcards {
-                flashcard.set = flashcardSet
+                flashcardSet.addCard(flashcard)
                 modelContext.insert(flashcard)
             }
 
             // Link flashcards to content
-            content.flashcards = result.flashcards
+            content.flashcards.append(contentsOf: result.flashcards)
+            flashcardSet.entryCount += 1
 
             // Save changes
             try modelContext.save()
@@ -356,19 +391,7 @@ struct ContentDetailView: View {
 
     /// Find existing flashcard set by topic or create a new one
     private func findOrCreateSet(for topic: String) -> FlashcardSet {
-        // Try to find existing set with this topic
-        let descriptor = FetchDescriptor<FlashcardSet>(
-            predicate: #Predicate { $0.tag == topic }
-        )
-
-        if let existingSet = try? modelContext.fetch(descriptor).first {
-            return existingSet
-        }
-
-        // Create new set
-        let newSet = FlashcardSet(topicLabel: topic, tag: topic)
-        modelContext.insert(newSet)
-        return newSet
+        modelContext.findOrCreateFlashcardSet(topicLabel: topic)
     }
 
     // MARK: - Other Actions

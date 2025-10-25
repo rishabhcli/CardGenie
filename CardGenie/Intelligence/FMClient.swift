@@ -10,7 +10,9 @@
 import Foundation
 import Combine
 import OSLog
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 // MARK: - Capability States
 
@@ -36,7 +38,7 @@ final class FMClient: ObservableObject {
     /// Check if Apple Intelligence is available on this device
     /// - Returns: Current capability state
     func capability() -> FMCapabilityState {
-        // iOS 26+ required for Foundation Models
+        #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             let model = SystemLanguageModel.default
             switch model.availability {
@@ -60,6 +62,10 @@ final class FMClient: ObservableObject {
             log.warning("iOS 26+ required for Foundation Models")
             return .notSupported
         }
+        #else
+        log.info("FoundationModels framework not available; using fallback mode")
+        return .modelNotReady
+        #endif
     }
 
     // MARK: - AI Operations
@@ -76,6 +82,7 @@ final class FMClient: ObservableObject {
             return ""
         }
 
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             log.error("iOS 26+ required")
             throw FMError.unsupportedOS
@@ -120,6 +127,10 @@ final class FMClient: ObservableObject {
             log.error("Summarization failed: \(error.localizedDescription)")
             throw FMError.processingFailed
         }
+        #else
+        log.info("Using fallback summarization implementation")
+        return fallbackSummary(for: trimmed)
+        #endif
     }
 
     /// Extract up to 3 relevant tags/keywords from the entry
@@ -127,6 +138,7 @@ final class FMClient: ObservableObject {
     /// - Returns: Array of extracted tags (max 3)
     /// - Throws: Error if the model is unavailable or processing fails
     func tags(for text: String) async throws -> [String] {
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
         }
@@ -173,6 +185,10 @@ final class FMClient: ObservableObject {
             log.error("Tag extraction failed: \(error.localizedDescription)")
             throw FMError.processingFailed
         }
+        #else
+        log.info("Using fallback tag extraction implementation")
+        return fallbackTags(for: text)
+        #endif
     }
 
     /// Generate a kind, encouraging reflection based on the entry
@@ -180,6 +196,7 @@ final class FMClient: ObservableObject {
     /// - Returns: One sentence of encouragement or reflection
     /// - Throws: Error if the model is unavailable or processing fails
     func reflection(for text: String) async throws -> String {
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
         }
@@ -225,6 +242,10 @@ final class FMClient: ObservableObject {
             log.error("Reflection generation failed: \(error.localizedDescription)")
             throw FMError.processingFailed
         }
+        #else
+        log.info("Using fallback reflection implementation")
+        return fallbackReflection(for: text)
+        #endif
     }
 
     // MARK: - Study Coach
@@ -241,6 +262,7 @@ final class FMClient: ObservableObject {
         totalCount: Int,
         streak: Int
     ) async throws -> String {
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
         }
@@ -294,6 +316,11 @@ final class FMClient: ObservableObject {
             log.error("Encouragement generation failed: \(error.localizedDescription)")
             return fallbackEncouragement(accuracy: accuracy)
         }
+        #else
+        log.info("Using fallback encouragement implementation")
+        let accuracy = totalCount > 0 ? Double(correctCount) / Double(totalCount) : 0.0
+        return fallbackEncouragement(accuracy: accuracy)
+        #endif
     }
 
     /// Generate insight about study patterns
@@ -308,6 +335,7 @@ final class FMClient: ObservableObject {
         averageAccuracy: Double,
         longestStreak: Int
     ) async throws -> String {
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
         }
@@ -354,6 +382,13 @@ final class FMClient: ObservableObject {
             log.error("Insight generation failed: \(error.localizedDescription)")
             return "You've reviewed \(totalReviews) cards - that's dedication! 🎯"
         }
+        #else
+        log.info("Using fallback study insight implementation")
+        if totalReviews == 0 {
+            return "Start a quick review session to build momentum! 🚀"
+        }
+        return "You've reviewed \(totalReviews) cards with \(Int(averageAccuracy * 100))% accuracy—keep the streak alive!"
+        #endif
     }
 
     /// Fallback encouragement when AI is unavailable
@@ -369,6 +404,53 @@ final class FMClient: ObservableObject {
         }
     }
 
+    // MARK: - Fallback Helpers
+
+    private func fallbackSummary(for text: String) -> String {
+        let sentences = text
+            .split(whereSeparator: { ".!?".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        let summary = sentences.prefix(2).joined(separator: ". ")
+        if summary.isEmpty {
+            let truncated = text.prefix(160)
+            return truncated.isEmpty ? "" : "\(truncated)…"
+        }
+        return sentences.count > 2 ? "\(summary)." : summary
+    }
+
+    private func fallbackTags(for text: String) -> [String] {
+        let separators = CharacterSet.alphanumerics.inverted
+        let words = text
+            .lowercased()
+            .components(separatedBy: separators)
+            .filter { $0.count > 3 }
+
+        let stopWords: Set<String> = [
+            "this", "that", "with", "have", "from", "about", "there", "their",
+            "would", "could", "should", "really", "today", "yesterday", "tomorrow"
+        ]
+
+        var frequency: [String: Int] = [:]
+        for word in words where !stopWords.contains(word) {
+            frequency[word, default: 0] += 1
+        }
+
+        let sorted = frequency.sorted { $0.value > $1.value }.map { $0.key.capitalized }
+        return Array(sorted.prefix(3))
+    }
+
+    private func fallbackReflection(for text: String) -> String {
+        if text.lowercased().contains("stress") || text.lowercased().contains("tired") {
+            return "It sounds like you handled a lot today—remember to take a breather when you can."
+        }
+        if text.lowercased().contains("happy") || text.lowercased().contains("grateful") {
+            return "Love how you’re appreciating the good moments—keep leaning into that energy!"
+        }
+        return "Thanks for reflecting—acknowledging your day is a powerful step forward."
+    }
+
     // MARK: - Streaming (Advanced)
 
     /// Stream a response token-by-token for real-time UI updates
@@ -377,6 +459,7 @@ final class FMClient: ObservableObject {
     ///   - onPartialContent: Callback for each partial content update
     /// - Throws: Error if streaming fails
     func streamSummary(_ text: String, onPartialContent: @escaping (String) -> Void) async throws {
+        #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
         }
@@ -418,6 +501,10 @@ final class FMClient: ObservableObject {
             log.error("Streaming failed: \(error.localizedDescription)")
             throw FMError.processingFailed
         }
+        #else
+        log.info("Using fallback streaming implementation")
+        onPartialContent(fallbackSummary(for: text))
+        #endif
     }
 }
 

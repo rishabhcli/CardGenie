@@ -56,12 +56,6 @@ struct PhotoScanView: View {
             .navigationTitle("Scan Notes")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-
                 if selectedImage != nil {
                     ToolbarItem(placement: .primaryAction) {
                         Button("Reset") {
@@ -311,21 +305,16 @@ struct PhotoScanView: View {
                     maxPerFormat: 3
                 )
 
-                // Create flashcard set
-                let flashcardSet = FlashcardSet(
-                    topicLabel: result.topicTag,
-                    tag: result.topicTag.lowercased()
-                )
+                // Find or create flashcard set for this topic
+                let flashcardSet = modelContext.findOrCreateFlashcardSet(topicLabel: result.topicTag)
 
                 // Link flashcards to content and set
-                content.flashcards = result.flashcards
-                flashcardSet.cards = result.flashcards
-
-                // Insert all entities
-                modelContext.insert(flashcardSet)
+                content.flashcards.append(contentsOf: result.flashcards)
                 for flashcard in result.flashcards {
+                    flashcardSet.addCard(flashcard)
                     modelContext.insert(flashcard)
                 }
+                flashcardSet.entryCount += 1
 
                 // Save everything
                 try modelContext.save()

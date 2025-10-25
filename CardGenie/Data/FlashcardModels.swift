@@ -85,6 +85,10 @@ final class Flashcard {
     @Relationship(inverse: \FlashcardSet.cards)
     var set: FlashcardSet?
 
+    /// Handwriting data for this card (optional)
+    @Relationship(deleteRule: .cascade)
+    var handwritingData: HandwritingData?
+
     // MARK: - Initialization
 
     init(
@@ -140,6 +144,66 @@ final class Flashcard {
         case .definition: return "Definition"
         }
     }
+
+    // MARK: - Mastery Level
+
+    /// Mastery level based on ease factor and review count
+    enum MasteryLevel: String {
+        case learning = "Learning" // Just started
+        case developing = "Developing" // Getting better
+        case proficient = "Proficient" // Solid knowledge
+        case mastered = "Mastered" // Expert level
+
+        var emoji: String {
+            switch self {
+            case .learning: return "🌱"
+            case .developing: return "📈"
+            case .proficient: return "⭐️"
+            case .mastered: return "🏆"
+            }
+        }
+
+        var color: String {
+            switch self {
+            case .learning: return "orange"
+            case .developing: return "blue"
+            case .proficient: return "purple"
+            case .mastered: return "gold"
+            }
+        }
+    }
+
+    /// Calculate current mastery level
+    var masteryLevel: MasteryLevel {
+        if reviewCount == 0 {
+            return .learning
+        } else if reviewCount < 5 || easeFactor < 2.2 {
+            return .developing
+        } else if reviewCount < 10 || easeFactor < 2.7 {
+            return .proficient
+        } else {
+            return .mastered
+        }
+    }
+
+    /// Progress towards next mastery level (0.0 to 1.0)
+    var masteryProgress: Double {
+        let level = masteryLevel
+        switch level {
+        case .learning:
+            return reviewCount > 0 ? Double(reviewCount) / 2.0 : 0.0
+        case .developing:
+            let reviewProgress = min(Double(reviewCount) / 5.0, 1.0) * 0.5
+            let easeProgress = min((easeFactor - 2.0) / 0.2, 1.0) * 0.5
+            return reviewProgress + easeProgress
+        case .proficient:
+            let reviewProgress = min(Double(reviewCount - 5) / 5.0, 1.0) * 0.5
+            let easeProgress = min((easeFactor - 2.2) / 0.5, 1.0) * 0.5
+            return reviewProgress + easeProgress
+        case .mastered:
+            return 1.0
+        }
+    }
 }
 
 // MARK: - FlashcardSet Model
@@ -179,6 +243,10 @@ final class FlashcardSet {
     /// All flashcards in this set
     @Relationship(deleteRule: .cascade)
     var cards: [Flashcard]
+
+    /// AR Memory Palace for this set (optional)
+    @Relationship(deleteRule: .cascade)
+    var arMemoryPalace: ARMemoryPalace?
 
     // MARK: - Initialization
 
@@ -266,5 +334,29 @@ extension FlashcardSet {
         cards
             .filter { $0.isNew }
             .sorted { $0.createdAt < $1.createdAt }
+    }
+}
+
+// MARK: - ModelContext Helpers
+
+extension ModelContext {
+    /// Find an existing flashcard set for a topic or create a new one if needed.
+    /// Ensures topic tags are normalized to avoid duplicate sets.
+    func findOrCreateFlashcardSet(topicLabel: String) -> FlashcardSet {
+        let trimmedLabel = topicLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        let normalizedLabel = trimmedLabel.isEmpty ? "General" : trimmedLabel
+        let normalizedTag = normalizedLabel.lowercased()
+
+        let descriptor = FetchDescriptor<FlashcardSet>(
+            predicate: #Predicate { $0.tag == normalizedTag }
+        )
+
+        if let existing = try? fetch(descriptor).first {
+            return existing
+        }
+
+        let newSet = FlashcardSet(topicLabel: normalizedLabel, tag: normalizedTag)
+        insert(newSet)
+        return newSet
     }
 }

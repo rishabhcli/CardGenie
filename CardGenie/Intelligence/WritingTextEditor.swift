@@ -52,26 +52,10 @@ struct WritingTextEditor: UIViewRepresentable {
 
         // Enable Apple Intelligence Writing Tools (iOS 26+)
         if #available(iOS 26.0, *) {
-            // This enables the built-in AI text editing features
-            // Users will see options like Proofread, Rewrite, and Summarize
-            // when they select text and open the context menu
-            // TODO: Uncomment when building with iOS 26 SDK
-            // textView.isWritingToolsEnabled = true
-
-            // Optional: Customize writing tools behavior
-            // textView.writingToolsBehavior = .automatic // or .limited
-            //
-            // Behaviors:
-            // - .automatic: Full Writing Tools (default)
-            // - .limited: Only basic corrections
-            // - .none: Disable Writing Tools
-
-            // The system automatically provides:
-            // - Grammar and spelling correction
-            // - Text rewriting in different tones
-            // - Smart summarization
-            // - Sentence restructuring
-            // All of these run on-device via Apple Intelligence
+            // Enable Apple Intelligence Writing Tools using KVC so the project still compiles on pre-iOS 26 SDKs.
+            if textView.responds(to: Selector(("setWritingToolsEnabled:"))) {
+                textView.setValue(true, forKey: "writingToolsEnabled")
+            }
         }
 
         // Set initial text

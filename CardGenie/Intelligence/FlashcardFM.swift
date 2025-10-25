@@ -8,7 +8,9 @@
 
 import Foundation
 import OSLog
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 // MARK: - Flashcard Generation Result
 
@@ -18,13 +20,91 @@ struct FlashcardGenerationResult {
     let entities: [String]
 }
 
+#if !canImport(FoundationModels)
+extension FMClient {
+    /// Generate flashcards using lightweight heuristics when FoundationModels is unavailable.
+    func generateFlashcards(
+        from content: StudyContent,
+        formats: Set<FlashcardType>,
+        maxPerFormat: Int = 3
+    ) async throws -> FlashcardGenerationResult {
+        flashcardLog.info("Using fallback flashcard generation for content: \(content.id)")
+
+        let baseText = content.displayText
+        let tags = fallbackTags(for: baseText)
+        let topic = tags.first ?? content.topic ?? "General"
+
+        var generated: [Flashcard] = []
+        let sentences = baseText
+            .split(whereSeparator: { ".!?".contains($0) })
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        if formats.contains(.qa), let sentence = sentences.first {
+            generated.append(
+                Flashcard(
+                    type: .qa,
+                    question: "What is the key idea from this note?",
+                    answer: sentence,
+                    linkedEntryID: content.id,
+                    tags: tags
+                )
+            )
+        }
+
+        if formats.contains(.cloze), let sentence = sentences.dropFirst().first {
+            let words = sentence.split(separator: " ")
+            if let keyword = words.first(where: { $0.count > 4 }) {
+                let answer = String(keyword)
+                let clozeSentence = sentence.replacingOccurrences(of: answer, with: "_____", options: .caseInsensitive, range: nil)
+                generated.append(
+                    Flashcard(
+                        type: .cloze,
+                        question: clozeSentence,
+                        answer: answer,
+                        linkedEntryID: content.id,
+                        tags: tags
+                    )
+                )
+            }
+        }
+
+        if formats.contains(.definition) {
+            let term = topic
+            let definition = sentences.first ?? "A concept related to \(topic)."
+            generated.append(
+                Flashcard(
+                    type: .definition,
+                    question: "What is \(term)?",
+                    answer: definition,
+                    linkedEntryID: content.id,
+                    tags: tags
+                )
+            )
+        }
+
+        let unique = deduplicateFlashcards(generated)
+        return FlashcardGenerationResult(flashcards: unique, topicTag: topic, entities: tags)
+    }
+
+    /// Provide a simple clarification message about a flashcard.
+    func clarifyFlashcard(_ flashcard: Flashcard, userQuestion: String) async throws -> String {
+        flashcardLog.info("Using fallback clarification for flashcard \(flashcard.id)")
+        return """
+        The answer, "\(flashcard.answer)", comes directly from the material linked to this card. Focus on how it connects to the question "\(flashcard.question)" and review the surrounding context in your notes for reinforcement.
+        """
+    }
+}
+#endif
+
 // MARK: - FMClient Extension for Flashcards
 
 extension FMClient {
-    private var flashcardLog: Logger {
+    fileprivate var flashcardLog: Logger {
         Logger(subsystem: "com.cardgenie.app", category: "FlashcardGeneration")
     }
 
+#if canImport(FoundationModels)
     // MARK: - Main Generation Method
 
     /// Generate flashcards from study content using on-device AI
@@ -368,10 +448,11 @@ extension FMClient {
             return []
         }
     }
+#endif
 
     // MARK: - Deduplication
 
-    private func deduplicateFlashcards(_ flashcards: [Flashcard]) -> [Flashcard] {
+    fileprivate func deduplicateFlashcards(_ flashcards: [Flashcard]) -> [Flashcard] {
         var seen = Set<String>()
         var unique: [Flashcard] = []
 
@@ -386,6 +467,7 @@ extension FMClient {
         return unique
     }
 
+#if canImport(FoundationModels)
     // MARK: - Interactive Clarification
 
     /// Generate a clarification/explanation for a flashcard using on-device AI
@@ -448,4 +530,5 @@ extension FMClient {
             throw FMError.processingFailed
         }
     }
+#endif
 }

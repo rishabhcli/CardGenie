@@ -1,19 +1,30 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-Primary source files live under `CardGenie/`. `App/` hosts `CardGenieApp.swift` and high-level configuration, `Features/` contains SwiftUI screens, `Data/` stores SwiftData models and persistence, `Intelligence/` wraps Apple Intelligence integrations, and `Design/` defines theming components. Shared assets stay in `Assets.xcassets`. Unit targets sit in `CardGenieTests/`, while UI flows belong to `CardGenieUITests/`.
+- Primary code lives in `CardGenie/`. `App/` hosts `CardGenieApp.swift` and app-level setup, `Features/` contains SwiftUI screens, `Data/` holds SwiftData models and persistence, `Intelligence/` wraps Apple Intelligence integrations, and `Design/` delivers theming components. Assets remain in `Assets.xcassets`.
+- Tests live in `CardGenieTests/` for unit coverage and `CardGenieUITests/` for UI flows. Keep shared fixtures alongside the tests that consume them.
 
 ## Build, Test, and Development Commands
-Use Xcode 17+ and the iOS 26 SDK. Open the project with `open CardGenie.xcodeproj`. For command-line builds, run `xcodebuild -scheme CardGenie -destination 'generic/platform=iOS' build`. Execute unit tests with `xcodebuild test -scheme CardGenie -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5'`. When iterating on SwiftUI previews, prefer Xcode's preview canvas to confirm Liquid Glass visuals.
+- Build: `xcodebuild -scheme CardGenie -destination 'generic/platform=iOS' build` to confirm the project compiles with Xcode 17 + iOS 17.5 SDK.
+- Unit tests: `xcodebuild test -scheme CardGenie -destination 'platform=iOS Simulator,name=iPhone 15 Pro,OS=17.5'`.
+- Open in Xcode: `open CardGenie.xcodeproj` for SwiftUI previews and asset tuning.
+- Prefer the preview canvas for iterating on Liquid Glass visuals; avoid adding throwaway preview data to production targets.
 
 ## Coding Style & Naming Conventions
-Follow Swift API Design Guidelines: camelCase for functions and properties, UpperCamelCase for types, and capitalized enums. Use 4-space indentation and group related extensions with `// MARK:` comments. Keep SwiftUI view files focused (one primary view per file) and favor small, composable view structs in `Design/Components`. When touching placeholder Apple Intelligence code, clearly flag TODOs with `// TODO(iOS26):`.
+- Follow Swift API Design Guidelines. Use UpperCamelCase for types, camelCase for functions/properties, and capitalize enums.
+- Indent with 4 spaces, keep one primary SwiftUI view per file, and group extensions using `// MARK:` comments.
+- Place shared view components in `Design/Components` and flag placeholder Apple Intelligence logic with `// TODO(iOS26):`.
 
 ## Testing Guidelines
-Write SwiftData and AI integration tests in `CardGenieTests/`, mirroring filenames with a `Tests` suffix (e.g., `StoreTests.swift`). UI flows belong in `CardGenieUITests/` with scenario-focused methods such as `testJournalEntryCreation()`. Run the full suite via `xcodebuild test` before submitting changes and target coverage for new logic, especially around persistence and FMClient behavior.
+- Mirror target files with `Tests` suffix counterparts (e.g., `StoreTests.swift`). Favor focused methods such as `testJournalEntryCreation()`.
+- Cover SwiftData persistence and FMClient fallbacks, especially offline scenarios. No logging of journal content or prompts in tests.
+- Run the full suite via the `xcodebuild test` command before submitting.
 
 ## Commit & Pull Request Guidelines
-Use short, imperative commit messages (`Add onboarding glass effect`). Reference related docs or ticket IDs in the body when helpful. Pull requests should summarize the change, note impacted screens or services, link to tracking issues, and include simulator screenshots or short screen recordings when UI shifts. Call out any placeholder Apple Intelligence behavior so reviewers can validate gating logic.
+- Use short, imperative commit messages (e.g., `Add onboarding glass effect`). Reference tickets or docs in the body when useful.
+- Pull requests should summarize the change, call out affected screens/services, link tracking issues, and attach simulator screenshots or brief recordings for UI shifts.
+- Highlight any placeholder Apple Intelligence behavior so reviewers can verify gating and privacy handling.
 
-## Apple Intelligence & Privacy Notes
-Never log raw journal content or AI prompts. Validate that new features respect the offline-first contract and degrade gracefully when Apple Intelligence is unavailable. Update `Intelligence/FMClient.swift` docs if API expectations shift, and confirm settings screens clearly communicate privacy posture.
+## Apple Intelligence & Privacy
+- Ensure features degrade gracefully when Apple Intelligence is unavailable and keep the app offline-first.
+- Never log raw journal entries or prompt text. Update `Intelligence/FMClient.swift` docs if API usage shifts and confirm settings screens communicate privacy posture clearly.

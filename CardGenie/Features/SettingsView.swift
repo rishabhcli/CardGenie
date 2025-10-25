@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 /// Settings view with privacy info and AI status
 struct SettingsView: View {
@@ -17,8 +18,14 @@ struct SettingsView: View {
     @StateObject private var fmClient = FMClient()
 
     @Query private var allContent: [StudyContent]
+    @Query private var flashcardSets: [FlashcardSet]
 
     @State private var showClearDataConfirmation = false
+    @State private var showExportOptions = false
+    @State private var showImportPicker = false
+    @State private var exportError: Error?
+    @State private var importSuccess = false
+    @State private var importedCount = 0
 
     var body: some View {
         NavigationStack {
@@ -26,84 +33,18 @@ struct SettingsView: View {
                 // AI Status Section
                 Section {
                     HStack {
-                        VStack(alignment: .leading, spacing: Spacing.xs) {
-                            Text("Apple Intelligence")
-                                .font(.headline)
-
-                            Text(aiStatusDescription)
-                                .font(.caption)
-                                .foregroundStyle(Color.secondaryText)
-                        }
-
+                        Text("Apple Intelligence")
                         Spacer()
-
                         AvailabilityBadge(state: fmClient.capability())
                     }
-                    .padding(.vertical, Spacing.xs)
 
                     if fmClient.capability() != .available {
-                        Button("Open Settings") {
+                        Button("Open System Settings") {
                             openSystemSettings()
                         }
                     }
                 } header: {
-                    Text("AI Features")
-                } footer: {
-                    Text("Apple Intelligence provides on-device summarization, writing assistance, and content tagging. All processing happens locally on your device.")
-                }
-
-                // Privacy Section
-                Section {
-                    InfoRow(
-                        icon: "lock.shield.fill",
-                        title: "100% Offline",
-                        description: "All data stays on your device"
-                    )
-
-                    InfoRow(
-                        icon: "cpu.fill",
-                        title: "On-Device AI",
-                        description: "Processing happens locally via Neural Engine"
-                    )
-
-                    InfoRow(
-                        icon: "eye.slash.fill",
-                        title: "No Tracking",
-                        description: "We don't collect or share any data"
-                    )
-
-                    InfoRow(
-                        icon: "icloud.slash.fill",
-                        title: "No Cloud Sync",
-                        description: "Your journal never leaves this device"
-                    )
-                } header: {
-                    Text("Privacy")
-                } footer: {
-                    Text("CardGenie is designed with privacy first. All your journal entries, AI processing, and data storage remain completely on your device.")
-                }
-
-                // Writing Tools Section
-                Section {
-                    VStack(alignment: .leading, spacing: Spacing.sm) {
-                        Text("Built-in Writing Tools")
-                            .font(.headline)
-
-                        Text("Select text in any entry to access:")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondaryText)
-                            .padding(.bottom, Spacing.xs)
-
-                        FeatureRow(icon: "checkmark.circle.fill", title: "Proofread")
-                        FeatureRow(icon: "arrow.triangle.2.circlepath", title: "Rewrite")
-                        FeatureRow(icon: "text.alignleft", title: "Summarize")
-                        FeatureRow(icon: "wand.and.stars", title: "Transform")
-                    }
-                    .padding(.vertical, Spacing.xs)
-                } header: {
-                    Text("Features")
-                } footer: {
-                    Text("All Writing Tools features are powered by on-device Apple Intelligence and work completely offline.")
+                    Text("AI")
                 }
 
                 // Data Section
@@ -116,10 +57,41 @@ struct SettingsView: View {
                     }
 
                     HStack {
-                        Text("Total Characters")
+                        Text("Flashcard Sets")
                         Spacer()
-                        Text("\(totalCharacterCount)")
+                        Text("\(flashcardSets.count)")
                             .foregroundStyle(Color.secondaryText)
+                    }
+
+                    HStack {
+                        Text("Total Flashcards")
+                        Spacer()
+                        Text("\(totalFlashcardCount)")
+                            .foregroundStyle(Color.secondaryText)
+                    }
+
+                    HStack {
+                        Text("Characters Written")
+                        Spacer()
+                        Text("\(totalCharacterCount.formatted())")
+                            .foregroundStyle(Color.secondaryText)
+                    }
+                } header: {
+                    Text("Your Progress")
+                }
+
+                // Backup Section
+                Section {
+                    Button {
+                        showExportOptions = true
+                    } label: {
+                        Label("Export Flashcards", systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showImportPicker = true
+                    } label: {
+                        Label("Import Flashcards", systemImage: "square.and.arrow.down")
                     }
 
                     Button(role: .destructive) {
@@ -128,30 +100,26 @@ struct SettingsView: View {
                         Label("Clear All Data", systemImage: "trash")
                     }
                 } header: {
-                    Text("Data")
+                    Text("Backup")
                 } footer: {
-                    Text("All data is stored locally in the app's private storage.")
+                    Text("Export your flashcards to backup or share. Imports will merge with existing cards.")
                 }
 
                 // About Section
                 Section {
-                    InfoRow(
-                        icon: "app.badge.checkmark.fill",
-                        title: "Version",
-                        description: "1.0.0"
-                    )
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text("1.0.0")
+                            .foregroundStyle(Color.secondaryText)
+                    }
 
-                    InfoRow(
-                        icon: "iphone.gen3",
-                        title: "Minimum OS",
-                        description: "iOS 26.0"
-                    )
-
-                    InfoRow(
-                        icon: "sparkles",
-                        title: "Design",
-                        description: "Liquid Glass UI"
-                    )
+                    HStack {
+                        Text("iOS Requirement")
+                        Spacer()
+                        Text("26.0+")
+                            .foregroundStyle(Color.secondaryText)
+                    }
                 } header: {
                     Text("About")
                 }
@@ -177,28 +145,45 @@ struct SettingsView: View {
             } message: {
                 Text("This will permanently delete all \(allContent.count) study materials. This action cannot be undone.")
             }
+            .confirmationDialog(
+                "Export Format",
+                isPresented: $showExportOptions,
+                titleVisibility: .visible
+            ) {
+                Button("JSON (Full Backup)") {
+                    exportFlashcards(format: .json)
+                }
+                Button("CSV (Progress Only)") {
+                    exportFlashcards(format: .csv)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Choose export format. JSON preserves all data, CSV is for spreadsheets.")
+            }
+            .fileImporter(
+                isPresented: $showImportPicker,
+                allowedContentTypes: [.json],
+                allowsMultipleSelection: false
+            ) { result in
+                handleImport(result)
+            }
+            .alert("Import Successful", isPresented: $importSuccess) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Imported \(importedCount) flashcards successfully!")
+            }
+            .errorAlert($exportError)
         }
     }
 
     // MARK: - Computed Properties
 
-    private var aiStatusDescription: String {
-        switch fmClient.capability() {
-        case .available:
-            return "Ready and available"
-        case .notEnabled:
-            return "Disabled in Settings"
-        case .notSupported:
-            return "Device not supported"
-        case .modelNotReady:
-            return "Loading model..."
-        case .unknown:
-            return "Status unknown"
-        }
-    }
-
     private var totalCharacterCount: Int {
         allContent.reduce(0) { $0 + $1.displayText.count }
+    }
+
+    private var totalFlashcardCount: Int {
+        flashcardSets.reduce(0) { $0 + $1.cardCount }
     }
 
     // MARK: - Actions
@@ -215,51 +200,72 @@ struct SettingsView: View {
         }
         try? modelContext.save()
     }
-}
 
-// MARK: - Supporting Views
+    // MARK: - Export/Import
 
-/// A row displaying information with an icon
-private struct InfoRow: View {
-    let icon: String
-    let title: String
-    let description: String
-
-    var body: some View {
-        HStack(spacing: Spacing.md) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(Color.aiAccent)
-                .frame(width: 32)
-
-            VStack(alignment: .leading, spacing: Spacing.xs) {
-                Text(title)
-                    .font(.body)
-                    .foregroundStyle(Color.primaryText)
-
-                Text(description)
-                    .font(.caption)
-                    .foregroundStyle(Color.secondaryText)
-            }
-        }
-        .padding(.vertical, Spacing.xs)
+    private enum ExportFormat {
+        case json
+        case csv
     }
-}
 
-/// A row displaying a feature with a checkmark
-private struct FeatureRow: View {
-    let icon: String
-    let title: String
+    private func exportFlashcards(format: ExportFormat) {
+        guard !flashcardSets.isEmpty else {
+            exportError = ExportError.noDataToExport
+            return
+        }
 
-    var body: some View {
-        HStack(spacing: Spacing.sm) {
-            Image(systemName: icon)
-                .foregroundStyle(Color.aiAccent)
-                .frame(width: 20)
+        do {
+            let data: Data
+            let filename: String
 
-            Text(title)
-                .font(.subheadline)
-                .foregroundStyle(Color.primaryText)
+            switch format {
+            case .json:
+                data = try FlashcardExporter.exportToJSON(sets: flashcardSets)
+                filename = FlashcardExporter.generateFilename(extension: "json")
+            case .csv:
+                let csvString = try FlashcardExporter.exportToCSV(sets: flashcardSets)
+                data = Data(csvString.utf8)
+                filename = FlashcardExporter.generateFilename(extension: "csv")
+            }
+
+            let fileURL = try FlashcardExporter.createExportFile(data: data, filename: filename)
+            shareFile(at: fileURL)
+
+        } catch {
+            exportError = error
+        }
+    }
+
+    private func handleImport(_ result: Result<[URL], Error>) {
+        do {
+            guard let url = try result.get().first else { return }
+
+            // Start accessing security-scoped resource
+            guard url.startAccessingSecurityScopedResource() else {
+                exportError = ExportError.fileWriteFailed("Cannot access file")
+                return
+            }
+            defer { url.stopAccessingSecurityScopedResource() }
+
+            let data = try Data(contentsOf: url)
+            importedCount = try FlashcardExporter.importFromJSON(data, into: modelContext)
+            importSuccess = true
+
+        } catch {
+            exportError = error
+        }
+    }
+
+    private func shareFile(at url: URL) {
+        let activityVC = UIActivityViewController(
+            activityItems: [url],
+            applicationActivities: nil
+        )
+
+        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+           let rootVC = windowScene.windows.first?.rootViewController {
+            activityVC.popoverPresentationController?.sourceView = rootVC.view
+            rootVC.present(activityVC, animated: true)
         }
     }
 }

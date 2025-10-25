@@ -517,16 +517,33 @@ struct FlashcardCardView: View {
 
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            // Type indicator
+            // Type indicator and mastery level
             HStack {
-                Image(systemName: typeIcon)
-                    .font(.caption)
-                Text(flashcard.typeDisplayName)
-                    .font(.caption)
-                    .fontWeight(.medium)
+                HStack(spacing: 4) {
+                    Image(systemName: typeIcon)
+                        .font(.caption)
+                    Text(flashcard.typeDisplayName)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                }
+                .foregroundStyle(Color.tertiaryText)
+
                 Spacer()
+
+                // Mastery badge
+                HStack(spacing: 4) {
+                    Text(flashcard.masteryLevel.emoji)
+                        .font(.caption)
+                    Text(flashcard.masteryLevel.rawValue)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(masteryColor.opacity(0.15))
+                .foregroundStyle(masteryColor)
+                .cornerRadius(8)
             }
-            .foregroundStyle(Color.tertiaryText)
 
             Spacer()
 
@@ -574,6 +591,39 @@ struct FlashcardCardView: View {
                 showAnswer.toggle()
             }
         }
+        // MARK: - Accessibility
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityValue(accessibilityValue)
+        .accessibilityHint(accessibilityHint)
+        .accessibilityAddTraits(showAnswer ? [] : .isButton)
+        .accessibilityAction(named: "Reveal Answer") {
+            withAnimation(.spring()) {
+                showAnswer = true
+            }
+        }
+    }
+
+    // MARK: - Accessibility Helpers
+
+    private var accessibilityLabel: String {
+        "Flashcard: \(flashcard.typeDisplayName). Mastery level: \(flashcard.masteryLevel.rawValue)"
+    }
+
+    private var accessibilityValue: String {
+        if showAnswer {
+            return "Question: \(flashcard.question). Answer: \(flashcard.answer)"
+        } else {
+            return "Question: \(flashcard.question). Answer hidden."
+        }
+    }
+
+    private var accessibilityHint: String {
+        if showAnswer {
+            return "Swipe right to rate your recall"
+        } else {
+            return "Double tap to reveal answer"
+        }
     }
 
     private var typeIcon: String {
@@ -581,6 +631,15 @@ struct FlashcardCardView: View {
         case .cloze: return "text.badge.star"
         case .qa: return "questionmark.bubble"
         case .definition: return "book"
+        }
+    }
+
+    private var masteryColor: Color {
+        switch flashcard.masteryLevel {
+        case .learning: return .orange
+        case .developing: return .blue
+        case .proficient: return .purple
+        case .mastered: return Color(red: 1.0, green: 0.84, blue: 0.0) // Gold
         }
     }
 }
@@ -614,6 +673,10 @@ struct ReviewButton: View {
             .cornerRadius(CornerRadius.md)
         }
         .disabled(!isEnabled)
+        // MARK: - Accessibility
+        .accessibilityLabel("\(response.displayName) recall")
+        .accessibilityValue("\(shortDescription) accuracy")
+        .accessibilityHint("Double tap to rate this flashcard as \(response.displayName.lowercased())")
     }
 
     private var backgroundColor: Color {
@@ -689,16 +752,17 @@ struct StudyProgressBar: View {
 struct FlashcardsEmptyState: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
-            Image(systemName: "rectangle.on.rectangle.angled")
+            Image(systemName: "wand.and.stars")
                 .font(.system(size: 64))
-                .foregroundStyle(Color.tertiaryText)
+                .foregroundStyle(Color.aiAccent)
+                .symbolEffect(.pulse)
 
             VStack(spacing: Spacing.sm) {
-                Text("No Flashcards Yet")
+                Text("Ready to Level Up? 🚀")
                     .font(.entryTitle)
                     .foregroundStyle(Color.primaryText)
 
-                Text("Generate flashcards from your journal entries to start learning")
+                Text("Create some study materials, then let CardGenie work its magic to generate flashcards!")
                     .font(.preview)
                     .foregroundStyle(Color.secondaryText)
                     .multilineTextAlignment(.center)

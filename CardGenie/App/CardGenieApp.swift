@@ -71,11 +71,23 @@ struct MainTabView: View {
 
             flashcardsTab
 
-            SettingsView()
+            VoiceAssistantView()
                 .tabItem {
-                    Label("Settings", systemImage: "gearshape.fill")
+                    Label("Ask", systemImage: "waveform.circle.fill")
                 }
                 .tag(2)
+
+            VoiceRecordView()
+                .tabItem {
+                    Label("Record", systemImage: "mic.circle.fill")
+                }
+                .tag(3)
+
+            PhotoScanView()
+                .tabItem {
+                    Label("Scan", systemImage: "camera.fill")
+                }
+                .tag(4)
         }
         .accentColor(.cosmicPurple)
     }

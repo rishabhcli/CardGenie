@@ -21,8 +21,6 @@ struct ContentListView: View {
     // Navigation
     @State private var selectedContent: StudyContent?
     @State private var showingSettings = false
-    @State private var showingPhotoScan = false
-    @State private var showingVoiceRecord = false
 
     // Animation
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -66,24 +64,8 @@ struct ContentListView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
-                    Menu {
-                        Button {
-                            createNewContent(source: .text)
-                        } label: {
-                            Label("Add Text", systemImage: "text.quote")
-                        }
-
-                        Button {
-                            showingPhotoScan = true
-                        } label: {
-                            Label("Scan Notes", systemImage: "camera.fill")
-                        }
-
-                        Button {
-                            showingVoiceRecord = true
-                        } label: {
-                            Label("Record Lecture", systemImage: "mic.fill")
-                        }
+                    Button {
+                        createNewContent(source: .text)
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
@@ -99,12 +81,6 @@ struct ContentListView: View {
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
-            }
-            .sheet(isPresented: $showingPhotoScan) {
-                PhotoScanView()
-            }
-            .sheet(isPresented: $showingVoiceRecord) {
-                VoiceRecordView()
             }
         }
     }

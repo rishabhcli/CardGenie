@@ -90,7 +90,7 @@ final class NotificationManager: ObservableObject {
             options: []
         )
 
-        await UNUserNotificationCenter.current().setNotificationCategories([category])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
 
         content.categoryIdentifier = "FLASHCARD_REVIEW"
 

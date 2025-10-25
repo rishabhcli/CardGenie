@@ -13,6 +13,8 @@ struct StudyResultsView: View {
     let correct: Int
     let total: Int
     let streak: Int
+    let missedCount: Int
+    let onRetry: (() -> Void)?
     let onDismiss: () -> Void
 
     @State private var encouragement = ""
@@ -78,6 +80,26 @@ struct StudyResultsView: View {
             }
             .padding(.vertical, Spacing.lg)
 
+            if missedCount > 0, let onRetry {
+                VStack(spacing: Spacing.sm) {
+                    Text("Missed \(missedCount) card\(missedCount == 1 ? "" : "s")")
+                        .font(.system(.callout, design: .rounded, weight: .semibold))
+                        .foregroundColor(.secondaryText)
+
+                    HapticButton(hapticStyle: .medium) {
+                        onRetry()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("Retry Missed Cards")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(MagicButtonStyle())
+                }
+                .padding(.horizontal)
+            }
+
             // AI Encouragement
             VStack(spacing: Spacing.md) {
                 if isLoading {
@@ -136,16 +158,48 @@ struct StudyResultsView: View {
             )
             isLoading = false
         } catch {
-            // Fallback encouragement
-            if accuracy >= 0.9 {
-                encouragement = "Outstanding work! You're mastering this material! ⭐️"
-            } else if accuracy >= 0.7 {
-                encouragement = "Great progress! Keep up the excellent work! 💪"
-            } else if accuracy >= 0.5 {
-                encouragement = "You're learning! Every review makes you stronger! 🌟"
+            // Fallback encouragement with more personality
+            let messages: [String]
+
+            if accuracy >= 0.95 {
+                messages = [
+                    "🎯 PERFECT! You're a CardGenie master!",
+                    "✨ Flawless! Your brain is on fire!",
+                    "🌟 Legendary performance! Keep this energy!",
+                    "🚀 Mind-blowing! You're unstoppable!"
+                ]
+            } else if accuracy >= 0.8 {
+                messages = [
+                    "🔥 Crushing it! You're in the zone!",
+                    "💪 Impressive! Your hard work is paying off!",
+                    "⭐️ Stellar session! You're leveling up fast!",
+                    "✨ Fantastic! Keep that momentum going!"
+                ]
+            } else if accuracy >= 0.6 {
+                messages = [
+                    "📈 Making progress! You're getting stronger!",
+                    "🌱 Growing every day! Keep practicing!",
+                    "💡 You're learning! Every card counts!",
+                    "🎯 Solid effort! You're on the right track!"
+                ]
             } else {
-                encouragement = "Don't give up! Learning takes time and you're doing great! 💫"
+                messages = [
+                    "🌟 Every expert was once a beginner! Keep going!",
+                    "💫 Practice makes perfect! You've got this!",
+                    "🦸 Heroes train every day! You're doing great!",
+                    "✨ Learning is a journey! You're making moves!"
+                ]
             }
+
+            // Add streak bonus message
+            if streak >= 7 {
+                encouragement = messages.randomElement()! + "\n🔥 \(streak)-day streak! You're on fire!"
+            } else if streak >= 3 {
+                encouragement = messages.randomElement()! + "\n⚡️ \(streak)-day streak! Keep it alive!"
+            } else {
+                encouragement = messages.randomElement()!
+            }
+
             isLoading = false
         }
     }
@@ -177,6 +231,8 @@ struct StatItem: View {
         correct: 9,
         total: 10,
         streak: 5,
+        missedCount: 0,
+        onRetry: nil,
         onDismiss: {}
     )
 }
@@ -186,6 +242,8 @@ struct StatItem: View {
         correct: 6,
         total: 10,
         streak: 2,
+        missedCount: 2,
+        onRetry: {},
         onDismiss: {}
     )
 }
@@ -195,6 +253,8 @@ struct StatItem: View {
         correct: 3,
         total: 10,
         streak: 1,
+        missedCount: 1,
+        onRetry: {},
         onDismiss: {}
     )
 }

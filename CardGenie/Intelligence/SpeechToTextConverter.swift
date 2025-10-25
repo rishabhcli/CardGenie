@@ -32,7 +32,7 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
     private let audioEngine = AVAudioEngine()
     private var audioRecorder: AVAudioRecorder?
     private var recordingURL: URL?
-    private var recordingTimer: Timer?
+    private var recordingTimerTask: Task<Void, Never>?
 
     // MARK: - Authorization
 
@@ -71,6 +71,11 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
         guard authorizationStatus() == .authorized else {
             logger.error("Speech recognition not authorized")
             throw SpeechError.notAuthorized
+        }
+
+        if #available(iOS 13.0, *), let recognizer = speechRecognizer, !recognizer.supportsOnDeviceRecognition {
+            logger.error("On-device recognition not supported on this device")
+            throw SpeechError.onDeviceNotSupported
         }
 
         guard isAvailable() else {
@@ -113,6 +118,10 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
             throw SpeechError.unableToCreateRequest
         }
 
+        if #available(iOS 13.0, *) {
+            recognitionRequest.requiresOnDeviceRecognition = true
+        }
+
         recognitionRequest.shouldReportPartialResults = true
 
         // Get audio input node
@@ -150,9 +159,18 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
         recordingDuration = 0
 
         // Start duration timer
-        recordingTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.recordingDuration += 0.1
+        recordingTimerTask?.cancel()
+        recordingTimerTask = Task { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: 100_000_000)
+                } catch {
+                    return
+                }
+                await MainActor.run {
+                    guard let self else { return }
+                    self.recordingDuration += 0.1
+                }
             }
         }
 
@@ -176,8 +194,8 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
         recognitionTask = nil
 
         // Stop timer
-        recordingTimer?.invalidate()
-        recordingTimer = nil
+        recordingTimerTask?.cancel()
+        recordingTimerTask = nil
 
         // Update state
         isRecording = false
@@ -222,8 +240,11 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
         logger.info("Starting transcription of audio file")
 
         return try await withCheckedThrowingContinuation { continuation in
-            let request = SFSpeechURLRecognitionRequest(url: url)
-            request.shouldReportPartialResults = false
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        if #available(iOS 13.0, *) {
+            request.requiresOnDeviceRecognition = true
+        }
+        request.shouldReportPartialResults = false
 
             speechRecognizer?.recognitionTask(with: request) { result, error in
                 if let error = error {
@@ -250,6 +271,7 @@ enum SpeechError: LocalizedError {
     case unableToCreateRequest
     case transcriptionFailed(String)
     case audioEngineError
+    case onDeviceNotSupported
 
     var errorDescription: String? {
         switch self {
@@ -263,6 +285,8 @@ enum SpeechError: LocalizedError {
             return "Transcription failed: \(reason)"
         case .audioEngineError:
             return "Audio recording error. Please check your microphone."
+        case .onDeviceNotSupported:
+            return "This device doesn’t support on-device speech recognition required for offline transcription."
         }
     }
 
@@ -278,6 +302,8 @@ enum SpeechError: LocalizedError {
             return "Make sure you're speaking clearly in a quiet environment."
         case .audioEngineError:
             return "Check that your microphone is working and not being used by another app."
+        case .onDeviceNotSupported:
+            return "Use a device that supports on-device speech recognition or connect to a newer Apple Intelligence-compatible device."
         }
     }
 }
