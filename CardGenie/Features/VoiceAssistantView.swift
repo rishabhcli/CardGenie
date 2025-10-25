@@ -3,11 +3,10 @@
 //  CardGenie
 //
 //  Voice Q&A agent using Apple Intelligence.
-//  Ask questions, get answers from your study materials.
+//  Ask general knowledge questions and get instant answers.
 //
 
 import SwiftUI
-import SwiftData
 import Speech
 import AVFoundation
 import Combine
@@ -15,8 +14,6 @@ import Combine
 // MARK: - Voice Assistant View
 
 struct VoiceAssistantView: View {
-    @Environment(\.modelContext) private var modelContext
-
     @StateObject private var assistant = VoiceAssistant()
     @State private var showPermissionAlert = false
     @State private var hasRequestedPermission = false
@@ -76,8 +73,6 @@ struct VoiceAssistantView: View {
             .onAppear {
                 if !hasRequestedPermission {
                     requestPermissions()
-                } else {
-                    assistant.setModelContext(modelContext)
                 }
             }
             .onDisappear {
@@ -113,7 +108,7 @@ struct VoiceAssistantView: View {
             Text("Voice Assistant")
                 .font(.title.bold())
 
-            Text("Ask questions about your study materials and get instant answers using on-device AI.")
+            Text("Ask any general knowledge question and get instant answers using on-device AI.")
                 .font(.body)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -136,11 +131,11 @@ struct VoiceAssistantView: View {
                 .font(.system(size: 50))
                 .foregroundStyle(.secondary)
 
-            Text("Tap the mic and ask a question")
+            Text("Hold the mic and ask a question")
                 .font(.headline)
                 .foregroundStyle(.secondary)
 
-            Text("I'll search your study materials and answer")
+            Text("Release when done speaking to get your answer")
                 .font(.caption)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
@@ -361,7 +356,6 @@ struct VoiceAssistantView: View {
             await MainActor.run {
                 if micAuth {
                     hasRequestedPermission = true
-                    assistant.setModelContext(modelContext)
                 } else {
                     showPermissionAlert = true
                 }
@@ -380,7 +374,6 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var currentTranscript = ""
     @Published var conversation: [ConversationMessage] = []
 
-    private var modelContext: ModelContext?
     private let llm: LLMEngine
     nonisolated(unsafe) private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
     nonisolated(unsafe) private let audioEngine = AVAudioEngine()
@@ -393,10 +386,6 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         self.llm = AIEngineFactory.createLLMEngine()
         super.init()
         speechSynthesizer.delegate = self
-    }
-
-    func setModelContext(_ context: ModelContext) {
-        self.modelContext = context
     }
 
     func clearConversation() {
@@ -516,89 +505,15 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     }
 
     private func generateAnswer(question: String) async throws -> String {
-        guard let context = modelContext else {
-            return "I don't have access to your study materials yet. Please add some content first."
-        }
+        // Generate general knowledge answer using on-device LLM
+        let prompt = """
+        You are a helpful voice assistant. Answer this question clearly and concisely in 2-3 sentences maximum.
+        This answer will be spoken aloud, so keep it conversational and easy to understand.
 
-        // Get all study content for RAG
-        let descriptor = FetchDescriptor<StudyContent>(
-            sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
-        )
+        QUESTION: \(question)
 
-        guard let allContent = try? context.fetch(descriptor), !allContent.isEmpty else {
-            return "I don't have any study materials to search. Please add some content first."
-        }
-
-        // Extract key terms from question
-        let questionWords = question.lowercased()
-            .components(separatedBy: CharacterSet.alphanumerics.inverted)
-            .filter { $0.count > 3 } // Only words longer than 3 chars
-
-        // Search for relevant content with better scoring
-        var scoredContent: [(content: StudyContent, score: Int)] = []
-
-        for content in allContent {
-            var score = 0
-            let contentText = (content.displayText + " " + (content.summary ?? "")).lowercased()
-
-            // Score based on term matches
-            for word in questionWords {
-                if contentText.contains(word) {
-                    score += 10
-                }
-            }
-
-            // Boost recent content slightly
-            let daysSince = Calendar.current.dateComponents([.day], from: content.createdAt, to: Date()).day ?? 0
-            if daysSince < 7 {
-                score += 2
-            }
-
-            if score > 0 {
-                scoredContent.append((content, score))
-            }
-        }
-
-        // Sort by score and take top 3
-        let relevantContent = scoredContent
-            .sorted { $0.score > $1.score }
-            .prefix(3)
-            .map { $0.content }
-
-        // Build context
-        let contextText: String
-        if !relevantContent.isEmpty {
-            contextText = relevantContent.enumerated().map { index, content in
-                "[Source \(index + 1): \(content.sourceLabel)]\n\(content.displayText.prefix(500))"
-            }.joined(separator: "\n\n")
-        } else {
-            contextText = ""
-        }
-
-        // Generate answer
-        let prompt: String
-        if !contextText.isEmpty {
-            prompt = """
-            You are a helpful study assistant. Answer the question based ONLY on the provided study materials.
-            Be concise (2-3 sentences maximum) since this will be spoken aloud.
-            If the materials don't contain the answer, say so briefly.
-
-            STUDY MATERIALS:
-            \(contextText)
-
-            QUESTION: \(question)
-
-            Provide a clear, concise answer:
-            """
-        } else {
-            prompt = """
-            You are a helpful study assistant. Answer this study-related question concisely in 2-3 sentences maximum.
-
-            QUESTION: \(question)
-
-            Provide a clear, concise answer:
-            """
-        }
+        Provide a clear, concise answer:
+        """
 
         let answer = try await llm.complete(prompt, maxTokens: 200)
         return answer.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -653,9 +568,5 @@ struct ConversationMessage: Identifiable {
 // MARK: - Preview
 
 #Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
-
-    return VoiceAssistantView()
-        .modelContainer(container)
+    VoiceAssistantView()
 }
