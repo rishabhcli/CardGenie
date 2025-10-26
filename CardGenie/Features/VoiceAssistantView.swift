@@ -10,6 +10,7 @@ import SwiftUI
 import Speech
 import AVFoundation
 import Combine
+import OSLog
 
 // MARK: - Voice Assistant View
 
@@ -373,11 +374,13 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isProcessing = false
     @Published var currentTranscript = ""
     @Published var conversation: [ConversationMessage] = []
+    @Published var lastError: String?
 
     private let llm: LLMEngine
     private let speechRecognizer: SFSpeechRecognizer
     private let audioEngine = AVAudioEngine()
     private let speechSynthesizer = AVSpeechSynthesizer()
+    private let log = Logger(subsystem: "com.cardgenie.app", category: "VoiceAssistant")
 
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
@@ -388,16 +391,34 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         self.speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer()!
         super.init()
         speechSynthesizer.delegate = self
+        log.info("🎙️ Voice Assistant initialized (OFFLINE MODE)")
+        log.info("✅ On-device speech recognition: ENABLED")
+        log.info("✅ On-device AI processing: \(self.llm.isAvailable ? "AVAILABLE" : "UNAVAILABLE")")
     }
 
     func clearConversation() {
         conversation.removeAll()
+        lastError = nil
+        log.info("🗑️ Conversation cleared")
+    }
+
+    // MARK: - Cancellation
+
+    func cancelListening() {
+        log.info("🛑 Cancelling voice recognition")
+        stopListening()
     }
 
     // MARK: - Listening
 
     func startListening() throws {
-        guard !isListening else { return }
+        guard !isListening else {
+            log.warning("⚠️ Already listening")
+            return
+        }
+
+        log.info("🎙️ Starting voice recognition (on-device)")
+        lastError = nil
 
         // Stop speaking if active
         if isSpeaking {
@@ -406,14 +427,25 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         }
 
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement)
-        try audioSession.setActive(true)
+        do {
+            try audioSession.setCategory(.record, mode: .measurement)
+            try audioSession.setActive(true)
+        } catch {
+            log.error("❌ Failed to configure audio session: \(error.localizedDescription)")
+            lastError = "Microphone access failed"
+            throw error
+        }
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else { return }
+        guard let recognitionRequest = recognitionRequest else {
+            log.error("❌ Failed to create recognition request")
+            lastError = "Speech recognition setup failed"
+            return
+        }
 
         recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.requiresOnDeviceRecognition = true
+        recognitionRequest.requiresOnDeviceRecognition = true // CRITICAL: OFFLINE ONLY
+        log.info("✅ On-device recognition mode ENFORCED")
 
         let inputNode = audioEngine.inputNode
         let recordingFormat = inputNode.outputFormat(forBus: 0)
@@ -423,7 +455,14 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         }
 
         audioEngine.prepare()
-        try audioEngine.start()
+        do {
+            try audioEngine.start()
+            log.info("🔊 Audio engine started")
+        } catch {
+            log.error("❌ Failed to start audio engine: \(error.localizedDescription)")
+            lastError = "Audio recording failed"
+            throw error
+        }
 
         recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
             guard let self = self else { return }
@@ -433,13 +472,16 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                     self.currentTranscript = result.bestTranscription.formattedString
 
                     if result.isFinal {
+                        self.log.info("✅ Transcription complete: '\(self.currentTranscript)'")
                         await self.handleQuestion(self.currentTranscript)
                     }
                 }
             }
 
-            if error != nil {
+            if let error = error {
                 Task { @MainActor in
+                    self.log.error("❌ Recognition error: \(error.localizedDescription)")
+                    self.lastError = "Voice recognition failed"
                     self.stopListening()
                 }
             }
@@ -452,6 +494,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     func stopListening() {
         guard isListening else { return }
 
+        log.info("🛑 Stopping voice recognition")
         audioEngine.stop()
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
@@ -463,8 +506,12 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     // MARK: - Question Handling
 
     private func handleQuestion(_ question: String) async {
-        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            log.warning("⚠️ Empty question received")
+            return
+        }
 
+        log.info("❓ Processing question: '\(question)'")
         stopListening()
 
         // Add user message
@@ -477,7 +524,9 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         // Get answer
         do {
+            log.info("🧠 Generating answer (on-device AI)...")
             let answer = try await generateAnswer(question: question)
+            log.info("✅ Answer generated: '\(answer.prefix(50))...'")
 
             // Add assistant message
             let assistantMessage = ConversationMessage(text: answer, isUser: false)
@@ -493,7 +542,9 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             try? startListening()
 
         } catch {
+            log.error("❌ Failed to generate answer: \(error.localizedDescription)")
             isProcessing = false
+            lastError = "AI processing failed"
 
             let errorAnswer = "Sorry, I had trouble processing that. Could you rephrase your question?"
             let errorMessage = ConversationMessage(text: errorAnswer, isUser: false)
