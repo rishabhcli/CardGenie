@@ -37,7 +37,7 @@ final class VideoProcessor {
         )
 
         // Get video duration
-        let asset = AVAsset(url: videoURL)
+        let asset = AVURLAsset(url: videoURL)
         let duration = try await asset.load(.duration).seconds
         sourceDoc.duration = duration
 
@@ -79,7 +79,7 @@ final class VideoProcessor {
     // MARK: - Audio Extraction
 
     private func extractAudio(from videoURL: URL) async throws -> URL {
-        let asset = AVAsset(url: videoURL)
+        let asset = AVURLAsset(url: videoURL)
 
         // Get audio track
         guard let audioTrack = try await asset.loadTracks(withMediaType: .audio).first else {
@@ -100,15 +100,22 @@ final class VideoProcessor {
         let tempDir = FileManager.default.temporaryDirectory
         let audioURL = tempDir.appendingPathComponent("\(UUID().uuidString).m4a")
 
-        exportSession.outputURL = audioURL
-        exportSession.outputFileType = .m4a
-
-        await exportSession.export()
-
-        if exportSession.status == .completed {
+        // Use new iOS 18+ export API
+        if #available(iOS 18.0, *) {
+            try await exportSession.export(to: audioURL, as: .m4a)
             return audioURL
         } else {
-            throw VideoProcessingError.exportFailed
+            // Fallback for older iOS versions
+            exportSession.outputURL = audioURL
+            exportSession.outputFileType = .m4a
+
+            await exportSession.export()
+
+            if exportSession.status == .completed {
+                return audioURL
+            } else {
+                throw VideoProcessingError.exportFailed
+            }
         }
     }
 

@@ -375,15 +375,17 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var conversation: [ConversationMessage] = []
 
     private let llm: LLMEngine
-    nonisolated(unsafe) private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
-    nonisolated(unsafe) private let audioEngine = AVAudioEngine()
-    nonisolated(unsafe) private let speechSynthesizer = AVSpeechSynthesizer()
+    private let speechRecognizer: SFSpeechRecognizer
+    private let audioEngine = AVAudioEngine()
+    private let speechSynthesizer = AVSpeechSynthesizer()
 
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
 
     override init() {
         self.llm = AIEngineFactory.createLLMEngine()
+        // Initialize speech recognizer with fallback
+        self.speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer()!
         super.init()
         speechSynthesizer.delegate = self
     }

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import NaturalLanguage
 
 // MARK: - LLM Engine Protocol
 
@@ -117,15 +118,76 @@ final class AppleEmbedding: EmbeddingEngine {
     }
 
     private func generateEmbedding(for text: String) async throws -> [Float] {
-        // Simplified embedding using NaturalLanguage framework
-        // In production, use actual embedding model
-        let normalized = text.lowercased()
-        let hash = abs(normalized.hashValue)
+        // Use NaturalLanguage framework's NLEmbedding for semantic vectors
+        guard let embedding = NLEmbedding.sentenceEmbedding(for: .english) else {
+            // Fallback to word embedding if sentence embedding not available
+            guard let wordEmbedding = NLEmbedding.wordEmbedding(for: .english) else {
+                throw LLMError.modelNotLoaded
+            }
+            return await generateWordBasedEmbedding(for: text, using: wordEmbedding)
+        }
 
-        // Simple hash-based embedding (placeholder)
-        // TODO: Replace with actual NLEmbedding or Core ML model
-        return (0..<dimension).map { i in
-            Float(sin(Double(hash + i) * 0.1))
+        // Get sentence embedding vector
+        if let vector = embedding.vector(for: text) {
+            // NLEmbedding returns vectors of varying sizes, normalize to our dimension
+            let floatVector = Array(vector).map { Float($0) }
+            return normalizeVector(floatVector, targetDimension: dimension)
+        }
+
+        // If sentence embedding fails, fall back to word-based approach
+        guard let wordEmbedding = NLEmbedding.wordEmbedding(for: .english) else {
+            throw LLMError.modelNotLoaded
+        }
+        return await generateWordBasedEmbedding(for: text, using: wordEmbedding)
+    }
+
+    private func generateWordBasedEmbedding(for text: String, using embedding: NLEmbedding) async -> [Float] {
+        // Tokenize text and average word embeddings
+        let tokenizer = NLTokenizer(unit: .word)
+        tokenizer.string = text
+
+        var wordVectors: [[Double]] = []
+        tokenizer.enumerateTokens(in: text.startIndex..<text.endIndex) { tokenRange, _ in
+            let word = String(text[tokenRange])
+            if let vector = embedding.vector(for: word) {
+                wordVectors.append(Array(vector))
+            }
+            return true
+        }
+
+        // Average all word vectors
+        guard !wordVectors.isEmpty else {
+            // Return zero vector if no words found
+            return Array(repeating: 0.0, count: dimension)
+        }
+
+        let vectorSize = wordVectors[0].count
+        var averagedVector = Array(repeating: 0.0, count: vectorSize)
+
+        for vector in wordVectors {
+            for (i, value) in vector.enumerated() {
+                averagedVector[i] += value
+            }
+        }
+
+        for i in 0..<vectorSize {
+            averagedVector[i] /= Double(wordVectors.count)
+        }
+
+        return normalizeVector(averagedVector.map { Float($0) }, targetDimension: dimension)
+    }
+
+    private func normalizeVector(_ vector: [Float], targetDimension: Int) -> [Float] {
+        let currentSize = vector.count
+
+        if currentSize == targetDimension {
+            return vector
+        } else if currentSize > targetDimension {
+            // Truncate to target dimension
+            return Array(vector.prefix(targetDimension))
+        } else {
+            // Pad with zeros to reach target dimension
+            return vector + Array(repeating: 0.0, count: targetDimension - currentSize)
         }
     }
 }
