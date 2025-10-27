@@ -11,12 +11,22 @@ import Speech
 
 // MARK: - Lecture Recorder
 
+protocol LectureRecorderDelegate: AnyObject {
+    @MainActor
+    func recorder(_ recorder: LectureRecorder, didUpdateTranscript transcript: String)
+
+    @MainActor
+    func recorder(_ recorder: LectureRecorder, didProduce chunk: TranscriptChunk)
+
+    @MainActor
+    func recorder(_ recorder: LectureRecorder, didEncounter error: Error)
+}
+
 @Observable
 final class LectureRecorder: NSObject {
     private let audioEngine = AVAudioEngine()
-    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
-    private var recognitionTask: SFSpeechRecognitionTask?
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US"))!
+    private let transcriber = OnDeviceTranscriber()
+    weak var delegate: LectureRecorderDelegate?
 
     private var audioFile: AVAudioFile?
     private var audioFileURL: URL?
@@ -38,23 +48,28 @@ final class LectureRecorder: NSObject {
     // Rolling summary timer
     private var summaryTimer: Timer?
 
+    @MainActor
+    func currentTimestamp() -> TimeInterval {
+        if let start = recordingStartTime {
+            return Date().timeIntervalSince(start)
+        }
+        return duration
+    }
+
     init(llm: LLMEngine = AIEngineFactory.createLLMEngine(),
          embedding: EmbeddingEngine = AIEngineFactory.createEmbeddingEngine()) {
         self.llm = llm
         self.embedding = embedding
         super.init()
+        transcriber.delegate = self
     }
 
     // MARK: - Permission
 
     func requestPermissions() async -> Bool {
-        // Request speech recognition
-        let speechAuth = await withCheckedContinuation { continuation in
-            SFSpeechRecognizer.requestAuthorization { status in
-                continuation.resume(returning: status)
-            }
+        guard await transcriber.prepareAuthorization() else {
+            return false
         }
-        guard speechAuth == .authorized else { return false }
 
         // Request microphone
         let audioSession = AVAudioSession.sharedInstance()
@@ -95,14 +110,11 @@ final class LectureRecorder: NSObject {
         try audioSession.setCategory(.record, mode: .measurement)
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
-        // Create recognition request
-        recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
-        guard let recognitionRequest = recognitionRequest else {
-            throw RecordingError.setupFailed
+        do {
+            try transcriber.startStreaming()
+        } catch {
+            throw RecordingError.recognitionFailed
         }
-
-        recognitionRequest.shouldReportPartialResults = true
-        recognitionRequest.requiresOnDeviceRecognition = true // OFFLINE ONLY
 
         // Setup audio engine
         let inputNode = audioEngine.inputNode
@@ -120,7 +132,7 @@ final class LectureRecorder: NSObject {
 
         // Install tap
         inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { [weak self] buffer, _ in
-            self?.recognitionRequest?.append(buffer)
+            self?.transcriber.append(buffer)
 
             // Write to file
             try? self?.audioFile?.write(from: buffer)
@@ -130,10 +142,6 @@ final class LectureRecorder: NSObject {
         try audioEngine.start()
 
         // Start recognition
-        recognitionTask = speechRecognizer.recognitionTask(with: recognitionRequest) { [weak self] result, error in
-            self?.handleRecognitionResult(result, error: error)
-        }
-
         isRecording = true
 
         // Start rolling summary timer (every 45 seconds)
@@ -152,8 +160,7 @@ final class LectureRecorder: NSObject {
         audioEngine.inputNode.removeTap(onBus: 0)
 
         // Stop recognition
-        recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
+        transcriber.stop()
 
         summaryTimer?.invalidate()
         summaryTimer = nil
@@ -182,19 +189,13 @@ final class LectureRecorder: NSObject {
 
     // MARK: - Recognition Handling
 
-    private func handleRecognitionResult(_ result: SFSpeechRecognitionResult?, error: Error?) {
-        if let error = error {
-            print("Recognition error: \(error)")
-            return
-        }
-
-        guard let result = result else { return }
-
+    private func handleRecognitionResult(_ result: SFSpeechRecognitionResult, isFinal: Bool) {
         let transcription = result.bestTranscription.formattedString
         transcript = transcription
+        delegate?.recorder(self, didUpdateTranscript: transcription)
 
         // Update rolling buffer
-        if result.isFinal {
+        if isFinal {
             rollingBuffer += transcription + " "
 
             // Check if we should chunk (based on silence or length)
@@ -232,6 +233,10 @@ final class LectureRecorder: NSObject {
         let embeddings = try? await embedding.embed([chunkText])
         if let embedding = embeddings?.first {
             chunk.embedding = embedding
+        }
+
+        await MainActor.run {
+            self.delegate?.recorder(self, didProduce: chunk)
         }
 
         // Add to session if provided
@@ -305,5 +310,19 @@ enum RecordingError: LocalizedError {
         case .permissionDenied: return "Microphone or speech recognition permission denied"
         case .recognitionFailed: return "Speech recognition failed"
         }
+    }
+}
+
+// MARK: - OnDeviceTranscriberDelegate
+
+extension LectureRecorder: OnDeviceTranscriberDelegate {
+    @MainActor
+    func transcriber(_ transcriber: OnDeviceTranscriber, didReceive result: SFSpeechRecognitionResult, isFinal: Bool) {
+        handleRecognitionResult(result, isFinal: isFinal)
+    }
+
+    @MainActor
+    func transcriber(_ transcriber: OnDeviceTranscriber, didFail error: OnDeviceTranscriberError) {
+        delegate?.recorder(self, didEncounter: error)
     }
 }

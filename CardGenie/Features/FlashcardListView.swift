@@ -91,7 +91,7 @@ struct FlashcardListView: View {
                 SettingsView()
             }
             .sheet(isPresented: $showingStatistics) {
-                StatisticsView()
+                FlashcardStatisticsView()
             }
         }
     }

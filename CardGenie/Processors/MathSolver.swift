@@ -190,8 +190,7 @@ final class MathSolver {
         ))
 
         // Pattern: ax + b = c
-        if let match = equation.range(of: #"^(\d*)x([+-]\d+)=(\d+)$"#, options: .regularExpression) {
-            let eqn = String(equation[match])
+        if equation.range(of: #"^(\d*)x([+-]\d+)=(\d+)$"#, options: .regularExpression) != nil {
 
             // Extract coefficients (simplified)
             // Production version would use proper parsing
@@ -225,7 +224,7 @@ final class MathSolver {
         // Production would use full symbolic algebra
 
         // Example: 2x + 3x → 5x
-        var simplified = expr
+        let simplified = expr
 
         // Combine like terms (very simplified)
         if simplified.contains("+") {

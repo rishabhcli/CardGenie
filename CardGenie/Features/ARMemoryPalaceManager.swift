@@ -92,7 +92,7 @@ final class ARMemoryPalaceManager: NSObject, ARSessionDelegate {
 
     /// Resume session
     func resumeSession() {
-        guard let currentFrame = arSession.currentFrame else { return }
+        guard let _ = arSession.currentFrame else { return }
         let configuration = ARWorldTrackingConfiguration()
         configuration.planeDetection = [.horizontal, .vertical]
         arSession.run(configuration, options: [])

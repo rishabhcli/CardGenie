@@ -18,7 +18,11 @@ struct CardGenieApp: App {
         let schema = Schema([
             StudyContent.self,
             Flashcard.self,
-            FlashcardSet.self
+            FlashcardSet.self,
+            SourceDocument.self,
+            NoteChunk.self,
+            LectureSession.self,
+            HighlightMarker.self
         ])
 
         let modelConfiguration = ModelConfiguration(

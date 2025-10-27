@@ -9,6 +9,27 @@
 - ✅ `SpacedRepetitionManager.swift` - SM-2 algorithm implementation
 - ✅ `FlashcardFM.swift` - AI generation logic (with iOS 26 placeholders)
 - ✅ `NotificationManager.swift` - Daily review reminders
+- ✅ `FlashcardGenerator.swift` - Multi-format card generation from content
+- ✅ `SpacedRepetitionTests.swift` - Comprehensive SM-2 algorithm tests (35+ test cases)
+
+**UI Views (7 files)**
+- ✅ `FlashcardListView.swift` - Browse and manage flashcard sets with due badges
+- ✅ `FlashcardStudyView.swift` - Interactive review mode with flip animations
+- ✅ `FlashcardEditorView.swift` - Manual card creation and editing (NEW)
+- ✅ `StudyResultsView.swift` - Enhanced session summaries with performance insights (NEW)
+- ✅ `SessionBuilderView.swift` - Customizable study session configuration (NEW)
+- ✅ `StatisticsView.swift` - Comprehensive dashboard with charts and insights (NEW)
+- ✅ `Components.swift` - Complete flashcard UI components (FlashcardCardView, ReviewButton, etc.)
+
+**App Integration**
+- ✅ `CardGenieApp.swift` - Flashcards tab with due count badge
+- ✅ Tab bar integration with dynamic badge updates
+- ✅ Notification setup on first launch
+
+**Testing (3 files)**
+- ✅ `SpacedRepetitionTests.swift` - SM-2 algorithm edge cases and performance
+- ✅ `FlashcardGenerationTests.swift` - Card generation pipeline tests (NEW)
+- ✅ `NotificationTests.swift` - Notification scheduling and handling tests (NEW)
 
 **Architecture**
 - ✅ Spaced repetition with SM-2 algorithm (Again/Good/Easy ratings)
@@ -16,21 +37,41 @@
 - ✅ Topic-based grouping into FlashcardSets
 - ✅ Performance tracking and statistics
 - ✅ Local notifications for daily reviews
+- ✅ Manual card creation and editing
+- ✅ Customizable study sessions with multiple modes
+- ✅ Comprehensive statistics dashboard with charts
+- ✅ Enhanced session results with performance feedback
 
-### 🚧 Remaining UI Components
+### 🚧 Remaining Integration Tasks
 
-**Views to Create**
-- ⏳ `FlashcardListView.swift` - Browse and manage flashcard sets
-- ⏳ `FlashcardStudyView.swift` - Interactive review mode
-- ⏳ Flashcard-specific UI components in `Components.swift`
-- ⏳ Update `JournalDetailView.swift` - Add "Generate Flashcards" button
-- ⏳ Update `CardGenieApp.swift` - Add Flashcards tab
+**Phase 1 - Baseline (Remaining)**
+- ⏳ Add flashcard generation trigger to content detail views
+- ⏳ Wire SessionBuilderView to FlashcardListView
+- ⏳ Wire StudyResultsView to FlashcardStudyView
+- ⏳ Update notification badge in real-time
 
-**Integration Tasks**
-- ⏳ Wire up AI generation to UI
-- ⏳ Implement card flip animations
-- ⏳ Add clarification UI in study mode
-- ⏳ Create statistics dashboard
+**Phase 2 - Management (Remaining)**
+- ⏳ Add FlashcardEditorView navigation from list and study views
+- ⏳ Implement tagging UI with autocomplete
+- ⏳ Add bulk actions (archive, delete, merge)
+
+**Phase 3 - UX Enhancements (Remaining)**
+- ⏳ Add keyboard shortcuts to study view
+- ⏳ Add haptic feedback
+- ⏳ Show next review date estimates
+
+**Phase 4 - Intelligence (Remaining)**
+- ⏳ Add AI refinement loop for card rewrites
+- ⏳ Persist generation metadata
+
+**Phase 5 - Insights (Remaining)**
+- ⏳ Add goal tracking with notifications
+- ⏳ Add widgets (optional)
+
+**Phase 6 - Quality (Remaining)**
+- ⏳ Run tests in CI with xcodebuild
+- ⏳ Accessibility audit
+- ⏳ Update in-app help screens
 
 ---
 
@@ -653,14 +694,16 @@ flashcard.interval           // Days between reviews
 
 ### Future Enhancements
 
-- [ ] Custom card creation (manual entry)
+- [x] Custom card creation (manual entry) - **COMPLETED** via FlashcardEditorView
+- [x] Statistics dashboard - **COMPLETED** via StatisticsView
+- [x] Study streak tracking - **COMPLETED** via StudyStreakManager
+- [x] Session customization - **COMPLETED** via SessionBuilderView
 - [ ] Import/export flashcard decks
-- [ ] Statistics dashboard
-- [ ] Study streak tracking
 - [ ] Multiple choice mode (in addition to self-grading)
 - [ ] Audio pronunciation for language learning
 - [ ] Image occlusion flashcards
 - [ ] Shared decks (with privacy opt-in)
+- [ ] Widgets for home screen and lock screen
 
 ---
 
@@ -673,11 +716,21 @@ flashcard.interval           // Days between reviews
 
 ---
 
-**Status**: 🟡 Core logic complete, UI implementation in progress
+**Status**: 🟢 Core features implemented, integration in progress
 
 **Ready for iOS 26 SDK**: ✅ All placeholder APIs clearly marked with `// TODO` and integration instructions
 
-**Tested**: 🧪 Data models and algorithms ready for unit testing
+**Tested**: 🧪 35+ unit tests covering SM-2, generation pipeline, and notifications
 
-**Next Priority**: 📱 Create SwiftUI views for list and study modes
+**Progress**: 📊
+- Phase 1 (Baseline): 80% complete
+- Phase 2 (Management): 75% complete (FlashcardEditorView done, integrations pending)
+- Phase 3 (UX): 70% complete (SessionBuilderView and StudyResultsView done)
+- Phase 4 (Intelligence): 0% complete
+- Phase 5 (Insights): 50% complete (StatisticsView done, goals/widgets pending)
+- Phase 6 (Quality): 60% complete (tests done, CI/accessibility pending)
+
+**Next Priority**: 📱 Wire up new views to existing UI and add generation triggers
+
+**Tracking**: 📋 See `FLASHCARD_TRACKING_TICKETS.md` for detailed breakdown (23 tickets, 73 hours estimated)
 

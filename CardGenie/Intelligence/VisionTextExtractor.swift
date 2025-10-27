@@ -12,25 +12,91 @@ import UIKit
 import OSLog
 import Combine
 
+/// Result of text extraction with metadata
+struct TextExtractionResult {
+    let text: String
+    let confidence: Double
+    let detectedLanguages: [String]
+    let blockCount: Int
+    let characterCount: Int
+    let preprocessingApplied: Bool
+
+    var confidenceLevel: ConfidenceLevel {
+        switch confidence {
+        case 0.9...1.0: return .high
+        case 0.7..<0.9: return .medium
+        case 0.5..<0.7: return .low
+        default: return .veryLow
+        }
+    }
+}
+
+enum ConfidenceLevel: String {
+    case high = "High"
+    case medium = "Medium"
+    case low = "Low"
+    case veryLow = "Very Low"
+
+    var color: String {
+        switch self {
+        case .high: return "green"
+        case .medium: return "yellow"
+        case .low: return "orange"
+        case .veryLow: return "red"
+        }
+    }
+}
+
 /// Text extraction from images using Apple's Vision framework
 @MainActor
 final class VisionTextExtractor: ObservableObject {
     private let logger = Logger(subsystem: "com.cardgenie.app", category: "Vision")
+    private let preprocessor = ImagePreprocessor()
 
     @Published var extractedText = ""
     @Published var isProcessing = false
     @Published var error: VisionError?
+    @Published var lastExtractionResult: TextExtractionResult?
 
-    /// Extract text from an image using Vision framework
-    /// - Parameter image: The UIImage to extract text from
+    /// Extract text from an image using Vision framework with preprocessing
+    /// - Parameters:
+    ///   - image: The UIImage to extract text from
+    ///   - enablePreprocessing: Whether to apply image preprocessing
     /// - Returns: Extracted text as a single string
     /// - Throws: VisionError if extraction fails
-    func extractText(from image: UIImage) async throws -> String {
+    func extractText(from image: UIImage, enablePreprocessing: Bool = true) async throws -> String {
+        let result = try await extractTextWithMetadata(from: image, enablePreprocessing: enablePreprocessing)
+        return result.text
+    }
+
+    /// Extract text from an image with full metadata
+    /// - Parameters:
+    ///   - image: The UIImage to extract text from
+    ///   - enablePreprocessing: Whether to apply image preprocessing
+    /// - Returns: TextExtractionResult with confidence and language info
+    /// - Throws: VisionError if extraction fails
+    func extractTextWithMetadata(from image: UIImage, enablePreprocessing: Bool = true) async throws -> TextExtractionResult {
         isProcessing = true
         error = nil
         defer { isProcessing = false }
 
-        guard let cgImage = image.cgImage else {
+        // Preprocess image if enabled
+        var processedImage = image
+        var preprocessingApplied = false
+
+        if enablePreprocessing {
+            let config = preprocessor.recommendPreprocessing(for: image)
+            let preprocessResult = preprocessor.preprocess(image, config: config)
+            processedImage = preprocessResult.processedImage
+            preprocessingApplied = !preprocessResult.appliedOperations.isEmpty
+
+            if preprocessingApplied {
+                logger.info("Applied preprocessing: \(preprocessResult.appliedOperations.joined(separator: ", "))")
+                ScanAnalytics.shared.trackPreprocessing()
+            }
+        }
+
+        guard let cgImage = processedImage.cgImage else {
             logger.error("Invalid image - no CGImage representation")
             let visionError = VisionError.invalidImage
             error = visionError
@@ -65,10 +131,21 @@ final class VisionTextExtractor: ObservableObject {
                     return
                 }
 
-                // Extract top candidate from each observation
-                let recognizedText = observations.compactMap { observation in
-                    observation.topCandidates(1).first?.string
-                }.joined(separator: "\n")
+                // Extract text and confidence from observations
+                var allText: [String] = []
+                var totalConfidence: Float = 0
+                var detectedLanguages = Set<String>()
+
+                for observation in observations {
+                    guard let candidate = observation.topCandidates(1).first else { continue }
+                    allText.append(candidate.string)
+                    totalConfidence += candidate.confidence
+
+                    // Track detected languages if available
+                    // Note: Language detection would require additional processing
+                }
+
+                let recognizedText = allText.joined(separator: "\n")
 
                 if recognizedText.isEmpty {
                     self.logger.warning("Recognized text is empty")
@@ -78,9 +155,20 @@ final class VisionTextExtractor: ObservableObject {
                     return
                 }
 
-                self.logger.info("Extracted \(recognizedText.count) characters from image")
+                let averageConfidence = Double(totalConfidence) / Double(observations.count)
+                let result = TextExtractionResult(
+                    text: recognizedText,
+                    confidence: averageConfidence,
+                    detectedLanguages: Array(detectedLanguages),
+                    blockCount: observations.count,
+                    characterCount: recognizedText.count,
+                    preprocessingApplied: preprocessingApplied
+                )
+
+                self.logger.info("Extracted \(recognizedText.count) characters with confidence \(String(format: "%.2f", averageConfidence))")
                 self.extractedText = recognizedText
-                continuation.resume(returning: recognizedText)
+                self.lastExtractionResult = result
+                continuation.resume(returning: result)
             }
 
             // Configure for maximum accuracy
