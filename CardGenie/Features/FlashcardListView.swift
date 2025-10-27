@@ -13,11 +13,8 @@ struct FlashcardListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \FlashcardSet.createdDate, order: .reverse) private var flashcardSets: [FlashcardSet]
 
-    @State private var selectedSet: FlashcardSet?
-    @State private var showingStudyView = false
-    @State private var studyingDailyReview = false
+    @State private var activeSession: FlashcardStudySession?
     @State private var searchText = ""
-    @State private var sheetSessionTitle: String? = nil
     @State private var showingSettings = false
     @State private var showingStatistics = false
     @State private var cachedDueCount: Int = 0
@@ -83,14 +80,12 @@ struct FlashcardListView: View {
                 }
             }
             .searchable(text: $searchText, prompt: "Search flashcard sets")
-            .sheet(isPresented: $showingStudyView) {
-                if let set = selectedSet {
-                    FlashcardStudyView(
-                        flashcardSet: set,
-                        sessionTitle: sheetSessionTitle,
-                        cards: studyingDailyReview ? dailyReviewQueue : getStudyCards(for: set)
-                    )
-                }
+            .sheet(item: $activeSession) { session in
+                FlashcardStudyView(
+                    flashcardSet: session.set,
+                    sessionTitle: session.title,
+                    cards: session.cards
+                )
             }
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
@@ -216,17 +211,11 @@ struct FlashcardListView: View {
                 ForEach(filteredSets) { set in
                     FlashcardSetRow(set: set)
                         .onTapGesture {
-                            selectedSet = set
-                            studyingDailyReview = false
-                            sheetSessionTitle = nil
-                            showingStudyView = true
+                            startStudySession(for: set)
                         }
                         .contextMenu {
                             Button {
-                                selectedSet = set
-                                studyingDailyReview = false
-                                sheetSessionTitle = nil
-                                showingStudyView = true
+                                startStudySession(for: set)
                             } label: {
                                 Label("Study", systemImage: "play.fill")
                             }
@@ -316,11 +305,24 @@ struct FlashcardListView: View {
     private func studyAllDueCards() {
         guard totalDueCount > 0 else { return }
 
-        // Use the first set that actually has due cards for context
-        selectedSet = flashcardSets.first(where: { $0.dueCount > 0 }) ?? flashcardSets.first
-        studyingDailyReview = true
-        sheetSessionTitle = "Daily Review"
-        showingStudyView = true
+        let queue = dailyReviewQueue
+        let cards = queue.isEmpty ? spacedRepetitionManager.getDailyReviewQueue(from: flashcardSets) : queue
+
+        guard
+            !cards.isEmpty,
+            let contextSet = flashcardSets.first(where: { $0.dueCount > 0 }) ?? flashcardSets.first
+        else { return }
+
+        activeSession = FlashcardStudySession(
+            set: contextSet,
+            title: "Daily Review",
+            cards: cards
+        )
+    }
+
+    private func startStudySession(for set: FlashcardSet) {
+        let cards = getStudyCards(for: set)
+        activeSession = FlashcardStudySession(set: set, title: nil, cards: cards)
     }
 
     private func getStudyCards(for set: FlashcardSet) -> [Flashcard] {
@@ -394,4 +396,13 @@ private struct StatCard: View {
 #Preview {
     FlashcardListView()
         .modelContainer(for: [FlashcardSet.self, Flashcard.self], inMemory: true)
+}
+
+// MARK: - Study Session Model
+
+private struct FlashcardStudySession: Identifiable {
+    let id = UUID()
+    let set: FlashcardSet
+    let title: String?
+    let cards: [Flashcard]
 }
