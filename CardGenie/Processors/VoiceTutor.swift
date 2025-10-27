@@ -164,7 +164,16 @@ final class VoiceTutor: NSObject, AVSpeechSynthesizerDelegate {
     private func generateTutorResponse(userQuestion: String) async throws -> String {
         // Build context from conversation history
         let conversationHistory = conversation.suffix(6)
-            .map { "\($0.role == .student ? "Student" : "Tutor"): \($0.text)" }
+            .map { turn -> String in
+                let speaker: String
+                switch turn.role {
+                case .student:
+                    speaker = "Student"
+                case .tutor:
+                    speaker = "Tutor"
+                }
+                return "\(speaker): \(turn.text)"
+            }
             .joined(separator: "\n")
 
         // Add context from notes if available
@@ -258,8 +267,8 @@ final class VoiceTutor: NSObject, AVSpeechSynthesizerDelegate {
 
 // MARK: - Models
 
-struct ConversationTurn {
-    enum Role {
+struct ConversationTurn: Sendable {
+    enum Role: Sendable {
         case student
         case tutor
     }

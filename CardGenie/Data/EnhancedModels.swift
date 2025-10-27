@@ -115,6 +115,11 @@ final class LectureSession {
     var duration: TimeInterval
     var audioFileURL: URL?
     var transcriptComplete: Bool
+    var collaborationGroupID: UUID?
+    private(set) var sharePlayStateRaw: String
+
+    @Relationship(deleteRule: .cascade)
+    var liveHighlights: [HighlightMarker] = []
 
     // Real-time summary
     var liveNotes: String = ""
@@ -129,12 +134,27 @@ final class LectureSession {
         self.recordedAt = Date()
         self.duration = 0
         self.transcriptComplete = false
+        self.sharePlayStateRaw = LectureCollaborationState.inactive.rawValue
     }
+
+    var sharePlayState: LectureCollaborationState {
+        get { LectureCollaborationState(rawValue: sharePlayStateRaw) ?? .inactive }
+        set { sharePlayStateRaw = newValue.rawValue }
+    }
+}
+
+// MARK: - Collaboration State
+
+enum LectureCollaborationState: String, Codable {
+    case inactive
+    case waiting
+    case active
+    case ended
 }
 
 // MARK: - Timestamp Range Helper
 
-struct TimestampRange: Codable {
+struct TimestampRange: Codable, Sendable {
     let start: Double
     let end: Double
 
@@ -147,6 +167,7 @@ struct TimestampRange: Codable {
     }
 }
 
+@MainActor
 extension NoteChunk {
     var timeRange: TimestampRange? {
         guard let json = timestampRange,
@@ -217,5 +238,58 @@ extension Flashcard {
         set {
             // Store metadata
         }
+    }
+}
+
+// MARK: - Highlight Marker
+
+@Model
+final class HighlightMarker {
+    var id: UUID
+    var createdAt: Date
+    var startTime: Double
+    var endTime: Double
+    var transcriptSnippet: String
+    var summary: String?
+    var authorName: String?
+    var authorID: UUID?
+    var confidence: Double
+    var isPinned: Bool
+    var isCardCandidate: Bool
+
+    @Relationship
+    var session: LectureSession?
+
+    @Relationship
+    var linkedFlashcard: Flashcard?
+
+    init(
+        startTime: Double,
+        endTime: Double,
+        transcriptSnippet: String,
+        summary: String?,
+        authorName: String?,
+        authorID: UUID?,
+        confidence: Double,
+        isPinned: Bool = false,
+        isCardCandidate: Bool = false
+    ) {
+        self.id = UUID()
+        self.createdAt = Date()
+        self.startTime = startTime
+        self.endTime = endTime
+        self.transcriptSnippet = transcriptSnippet
+        self.summary = summary
+        self.authorName = authorName
+        self.authorID = authorID
+        self.confidence = confidence
+        self.isPinned = isPinned
+        self.isCardCandidate = isCardCandidate
+    }
+}
+
+extension HighlightMarker {
+    var timeRange: TimestampRange {
+        TimestampRange(start: startTime, end: endTime)
     }
 }

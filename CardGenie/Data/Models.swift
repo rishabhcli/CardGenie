@@ -42,8 +42,14 @@ final class StudyContent {
     /// Extracted or processed text (may differ from raw for photos/voice)
     var extractedText: String?
 
-    /// Photo data if source is photo
+    /// Photo data if source is photo (single page)
     var photoData: Data?
+
+    /// Multiple page images for multi-page scans (encoded as array of Data)
+    var photoPages: [Data]?
+
+    /// Number of pages in multi-page scan
+    var pageCount: Int?
 
     /// Audio file URL if source is voice
     var audioURL: String?
@@ -81,6 +87,8 @@ final class StudyContent {
         self.rawContent = rawContent
         self.extractedText = nil
         self.photoData = nil
+        self.photoPages = nil
+        self.pageCount = nil
         self.audioURL = nil
         self.summary = nil
         self.tags = []

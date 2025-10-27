@@ -9,6 +9,7 @@
 import SwiftUI
 import SwiftData
 import PhotosUI
+import VisionKit
 
 /// Photo scanning interface with text extraction and flashcard generation
 struct PhotoScanView: View {
@@ -16,15 +17,22 @@ struct PhotoScanView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var extractor = VisionTextExtractor()
     @StateObject private var fmClient = FMClient()
+    @StateObject private var analytics = ScanAnalytics.shared
 
     @State private var selectedImage: UIImage?
+    @State private var selectedImages: [UIImage] = []
     @State private var extractedText = ""
     @State private var showCamera = false
+    @State private var showDocumentScanner = false
     @State private var showPhotoPicker = false
     @State private var isGeneratingCards = false
     @State private var selectedPhoto: PhotosPickerItem?
+    @State private var documentScanResult: DocumentScanResult?
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var isMultiPage = false
+    @State private var extractionResult: TextExtractionResult?
+    @State private var showLowConfidenceWarning = false
 
     var body: some View {
         NavigationStack {
@@ -34,9 +42,13 @@ struct PhotoScanView: View {
 
                 ScrollView {
                     VStack(spacing: Spacing.xl) {
-                        if let image = selectedImage {
-                            // Show captured/selected image
-                            imagePreviewSection(image: image)
+                        if !selectedImages.isEmpty || selectedImage != nil {
+                            // Show captured/selected images
+                            if !selectedImages.isEmpty {
+                                multiPagePreviewSection
+                            } else if let image = selectedImage {
+                                imagePreviewSection(image: image)
+                            }
 
                             if extractor.isProcessing {
                                 // Text extraction in progress
@@ -68,6 +80,10 @@ struct PhotoScanView: View {
             .sheet(isPresented: $showCamera) {
                 CameraView(image: $selectedImage)
             }
+            .sheet(isPresented: $showDocumentScanner) {
+                DocumentScannerView(result: $documentScanResult)
+                    .ignoresSafeArea()
+            }
             .photosPicker(
                 isPresented: $showPhotoPicker,
                 selection: $selectedPhoto,
@@ -80,8 +96,18 @@ struct PhotoScanView: View {
             }
             .onChange(of: selectedImage) { oldValue, newValue in
                 if let image = newValue {
+                    isMultiPage = false
                     Task {
                         await extractTextFromImage(image)
+                    }
+                }
+            }
+            .onChange(of: documentScanResult) { oldValue, newValue in
+                if let result = newValue {
+                    selectedImages = result.images
+                    isMultiPage = true
+                    Task {
+                        await extractTextFromMultipleImages(result.images)
                     }
                 }
             }
@@ -91,6 +117,16 @@ struct PhotoScanView: View {
                 if let errorMessage {
                     Text(errorMessage)
                 }
+            }
+            .alert("Low OCR Confidence", isPresented: $showLowConfidenceWarning) {
+                Button("Continue Anyway", role: .none) {
+                    // User chooses to continue with current scan
+                }
+                Button("Re-Scan", role: .cancel) {
+                    resetScan()
+                }
+            } message: {
+                Text("The text extraction quality is lower than optimal. For best results, try:\n\n• Better lighting\n• Holding camera steady\n• Ensuring text is in focus\n\nWould you like to re-scan?")
             }
         }
     }
@@ -123,13 +159,24 @@ struct PhotoScanView: View {
 
             // Action buttons
             VStack(spacing: Spacing.md) {
+                // Document scanner (if available)
+                if DocumentScanningCapability.isAvailable {
+                    HapticButton(hapticStyle: .medium) {
+                        showDocumentScanner = true
+                    } label: {
+                        Label("Scan Document", systemImage: "doc.text.viewfinder")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(MagicButtonStyle())
+                }
+
                 HapticButton(hapticStyle: .medium) {
                     showCamera = true
                 } label: {
                     Label("Take Photo", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(MagicButtonStyle())
+                .buttonStyle(DocumentScanningCapability.isAvailable ? SecondaryButtonStyle() : MagicButtonStyle())
 
                 Button {
                     showPhotoPicker = true
@@ -164,6 +211,47 @@ struct PhotoScanView: View {
         }
     }
 
+    private var multiPagePreviewSection: some View {
+        VStack(spacing: Spacing.md) {
+            HStack {
+                Text("Scanned Document")
+                    .font(.system(.caption, design: .rounded))
+                    .foregroundColor(.secondaryText)
+                    .textCase(.uppercase)
+
+                Spacer()
+
+                Text("\(selectedImages.count) pages")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .foregroundColor(.cosmicPurple)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color.cosmicPurple.opacity(0.1))
+                    .cornerRadius(CornerRadius.md)
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Spacing.md) {
+                    ForEach(Array(selectedImages.enumerated()), id: \.offset) { index, image in
+                        VStack(spacing: Spacing.xs) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 200)
+                                .cornerRadius(CornerRadius.md)
+                                .shadow(color: .cosmicPurple.opacity(0.2), radius: 5, y: 3)
+
+                            Text("Page \(index + 1)")
+                                .font(.system(.caption2, design: .rounded))
+                                .foregroundColor(.secondaryText)
+                        }
+                    }
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+    }
+
     private var loadingSection: some View {
         VStack(spacing: Spacing.md) {
             ProgressView()
@@ -195,6 +283,22 @@ struct PhotoScanView: View {
                         .foregroundColor(.secondaryText)
                         .textCase(.uppercase)
                     Spacer()
+
+                    // Confidence badge
+                    if let result = extractionResult {
+                        HStack(spacing: 4) {
+                            Image(systemName: confidenceIcon(for: result.confidenceLevel))
+                                .font(.system(size: 10))
+                            Text("\(Int(result.confidence * 100))%")
+                                .font(.system(.caption2, design: .rounded, weight: .semibold))
+                        }
+                        .foregroundColor(confidenceColor(for: result.confidenceLevel))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(confidenceColor(for: result.confidenceLevel).opacity(0.15))
+                        .cornerRadius(CornerRadius.sm)
+                    }
+
                     Text("\(extractedText.count) characters")
                         .font(.system(.caption2, design: .rounded))
                         .foregroundColor(.secondaryText)
@@ -261,16 +365,87 @@ struct PhotoScanView: View {
     }
 
     private func extractTextFromImage(_ image: UIImage) async {
+        analytics.trackScanAttempt()
+
         do {
-            extractedText = try await extractor.extractText(from: image)
+            let result = try await extractor.extractTextWithMetadata(from: image)
+            extractedText = result.text
+            extractionResult = result
+            analytics.trackScanSuccess(characterCount: result.characterCount, confidence: result.confidence)
+
+            // Check for low confidence
+            if result.confidenceLevel == .low || result.confidenceLevel == .veryLow {
+                showLowConfidenceWarning = true
+                analytics.trackLowConfidenceWarning()
+            }
+
             HapticFeedback.success()
         } catch let error as VisionError {
+            analytics.trackScanFailure(reason: error.localizedDescription)
             await MainActor.run {
                 errorMessage = error.errorDescription
                 showError = true
                 HapticFeedback.error()
             }
         } catch {
+            analytics.trackScanFailure(reason: error.localizedDescription)
+            await MainActor.run {
+                errorMessage = "Text extraction failed. Please try again."
+                showError = true
+                HapticFeedback.error()
+            }
+        }
+    }
+
+    private func extractTextFromMultipleImages(_ images: [UIImage]) async {
+        analytics.trackScanAttempt()
+        analytics.trackMultiPageScan(pageCount: images.count)
+
+        do {
+            var allText: [String] = []
+            var totalConfidence: Double = 0
+            var hasLowConfidence = false
+
+            for (index, image) in images.enumerated() {
+                let result = try await extractor.extractTextWithMetadata(from: image)
+                allText.append("--- Page \(index + 1) ---\n\n\(result.text)")
+                totalConfidence += result.confidence
+
+                if result.confidenceLevel == .low || result.confidenceLevel == .veryLow {
+                    hasLowConfidence = true
+                }
+            }
+
+            extractedText = allText.joined(separator: "\n\n")
+            let avgConfidence = totalConfidence / Double(images.count)
+
+            // Create combined result
+            extractionResult = TextExtractionResult(
+                text: extractedText,
+                confidence: avgConfidence,
+                detectedLanguages: [],
+                blockCount: images.count,
+                characterCount: extractedText.count,
+                preprocessingApplied: true
+            )
+
+            analytics.trackScanSuccess(characterCount: extractedText.count, confidence: avgConfidence)
+
+            if hasLowConfidence {
+                showLowConfidenceWarning = true
+                analytics.trackLowConfidenceWarning()
+            }
+
+            HapticFeedback.success()
+        } catch let error as VisionError {
+            analytics.trackScanFailure(reason: error.localizedDescription)
+            await MainActor.run {
+                errorMessage = error.errorDescription
+                showError = true
+                HapticFeedback.error()
+            }
+        } catch {
+            analytics.trackScanFailure(reason: error.localizedDescription)
             await MainActor.run {
                 errorMessage = "Text extraction failed. Please try again."
                 showError = true
@@ -292,7 +467,15 @@ struct PhotoScanView: View {
                     source: .photo,
                     rawContent: extractedText
                 )
-                content.photoData = selectedImage?.jpegData(compressionQuality: 0.8)
+
+                // Store images based on scan type
+                if isMultiPage && !selectedImages.isEmpty {
+                    content.photoPages = selectedImages.compactMap { $0.jpegData(compressionQuality: 0.8) }
+                    content.pageCount = selectedImages.count
+                } else if let image = selectedImage {
+                    content.photoData = image.jpegData(compressionQuality: 0.8)
+                    content.pageCount = 1
+                }
 
                 // Save the content first
                 modelContext.insert(content)
@@ -338,9 +521,34 @@ struct PhotoScanView: View {
 
     private func resetScan() {
         selectedImage = nil
+        selectedImages = []
         extractedText = ""
         selectedPhoto = nil
+        documentScanResult = nil
         errorMessage = nil
+        isMultiPage = false
+        extractionResult = nil
+        showLowConfidenceWarning = false
+    }
+
+    // MARK: - Helper Functions
+
+    private func confidenceColor(for level: ConfidenceLevel) -> Color {
+        switch level {
+        case .high: return .genieGreen
+        case .medium: return .yellow
+        case .low: return .orange
+        case .veryLow: return .red
+        }
+    }
+
+    private func confidenceIcon(for level: ConfidenceLevel) -> String {
+        switch level {
+        case .high: return "checkmark.circle.fill"
+        case .medium: return "checkmark.circle"
+        case .low: return "exclamationmark.triangle"
+        case .veryLow: return "xmark.circle"
+        }
     }
 }
 
