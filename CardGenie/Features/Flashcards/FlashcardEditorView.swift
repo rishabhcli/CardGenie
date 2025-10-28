@@ -113,8 +113,6 @@ struct FlashcardEditorView: View {
             .onAppear {
                 loadInitialData()
             }
-            // Keyboard shortcuts
-            .keyboardShortcut(.return, modifiers: [.command], action: saveCard)
         }
     }
 
@@ -204,7 +202,7 @@ struct FlashcardEditorView: View {
 
             // Current tags
             if !tags.isEmpty {
-                FlowLayout(spacing: 8) {
+                TagFlowLayout(spacing: 8) {
                     ForEach(tags, id: \.self) { tag in
                         TagChip(text: tag)
                             .overlay(alignment: .topTrailing) {
@@ -251,7 +249,7 @@ struct FlashcardEditorView: View {
                         .font(.caption)
                         .foregroundStyle(Color.secondaryText)
 
-                    FlowLayout(spacing: 8) {
+                    TagFlowLayout(spacing: 8) {
                         ForEach(tagSuggestions.prefix(5), id: \.self) { suggestion in
                             Button {
                                 selectTag(suggestion)
@@ -630,59 +628,6 @@ struct FlashcardEditorView: View {
         case .qa: return "Q&A"
         case .cloze: return "Cloze"
         case .definition: return "Definition"
-        }
-    }
-}
-
-// MARK: - Flow Layout for Tags
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: result.positions[index] + bounds.origin, proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var lineHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if x + size.width > maxWidth && x > 0 {
-                    x = 0
-                    y += lineHeight + spacing
-                    lineHeight = 0
-                }
-
-                positions.append(CGPoint(x: x, y: y))
-                lineHeight = max(lineHeight, size.height)
-                x += size.width + spacing
-            }
-
-            self.size = CGSize(width: maxWidth, height: y + lineHeight)
         }
     }
 }

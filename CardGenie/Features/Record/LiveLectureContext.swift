@@ -56,19 +56,25 @@ final class LiveLectureContext: LectureRecorderDelegate {
     private var modelContext: ModelContext?
     private var notificationToken: NSObjectProtocol?
 
+    @MainActor
     init(
-        recorder: LectureRecorder = LectureRecorder(),
-        highlightExtractor: HighlightExtractor = HighlightExtractor(),
-        activityManager: LiveHighlightActivityManager = LiveHighlightActivityManager(),
-        collaboration: LectureCollaborationController = LectureCollaborationController()
+        recorder: LectureRecorder? = nil,
+        highlightExtractor: HighlightExtractor? = nil,
+        activityManager: LiveHighlightActivityManager? = nil,
+        collaboration: LectureCollaborationController? = nil
     ) {
-        self.recorder = recorder
-        self.highlightExtractor = highlightExtractor
-        self.activityManager = activityManager
-        self.collaboration = collaboration
-        recorder.delegate = self
+        let recorderInstance = recorder ?? LectureRecorder()
+        let extractorInstance = highlightExtractor ?? HighlightExtractor()
+        let activityManagerInstance = activityManager ?? LiveHighlightActivityManager()
+        let collaborationController = collaboration ?? LectureCollaborationController()
 
-        notificationToken = NotificationCenter.default.addObserver(
+        self.recorder = recorderInstance
+        self.highlightExtractor = extractorInstance
+        self.activityManager = activityManagerInstance
+        self.collaboration = collaborationController
+        recorderInstance.delegate = self
+
+        let token = NotificationCenter.default.addObserver(
             forName: .collaborativeHighlightReceived,
             object: nil,
             queue: .main
@@ -76,10 +82,15 @@ final class LiveLectureContext: LectureRecorderDelegate {
             guard
                 let highlight = notification.object as? CollaborativeHighlight
             else { return }
-            self?.handleCollaborativeHighlight(highlight)
+
+            Task { @MainActor [weak self] in
+                self?.handleCollaborativeHighlight(highlight)
+            }
         }
+        notificationToken = token
     }
 
+    @MainActor
     deinit {
         if let token = notificationToken {
             NotificationCenter.default.removeObserver(token)

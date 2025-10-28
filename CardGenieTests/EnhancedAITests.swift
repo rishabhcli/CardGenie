@@ -155,14 +155,14 @@ final class EnhancedAITests: XCTestCase {
     }
 
     func testStudyPlanModel() {
-        let session = StudySession(
+        let session = GeneratedStudySession(
             date: "2025-10-28",
             goal: "Review calculus",
             materials: ["Chapter 1", "Practice problems"],
             estimatedMinutes: 45
         )
 
-        let plan = StudyPlan(
+        let plan = GeneratedStudyPlan(
             course: "AP Calculus",
             overallGoal: "Master derivatives",
             sessions: [session]
@@ -355,11 +355,11 @@ final class EnhancedAITests: XCTestCase {
     @available(iOS 26.0, *)
     func testStudyPlanTracker() {
         let sessions = [
-            StudySession(date: "2025-10-28", goal: "Goal 1", materials: ["M1"], estimatedMinutes: 30),
-            StudySession(date: "2025-10-29", goal: "Goal 2", materials: ["M2"], estimatedMinutes: 45)
+            GeneratedStudySession(date: "2025-10-28", goal: "Goal 1", materials: ["M1"], estimatedMinutes: 30),
+            GeneratedStudySession(date: "2025-10-29", goal: "Goal 2", materials: ["M2"], estimatedMinutes: 45)
         ]
 
-        let plan = StudyPlan(
+        let plan = GeneratedStudyPlan(
             course: "Test Course",
             overallGoal: "Test Goal",
             sessions: sessions

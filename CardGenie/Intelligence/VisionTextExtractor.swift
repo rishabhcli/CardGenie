@@ -134,7 +134,7 @@ final class VisionTextExtractor: ObservableObject {
                 // Extract text and confidence from observations
                 var allText: [String] = []
                 var totalConfidence: Float = 0
-                var detectedLanguages = Set<String>()
+                let detectedLanguages = Set<String>()
 
                 for observation in observations {
                     guard let candidate = observation.topCandidates(1).first else { continue }

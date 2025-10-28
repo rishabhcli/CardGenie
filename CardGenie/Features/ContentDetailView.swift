@@ -144,7 +144,7 @@ struct ContentDetailView: View {
                         .font(.headline)
                         .foregroundStyle(Color.cosmicPurple)
 
-                    FlowLayout(spacing: Spacing.xs) {
+                    TagFlowLayout(spacing: Spacing.xs) {
                         ForEach(content.tags, id: \.self) { tag in
                             TagChip(text: tag)
                         }
@@ -447,61 +447,6 @@ struct ContentDetailView: View {
             return "Apple Intelligence is loading. Please try again in a moment."
         case .unknown:
             return "Unable to determine Apple Intelligence availability."
-        }
-    }
-}
-
-// MARK: - Flow Layout
-
-/// A simple flow layout for tags
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
-        var totalHeight: CGFloat = 0
-        var totalWidth: CGFloat = 0
-        var lineWidth: CGFloat = 0
-        var lineHeight: CGFloat = 0
-
-        for size in sizes {
-            if lineWidth + size.width > proposal.width ?? 0 {
-                totalHeight += lineHeight + spacing
-                lineWidth = size.width
-                lineHeight = size.height
-            } else {
-                lineWidth += size.width + spacing
-                lineHeight = max(lineHeight, size.height)
-            }
-            totalWidth = max(totalWidth, lineWidth)
-        }
-
-        totalHeight += lineHeight
-
-        return CGSize(width: totalWidth, height: totalHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var lineX = bounds.minX
-        var lineY = bounds.minY
-        var lineHeight: CGFloat = 0
-
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-
-            if lineX + size.width > bounds.maxX {
-                lineX = bounds.minX
-                lineY += lineHeight + spacing
-                lineHeight = 0
-            }
-
-            subview.place(
-                at: CGPoint(x: lineX, y: lineY),
-                proposal: ProposedViewSize(size)
-            )
-
-            lineX += size.width + spacing
-            lineHeight = max(lineHeight, size.height)
         }
     }
 }

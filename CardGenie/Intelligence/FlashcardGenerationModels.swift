@@ -106,6 +106,44 @@ struct DefinitionCard: Equatable {
     let definition: String
 }
 
+// MARK: - Quiz Generation
+
+@Generable
+struct QuizBatch: Equatable {
+    @Guide(description: "A list of quiz questions mixing multiple formats.")
+    @Guide(.count(1...10))
+    let items: [QuizItem]
+}
+
+@Generable
+struct QuizItem: Equatable {
+    @Guide(description: "Question format: mcq, cloze, or shortAnswer.")
+    let type: QuizTypeEnum
+
+    @Guide(description: "The quiz question prompt.")
+    let question: String
+
+    @Guide(description: "The correct answer or completion.")
+    let correctAnswer: String
+
+    @Guide(description: "Incorrect options for multiple choice questions.")
+    @Guide(.count(0...3))
+    let distractors: [String]
+
+    @Guide(description: "Difficulty rating from 1 (easy) to 5 (hard).")
+    let difficulty: Int
+
+    @Guide(description: "Explanation reinforcing the correct answer.")
+    let explanation: String
+}
+
+@Generable
+enum QuizTypeEnum {
+    case mcq
+    case cloze
+    case shortAnswer
+}
+
 // MARK: - Journal Entry Tagging
 
 @Generable
@@ -114,6 +152,7 @@ struct JournalTags: Equatable {
     @Guide(.count(1...3))
     let tags: [String]
 }
+
 #else
 struct EntityExtractionResult: Equatable {
     let entities: [String]
@@ -187,22 +226,54 @@ enum QuizTypeEnum: Equatable {
 struct QuizBatch: Equatable {
     let items: [QuizItem]
 }
+#endif
 
-// MARK: - Study Plan Generation (Fallback)
+// MARK: - Study Plan Generation
 
-struct StudySession: Equatable {
+#if canImport(FoundationModels)
+@Generable
+struct GeneratedStudySession: Equatable {
+    @Guide(description: "ISO 8601 date (YYYY-MM-DD) for the session.")
+    let date: String
+
+    @Guide(description: "Specific learning outcome the student should accomplish.")
+    let goal: String
+
+    @Guide(description: "2-4 concrete materials or activities for the session.")
+    @Guide(.count(2...4))
+    let materials: [String]
+
+    @Guide(description: "Estimated duration in minutes (typically 30-45).")
+    let estimatedMinutes: Int
+}
+
+@Generable
+struct GeneratedStudyPlan: Equatable {
+    @Guide(description: "Course or subject the plan is for.")
+    let course: String
+
+    @Guide(description: "Overall learning goal across the seven sessions.")
+    let overallGoal: String
+
+    @Guide(description: "Exactly seven study sessions with goals, materials, and estimates.")
+    @Guide(.count(7...7))
+    let sessions: [GeneratedStudySession]
+}
+#else
+struct GeneratedStudySession: Equatable {
     let date: String
     let goal: String
     let materials: [String]
     let estimatedMinutes: Int
 }
 
-struct StudyPlan: Equatable {
+struct GeneratedStudyPlan: Equatable {
     let course: String
     let overallGoal: String
-    let sessions: [StudySession]
+    let sessions: [GeneratedStudySession]
 }
 #endif
+
 
 // MARK: - Conversion Helpers
 

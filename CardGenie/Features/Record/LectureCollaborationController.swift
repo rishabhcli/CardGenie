@@ -6,6 +6,9 @@
 //
 
 import Foundation
+#if canImport(Combine)
+import Combine
+#endif
 #if canImport(GroupActivities)
 import GroupActivities
 #endif
@@ -48,7 +51,7 @@ final class LectureCollaborationController {
     init() {
         #if canImport(GroupActivities)
         if #available(iOS 17.0, *) {
-            state = GroupActivitiesAvailability.shared.isEligible ? .idle : .unavailable
+            state = .idle
         } else {
             state = .unavailable
         }
@@ -60,10 +63,6 @@ final class LectureCollaborationController {
     func startSharing(forTitle title: String) async {
         #if canImport(GroupActivities)
         guard #available(iOS 17.0, *) else { return }
-        guard GroupActivitiesAvailability.shared.isEligible else {
-            state = .unavailable
-            return
-        }
 
         do {
             let activity = LectureCollaborationActivity(title: title)
@@ -71,11 +70,11 @@ final class LectureCollaborationController {
 
             switch await activity.prepareForActivation() {
             case .activationPreferred:
-                try await activity.activate()
+                _ = try await activity.activate()
             case .activationDisabled:
                 state = .unavailable
                 return
-            case .activationRejected:
+            case .cancelled:
                 state = .idle
                 return
             @unknown default:
@@ -119,7 +118,7 @@ final class LectureCollaborationController {
     #if canImport(GroupActivities)
     @available(iOS 17.0, *)
     private func listenForSessions(activity: LectureCollaborationActivity) async {
-        for await session in activity.sessions() {
+        for await session in LectureCollaborationActivity.sessions() {
             configure(session)
         }
     }
@@ -131,7 +130,7 @@ final class LectureCollaborationController {
         participants = session.activeParticipants.map { participant in
             CollaborationParticipant(
                 id: participant.id,
-                name: participant.displayName
+                name: participant.id.uuidString
             )
         }
         state = .active
@@ -149,7 +148,7 @@ final class LectureCollaborationController {
     private func listenForParticipantChanges(session: GroupSession<LectureCollaborationActivity>) async {
         for await change in session.$activeParticipants.values {
             participants = change.map { participant in
-                CollaborationParticipant(id: participant.id, name: participant.displayName)
+                CollaborationParticipant(id: participant.id, name: participant.id.uuidString)
             }
         }
     }
@@ -173,7 +172,7 @@ struct LectureCollaborationActivity: GroupActivity {
         var metadata = GroupActivityMetadata()
         metadata.title = "\(title) · CardGenie"
         metadata.fallbackURL = URL(string: "cardgenie://record")
-        metadata.type = .studyTogether
+        metadata.type = .generic
         return metadata
     }
 }

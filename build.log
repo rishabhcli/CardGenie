@@ -1,0 +1,441 @@
+Command line invocation:
+    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project CardGenie.xcodeproj -scheme CardGenie -configuration Debug -destination generic/platform=iOS build
+
+ComputePackagePrebuildTargetDependencyGraph
+
+Prepare packages
+
+CreateBuildRequest
+
+SendProjectDescription
+
+CreateBuildOperation
+
+ComputeTargetDependencyGraph
+note: Building targets in dependency order
+note: Target dependency graph (1 target)
+    Target 'CardGenie' in project 'CardGenie' (no dependencies)
+
+GatherProvisioningInputs
+
+CreateBuildDescription
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang -v -E -dM -isysroot /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk -x c -c /dev/null
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --print-asset-tag-combinations --output-format xml1 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Assets.xcassets
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/usr/bin/actool --version --output-format xml1
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc --version
+
+ExecuteExternalTool /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -version_details
+
+Build description signature: 35d83142cbbfc409cfd63c1ce89a1f5b
+Build description path: /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/XCBuildData/35d83142cbbfc409cfd63c1ce89a1f5b.xcbuilddata
+ClangStatCache /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.0-23A339-3885c01c3e6b6a337905948deab2002e81ce72e5b06c9602b9d30b56f2eed08a.sdkstatcache
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie.xcodeproj
+    /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang-stat-cache /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.0-23A339-3885c01c3e6b6a337905948deab2002e81ce72e5b06c9602b9d30b56f2eed08a.sdkstatcache
+
+ProcessInfoPlistFile /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.app/Info.plist /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/empty-CardGenie.plist (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-infoPlistUtility /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/empty-CardGenie.plist -producttype com.apple.product-type.application -genpkginfo /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.app/PkgInfo -expandbuildsettings -format binary -platform iphoneos -additionalcontentfile /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/assetcatalog_generated_info.plist -requiredArchitecture arm64 -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.app/Info.plist
+
+SwiftDriver CardGenie normal arm64 com.apple.xcode.tools.swift.compiler (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-SwiftDriver -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name CardGenie -Onone -enforce-exclusivity\=checked @/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk -target arm64-apple-ios26.0 -g -module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -F /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -c -j14 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.0-23A339-3885c01c3e6b6a337905948deab2002e81ce72e5b06c9602b9d30b56f2eed08a.sdkstatcache -output-file-map /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie_const_extract_protocols.json -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-generated-files.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-own-target-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-project-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/include -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources-normal/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie-Swift.h -working-directory /Users/rishabhbansal/Documents/GitHub/CardGenie -experimental-emit-module-separately -disable-cmo
+
+SwiftCompile normal arm64 Compiling\ TagFlowLayout.swift,\ Components.swift,\ MagicEffects.swift,\ Theme.swift,\ FlashcardEditorView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components/TagFlowLayout.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/MagicEffects.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Theme.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardEditorView.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components/TagFlowLayout.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/MagicEffects.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Theme.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardEditorView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ FlashcardStatisticsView.swift,\ SessionBuilderView.swift,\ StudyResultsView.swift,\ LectureCollaborationController.swift,\ LiveHighlightActivityManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardStatisticsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/SessionBuilderView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/StudyResultsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LectureCollaborationController.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardStatisticsView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/SessionBuilderView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/StudyResultsView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LectureCollaborationController.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift:63:38: warning: 'request(attributes:contentState:pushType:)' was deprecated in iOS 16.2: Use request(attributes:content:pushType:) instead
+            activity = try? Activity.request(attributes: attributes, contentState: state)
+                                     ^
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift:82:28: warning: 'update(using:)' was deprecated in iOS 16.2: Use update(_:) instead
+            await activity.update(using: state)
+                           ^
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift:90:28: warning: 'end(using:dismissalPolicy:)' was deprecated in iOS 16.2: Use end(content:dismissalPolicy:) instead
+            await activity.end(dismissalPolicy: .immediate)
+                           ^
+
+SwiftCompile normal arm64 Compiling\ HandwritingEditorView.swift,\ PhotoScanView.swift,\ ScanReviewView.swift,\ SettingsView.swift,\ StatisticsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/HandwritingEditorView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/PhotoScanView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ScanReviewView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/SettingsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StatisticsView.swift (in target 'CardGenie' from project 'CardGenie')
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/HandwritingEditorView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/PhotoScanView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/PhotoScanView.swift:82:50: error: referencing instance method 'onChange(of:initial:_:)' on 'Optional' requires that 'DocumentScanResult' conform to 'Equatable'
+        let documentChangeView = imageChangeView.onChange(of: documentScanResult) { _, newValue in
+                                                 ^
+Swift.Optional:1:11: note: requirement from conditional conformance of 'DocumentScanResult?' to 'Equatable'
+extension Optional : Equatable where Wrapped : Equatable {
+          ^
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ScanReviewView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/SettingsView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StatisticsView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+Failed frontend command:
+/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swift-frontend -frontend -c /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/App/CardGenieApp.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/CacheManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedFeatureModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardExporter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Models.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/SpacedRepetitionManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Store.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/StudyStreakManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/VectorStore.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components/TagFlowLayout.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Components.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/MagicEffects.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Design/Theme.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardEditorView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/FlashcardStatisticsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/SessionBuilderView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Flashcards/StudyResultsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LectureCollaborationController.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveHighlightActivityManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveLectureContext.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/AIAvailabilityViews.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ConceptMapView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentDetailView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentListView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/DocumentScannerView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardListView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardStudyView.swift -primary-file /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/HandwritingEditorView.swift -primary-file /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/PhotoScanView.swift -primary-file /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ScanReviewView.swift -primary-file /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/SettingsView.swift -primary-file /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StatisticsView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StudyPlanView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceAssistantView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceRecordView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AIEngine.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AISafety.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AITools.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AutoCategorizer.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/EnhancedSessionManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardFM.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardGenerationModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FMClient.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ImagePreprocessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/NotificationManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/QuizBuilder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanAnalytics.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanQueue.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/SpeechToTextConverter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/StudyPlanGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/WritingTextEditor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ConceptMapGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/CSVImporter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/FlashcardGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HandwritingProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightCardBuilder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightExtractor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ImageProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/LectureRecorder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/MathSolver.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/OnDeviceTranscriber.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/PDFProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/SmartScheduler.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VideoProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VoiceTutor.swift /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/GeneratedAssetSymbols.swift -supplementary-output-file-map /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/supplementaryOutputs-7 -target arm64-apple-ios26.0 -module-can-import-version ActivityKit 268 1.0.0 -module-can-import-version Combine 3023 0 -module-can-import-version DeveloperToolsSupport 23.0.4 23.0.4 -module-can-import-version FoundationModels 1.0.49 0 -module-can-import-version GroupActivities 267.100.2 1.0.0 -module-can-import-version SwiftUI 7.0.84.1 7.0.84 -module-can-import-version UIKit 9088.1.113 9088.1.113 -disable-cross-import-overlay-search -swift-module-cross-import GroupActivities /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/GroupActivities.framework/Modules/GroupActivities.swiftcrossimport/UIKit.swiftoverlay -swift-module-cross-import GroupActivities /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/GroupActivities.framework/Modules/GroupActivities.swiftcrossimport/UIKit.swiftoverlay -swift-module-cross-import PhotosUI /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/PhotosUI.framework/Modules/PhotosUI.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import PhotosUI /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS.sdk/System/Library/Frameworks/PhotosUI.framework/Modules/PhotosUI.swiftcrossimport/WidgetKit.swiftoverlay -swift-module-cross-import PhotosUI /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/PhotosUI.framework/Modules/PhotosUI.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import PhotosUI /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/PhotosUI.framework/Modules/PhotosUI.swiftcrossimport/WidgetKit.swiftoverlay -swift-module-cross-import RealityKit /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/RealityKit.framework/Modules/RealityKit.swiftcrossimport/SwiftUI.swiftoverlay -swift-module-cross-import SwiftData /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/SwiftData.framework/Modules/SwiftData.swiftcrossimport/CoreData.swiftoverlay -swift-module-cross-import SwiftData /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk/System/Library/Frameworks/SwiftData.framework/Modules/SwiftData.swiftcrossimport/SwiftUI.swiftoverlay -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libFoundationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#FoundationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libFoundationModelsMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#FoundationModelsMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libObservationMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#ObservationMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libPreviewsMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#PreviewsMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftDataMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftDataMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftMacros -load-resolved-plugin /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/lib/swift/host/plugins/libSwiftUIMacros.dylib\#/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/usr/bin/swift-plugin-server\#SwiftUIMacros -disable-implicit-swift-modules -Xcc -fno-implicit-modules -Xcc -fno-implicit-module-maps -explicit-swift-module-map-file /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie-dependencies-1.json -Xllvm -aarch64-use-tbi -enable-objc-interop -stack-check -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk -I /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -F /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -no-color-diagnostics -Xcc -fno-color-diagnostics -enable-testing -g -debug-info-format\=dwarf -dwarf-version\=5 -module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -profile-generate -profile-coverage-mapping -swift-version 5 -enforce-exclusivity\=checked -Onone -D DEBUG -serialize-debugging-options -const-gather-protocols-file /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie_const_extract_protocols.json -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -enable-bare-slash-regex -default-isolation\=MainActor -empty-abi-descriptor -validate-clang-modules-once -clang-build-session-file /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -working-directory -Xcc /Users/rishabhbansal/Documents/GitHub/CardGenie -enable-anonymous-context-mangled-names -file-compilation-dir /Users/rishabhbansal/Documents/GitHub/CardGenie -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -Xcc -ivfsstatcache -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.0-23A339-3885c01c3e6b6a337905948deab2002e81ce72e5b06c9602b9d30b56f2eed08a.sdkstatcache -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/swift-overrides.hmap -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-generated-files.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-own-target-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-project-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/include -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources-normal/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources -Xcc -DDEBUG\=1 -no-auto-bridging-header-chaining -module-name CardGenie -frontend-parseable-output -disable-clang-spi -target-sdk-version 26.0 -target-sdk-name iphoneos26.0 -clang-target arm64-apple-ios26.0 -in-process-plugin-server-path /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/host/libSwiftInProcPluginServer.dylib -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/HandwritingEditorView.o -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/PhotoScanView.o -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/ScanReviewView.o -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/SettingsView.o -o /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/StatisticsView.o -index-unit-output-path /CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/HandwritingEditorView.o -index-unit-output-path /CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/PhotoScanView.o -index-unit-output-path /CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/ScanReviewView.o -index-unit-output-path /CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/SettingsView.o -index-unit-output-path /CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/StatisticsView.o -index-store-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Index.noindex/DataStore -index-system-modules
+SwiftCompile normal arm64 Compiling\ AITools.swift,\ AutoCategorizer.swift,\ EnhancedSessionManager.swift,\ FlashcardFM.swift,\ FlashcardGenerationModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AITools.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AutoCategorizer.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/EnhancedSessionManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardFM.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardGenerationModels.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AITools.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AutoCategorizer.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/EnhancedSessionManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardFM.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FlashcardGenerationModels.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ LiveLectureContext.swift,\ AIAvailabilityViews.swift,\ ARMemoryPalaceManager.swift,\ ARMemoryPalaceView.swift,\ ConceptMapView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveLectureContext.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/AIAvailabilityViews.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ConceptMapView.swift (in target 'CardGenie' from project 'CardGenie')
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/Record/LiveLectureContext.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/AIAvailabilityViews.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ARMemoryPalaceView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ConceptMapView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ Models.swift,\ SpacedRepetitionManager.swift,\ Store.swift,\ StudyStreakManager.swift,\ VectorStore.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Models.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/SpacedRepetitionManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Store.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/StudyStreakManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/VectorStore.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Models.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/SpacedRepetitionManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/Store.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/StudyStreakManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/VectorStore.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ StudyPlanView.swift,\ VoiceAssistantView.swift,\ VoiceRecordView.swift,\ AIEngine.swift,\ AISafety.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StudyPlanView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceAssistantView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceRecordView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AIEngine.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AISafety.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/StudyPlanView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceAssistantView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/VoiceRecordView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AIEngine.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/AISafety.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ ContentDetailView.swift,\ ContentListView.swift,\ DocumentScannerView.swift,\ FlashcardListView.swift,\ FlashcardStudyView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentDetailView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentListView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/DocumentScannerView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardListView.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardStudyView.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentDetailView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/ContentListView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/DocumentScannerView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardListView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Features/FlashcardStudyView.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ FMClient.swift,\ ImagePreprocessor.swift,\ NotificationManager.swift,\ QuizBuilder.swift,\ ScanAnalytics.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FMClient.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ImagePreprocessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/NotificationManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/QuizBuilder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanAnalytics.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/FMClient.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ImagePreprocessor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/NotificationManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/QuizBuilder.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanAnalytics.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ CardGenieApp.swift,\ CacheManager.swift,\ EnhancedFeatureModels.swift,\ EnhancedModels.swift,\ FlashcardExporter.swift,\ FlashcardModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/App/CardGenieApp.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/CacheManager.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedFeatureModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedModels.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardExporter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardModels.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/App/CardGenieApp.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/CacheManager.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedFeatureModels.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/EnhancedModels.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardExporter.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Data/FlashcardModels.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ ScanQueue.swift,\ SpeechToTextConverter.swift,\ StudyPlanGenerator.swift,\ VisionTextExtractor.swift,\ WritingTextEditor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanQueue.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/SpeechToTextConverter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/StudyPlanGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/WritingTextEditor.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/ScanQueue.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift:137:21: warning: variable 'detectedLanguages' was never mutated; consider changing to 'let' constant
+                var detectedLanguages = Set<String>()
+                ~~~ ^
+                let
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/SpeechToTextConverter.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift:137:21: warning: variable 'detectedLanguages' was never mutated; consider changing to 'let' constant
+                var detectedLanguages = Set<String>()
+                ~~~ ^
+                let
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/StudyPlanGenerator.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift:137:21: warning: variable 'detectedLanguages' was never mutated; consider changing to 'let' constant
+                var detectedLanguages = Set<String>()
+                ~~~ ^
+                let
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift:137:21: warning: variable 'detectedLanguages' was never mutated; consider changing to 'let' constant
+                var detectedLanguages = Set<String>()
+                ~~~ ^
+                let
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/WritingTextEditor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+/Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Intelligence/VisionTextExtractor.swift:137:21: warning: variable 'detectedLanguages' was never mutated; consider changing to 'let' constant
+                var detectedLanguages = Set<String>()
+                ~~~ ^
+                let
+
+SwiftEmitModule normal arm64 Emitting\ module\ for\ CardGenie (in target 'CardGenie' from project 'CardGenie')
+
+EmitSwiftModule normal arm64 (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ ConceptMapGenerator.swift,\ CSVImporter.swift,\ FlashcardGenerator.swift,\ HandwritingProcessor.swift,\ HighlightCardBuilder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ConceptMapGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/CSVImporter.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/FlashcardGenerator.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HandwritingProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightCardBuilder.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ConceptMapGenerator.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/CSVImporter.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/FlashcardGenerator.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HandwritingProcessor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightCardBuilder.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ HighlightExtractor.swift,\ ImageProcessor.swift,\ LectureRecorder.swift,\ MathSolver.swift,\ OnDeviceTranscriber.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightExtractor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ImageProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/LectureRecorder.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/MathSolver.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/OnDeviceTranscriber.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/HighlightExtractor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/ImageProcessor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/LectureRecorder.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/MathSolver.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/OnDeviceTranscriber.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 Compiling\ PDFProcessor.swift,\ SmartScheduler.swift,\ VideoProcessor.swift,\ VoiceTutor.swift,\ GeneratedAssetSymbols.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/PDFProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/SmartScheduler.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VideoProcessor.swift /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VoiceTutor.swift /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/PDFProcessor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/SmartScheduler.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VideoProcessor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Documents/GitHub/CardGenie/CardGenie/Processors/VoiceTutor.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftCompile normal arm64 /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/GeneratedAssetSymbols.swift (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    
+
+SwiftDriverJobDiscovery normal arm64 Compiling Models.swift, SpacedRepetitionManager.swift, Store.swift, StudyStreakManager.swift, VectorStore.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling HighlightExtractor.swift, ImageProcessor.swift, LectureRecorder.swift, MathSolver.swift, OnDeviceTranscriber.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling FMClient.swift, ImagePreprocessor.swift, NotificationManager.swift, QuizBuilder.swift, ScanAnalytics.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling ConceptMapGenerator.swift, CSVImporter.swift, FlashcardGenerator.swift, HandwritingProcessor.swift, HighlightCardBuilder.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling AITools.swift, AutoCategorizer.swift, EnhancedSessionManager.swift, FlashcardFM.swift, FlashcardGenerationModels.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling ScanQueue.swift, SpeechToTextConverter.swift, StudyPlanGenerator.swift, VisionTextExtractor.swift, WritingTextEditor.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling PDFProcessor.swift, SmartScheduler.swift, VideoProcessor.swift, VoiceTutor.swift, GeneratedAssetSymbols.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling CardGenieApp.swift, CacheManager.swift, EnhancedFeatureModels.swift, EnhancedModels.swift, FlashcardExporter.swift, FlashcardModels.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling FlashcardStatisticsView.swift, SessionBuilderView.swift, StudyResultsView.swift, LectureCollaborationController.swift, LiveHighlightActivityManager.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Emitting module for CardGenie (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriver\ Compilation\ Requirements CardGenie normal arm64 com.apple.xcode.tools.swift.compiler (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-Swift-Compilation-Requirements -- /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/swiftc -module-name CardGenie -Onone -enforce-exclusivity\=checked @/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.SwiftFileList -DDEBUG -default-isolation\=MainActor -enable-bare-slash-regex -enable-upcoming-feature DisableOutwardActorInference -enable-upcoming-feature InferSendableFromCaptures -enable-upcoming-feature GlobalActorIsolatedTypesUsability -enable-upcoming-feature MemberImportVisibility -enable-upcoming-feature InferIsolatedConformances -enable-upcoming-feature NonisolatedNonsendingByDefault -enable-experimental-feature DebugDescriptionMacro -sdk /Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS26.0.sdk -target arm64-apple-ios26.0 -g -module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -Xfrontend -serialize-debugging-options -profile-coverage-mapping -profile-generate -enable-testing -index-store-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Index.noindex/DataStore -Xcc -D_LIBCPP_HARDENING_MODE\=_LIBCPP_HARDENING_MODE_DEBUG -swift-version 5 -I /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -F /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos -c -j14 -enable-batch-mode -incremental -Xcc -ivfsstatcache -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/SDKStatCaches.noindex/iphoneos26.0-23A339-3885c01c3e6b6a337905948deab2002e81ce72e5b06c9602b9d30b56f2eed08a.sdkstatcache -output-file-map /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie-OutputFileMap.json -use-frontend-parseable-output -save-temps -no-color-diagnostics -explicit-module-build -module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/SwiftExplicitPrecompiledModules -clang-scanner-module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -sdk-module-cache-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex -serialize-diagnostics -emit-dependencies -emit-module -emit-module-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftmodule -validate-clang-modules-once -clang-build-session-file /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/ModuleCache.noindex/Session.modulevalidation -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/swift-overrides.hmap -emit-const-values -Xfrontend -const-gather-protocols-file -Xfrontend /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie_const_extract_protocols.json -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-generated-files.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-own-target-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-all-target-headers.hmap -Xcc -iquote -Xcc /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/CardGenie-project-headers.hmap -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/include -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources-normal/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources/arm64 -Xcc -I/Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/DerivedSources -Xcc -DDEBUG\=1 -emit-objc-header -emit-objc-header-path /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie-Swift.h -working-directory /Users/rishabhbansal/Documents/GitHub/CardGenie -experimental-emit-module-separately -disable-cmo
+
+Copy /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/arm64-apple-ios.abi.json /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.abi.json (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.abi.json /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/arm64-apple-ios.abi.json
+
+Copy /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/arm64-apple-ios.swiftmodule /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftmodule (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftmodule /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/arm64-apple-ios.swiftmodule
+
+Copy /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftsourceinfo (in target 'CardGenie' from project 'CardGenie')
+    cd /Users/rishabhbansal/Documents/GitHub/CardGenie
+    builtin-copy -exclude .DS_Store -exclude CVS -exclude .svn -exclude .git -exclude .hg -resolve-src-symlinks -rename /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Intermediates.noindex/CardGenie.build/Debug-iphoneos/CardGenie.build/Objects-normal/arm64/CardGenie.swiftsourceinfo /Users/rishabhbansal/Library/Developer/Xcode/DerivedData/CardGenie-abzejwvgxjnzqnfepqusjahtzsma/Build/Products/Debug-iphoneos/CardGenie.swiftmodule/Project/arm64-apple-ios.swiftsourceinfo
+
+SwiftDriverJobDiscovery normal arm64 Compiling ContentDetailView.swift, ContentListView.swift, DocumentScannerView.swift, FlashcardListView.swift, FlashcardStudyView.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling TagFlowLayout.swift, Components.swift, MagicEffects.swift, Theme.swift, FlashcardEditorView.swift (in target 'CardGenie' from project 'CardGenie')
+
+SwiftDriverJobDiscovery normal arm64 Compiling StudyPlanView.swift, VoiceAssistantView.swift, VoiceRecordView.swift, AIEngine.swift, AISafety.swift (in target 'CardGenie' from project 'CardGenie')
+

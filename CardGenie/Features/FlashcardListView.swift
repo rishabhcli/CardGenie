@@ -30,7 +30,13 @@ struct FlashcardListView: View {
                     .ignoresSafeArea()
 
                 if flashcardSets.isEmpty {
-                    FlashcardsEmptyState()
+                    VStack(spacing: Spacing.lg) {
+                        GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+                            .padding(.horizontal)
+
+                        FlashcardsEmptyState()
+                    }
+                    .padding(.top, Spacing.xl)
                 } else {
                     mainContent
                 }
@@ -79,7 +85,6 @@ struct FlashcardListView: View {
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search flashcard sets")
             .sheet(item: $activeSession) { session in
                 FlashcardStudyView(
                     flashcardSet: session.set,
@@ -100,7 +105,9 @@ struct FlashcardListView: View {
 
     private var mainContent: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
+                GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+
                 // Daily Review Section
                 if totalDueCount > 0 {
                     dailyReviewSection
@@ -112,7 +119,8 @@ struct FlashcardListView: View {
                 // Flashcard Sets List
                 flashcardSetsSection
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.vertical, Spacing.lg)
         }
     }
 
@@ -202,11 +210,21 @@ struct FlashcardListView: View {
             }
 
             if filteredSets.isEmpty {
-                Text("No flashcard sets found")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondaryText)
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                VStack(spacing: Spacing.sm) {
+                    Text(searchText.isEmpty ? "No flashcard sets found" : "No results for “\(searchText)”")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondaryText)
+
+                    if searchText.isEmpty {
+                        Text("Create a set to get started with your study queue.")
+                            .font(.caption)
+                            .foregroundStyle(Color.tertiaryText)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .glassPanel()
+                .cornerRadius(16)
             } else {
                 ForEach(filteredSets) { set in
                     FlashcardSetRow(set: set)

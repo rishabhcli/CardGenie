@@ -9,6 +9,7 @@
 import Foundation
 import AVFoundation
 import Speech
+import Observation
 
 // MARK: - Voice Tutor
 

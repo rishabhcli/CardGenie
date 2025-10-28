@@ -27,28 +27,46 @@ struct ContentListView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                if allContent.isEmpty && searchText.isEmpty {
-                    // Empty state
-                    EmptyStateView()
-                } else {
-                    // List of content
-                    List {
-                        ForEach(filteredContent) { content in
-                            NavigationLink(value: content) {
-                                ContentRow(content: content)
-                            }
+            List {
+                Section {
+                    GlassSearchBar(text: $searchText, placeholder: "Search your study materials...")
+                }
+                .listSectionSeparator(.hidden)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: Spacing.md, leading: Spacing.md, bottom: Spacing.sm, trailing: Spacing.md))
+                .listRowBackground(Color.clear)
+
+                if filteredContent.isEmpty {
+                    Section {
+                        if searchText.isEmpty {
+                            EmptyStateView()
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, Spacing.xl)
+                        } else {
+                            Text("No results for “\(searchText)”")
+                                .font(.subheadline)
+                                .foregroundStyle(Color.secondaryText)
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.vertical, Spacing.lg)
                         }
-                        .onDelete(perform: deleteContent)
                     }
-                    .listStyle(.plain)
-                    .searchable(
-                        text: $searchText,
-                        placement: .navigationBarDrawer(displayMode: .always),
-                        prompt: "Search your study materials..."
-                    )
+                    .listSectionSeparator(.hidden)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.init(top: Spacing.lg, leading: Spacing.md, bottom: Spacing.xl, trailing: Spacing.md))
+                    .listRowBackground(Color.clear)
+                } else {
+                    ForEach(filteredContent) { content in
+                        NavigationLink(value: content) {
+                            ContentRow(content: content)
+                        }
+                        .listRowBackground(Color.clear)
+                    }
+                    .onDelete(perform: deleteContent)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .listStyle(.plain)
+            .background(Color.clear)
             .navigationTitle("Study Materials")
             .navigationDestination(for: StudyContent.self) { content in
                 ContentDetailView(content: content)

@@ -10,8 +10,9 @@ import AVFoundation
 import Speech
 import OSLog
 
-// AVAssetExportSession callbacks stay on the exporting queue; mark as @unchecked Sendable for continuations.
-extension AVAssetExportSession: @unchecked Sendable {}
+private struct ExportSessionBox: @unchecked Sendable {
+    let session: AVAssetExportSession
+}
 
 // MARK: - Progress Delegate
 
@@ -204,10 +205,9 @@ final class VideoProcessor {
 
             // Use the legacy async export API bridged via continuation.
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                // Capture export session for legacy API (pre-iOS 18)
-                nonisolated(unsafe) let session = exportSession
-                session.exportAsynchronously {
-                    switch session.status {
+                let sessionBox = ExportSessionBox(session: exportSession)
+                sessionBox.session.exportAsynchronously {
+                    switch sessionBox.session.status {
                     case .completed:
                         continuation.resume()
                     case .failed, .cancelled:
