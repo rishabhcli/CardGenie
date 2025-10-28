@@ -8,6 +8,7 @@
 
 import Foundation
 import OSLog
+import Combine
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -82,12 +83,12 @@ final class EnhancedSessionManager: ObservableObject {
     // MARK: - Single-Turn Request
 
     /// Perform a single-turn request (creates new session each time)
-    func singleTurnRequest<T: Decodable>(
+    func singleTurnRequest<T>(
         prompt: String,
         instructions: String,
         generating type: T.Type,
         options: GenerationOptions = GenerationOptions()
-    ) async throws -> T {
+    ) async throws -> T where T: Generable {
         // Ensure no concurrent requests
         guard !isResponding else {
             log.warning("Request blocked: already responding")

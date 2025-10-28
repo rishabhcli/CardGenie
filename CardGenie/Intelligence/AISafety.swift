@@ -58,11 +58,24 @@ struct SafetyEvent {
     }
 }
 
-enum SafetyEventType {
+enum SafetyEventType: CustomStringConvertible {
     case guardrailViolation
     case refusal
     case denyListMatch
     case privacyFilter
+
+    var description: String {
+        switch self {
+        case .guardrailViolation:
+            return "guardrail_violation"
+        case .refusal:
+            return "refusal"
+        case .denyListMatch:
+            return "deny_list_match"
+        case .privacyFilter:
+            return "privacy_filter"
+        }
+    }
 }
 
 // MARK: - Content Safety Filter
