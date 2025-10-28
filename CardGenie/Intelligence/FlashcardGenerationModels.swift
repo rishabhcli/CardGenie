@@ -166,6 +166,42 @@ struct DefinitionCard: Equatable {
 struct JournalTags: Equatable {
     let tags: [String]
 }
+
+// MARK: - Quiz Generation (Fallback)
+
+struct QuizItem: Equatable {
+    let type: QuizTypeEnum
+    let question: String
+    let correctAnswer: String
+    let distractors: [String]
+    let difficulty: Int
+    let explanation: String
+}
+
+enum QuizTypeEnum: Equatable {
+    case mcq
+    case cloze
+    case shortAnswer
+}
+
+struct QuizBatch: Equatable {
+    let items: [QuizItem]
+}
+
+// MARK: - Study Plan Generation (Fallback)
+
+struct StudySession: Equatable {
+    let date: String
+    let goal: String
+    let materials: [String]
+    let estimatedMinutes: Int
+}
+
+struct StudyPlan: Equatable {
+    let course: String
+    let overallGoal: String
+    let sessions: [StudySession]
+}
 #endif
 
 // MARK: - Conversion Helpers
