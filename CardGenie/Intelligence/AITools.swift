@@ -64,7 +64,7 @@ final class FetchNotesTool: AITool {
                     content.topic?.localizedStandardContains(query) ?? false ||
                     content.tags.contains(query.lowercased())
                 },
-                sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
+                sortBy: [SortDescriptor<StudyContent>(\.createdDate, order: .reverse)]
             )
 
             let results = try modelContext.fetch(descriptor)
@@ -153,7 +153,7 @@ final class SaveFlashcardsTool: AITool {
 
                 let tags = (cardData["tags"] as? [String]) ?? []
                 let linkedID = (cardData["linkedEntryID"] as? String)
-                    .flatMap { UUID(uuidString: $0) }
+                    .flatMap { UUID(uuidString: $0) } ?? UUID()
 
                 let flashcard = Flashcard(
                     type: type,
@@ -203,12 +203,7 @@ final class UpcomingDeadlinesTool: AITool {
         log.info("Fetching upcoming deadlines")
 
         // Request calendar access
-        let granted: Bool
-        if #available(iOS 17.0, *) {
-            granted = try await eventStore.requestFullAccessToEvents()
-        } else {
-            granted = try await eventStore.requestAccess(to: .event)
-        }
+        let granted = try await eventStore.requestFullAccessToEvents()
 
         guard granted else {
             return ToolResult(
@@ -291,7 +286,7 @@ final class GlossaryTool: AITool {
                     card.type == FlashcardType.definition &&
                     card.question.localizedStandardContains(term)
                 },
-                sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
+                sortBy: [SortDescriptor<Flashcard>(\.createdDate, order: .reverse)]
             )
 
             let results = try modelContext.fetch(descriptor)
@@ -309,7 +304,7 @@ final class GlossaryTool: AITool {
                 predicate: #Predicate<StudyContent> { content in
                     content.displayText.localizedStandardContains(term)
                 },
-                sortBy: [SortDescriptor(\.createdDate, order: .reverse)]
+                sortBy: [SortDescriptor<StudyContent>(\.createdDate, order: .reverse)]
             )
 
             let contentResults = try modelContext.fetch(contentDescriptor)
