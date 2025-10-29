@@ -61,19 +61,63 @@ struct CardGenieApp: App {
 // MARK: - Main Tab View
 
 /// Main navigation with Study Materials, Flashcards, and Settings tabs
+/// Uses iOS 26+ Tab API for modern Liquid Glass tab bar with sidebar adaptability
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
+    @State private var selectedTab: Int = 0
 
     var body: some View {
-        TabView {
+        if #available(iOS 26.0, *) {
+            // iOS 26+ modern Tab API with Liquid Glass
+            TabView(selection: $selectedTab) {
+                Tab("Study", systemImage: "sparkles", value: 0) {
+                    ContentListView()
+                }
+
+                if let badge = flashcardBadge {
+                    Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
+                        FlashcardListView()
+                    }
+                    .badge(badge)
+                } else {
+                    Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
+                        FlashcardListView()
+                    }
+                }
+
+                Tab("Ask", systemImage: "waveform.circle.fill", value: 2) {
+                    VoiceAssistantView()
+                }
+
+                Tab("Record", systemImage: "mic.circle.fill", value: 3) {
+                    VoiceRecordView()
+                }
+
+                Tab("Scan", systemImage: "camera.fill", value: 4) {
+                    PhotoScanView()
+                }
+            }
+            .tabViewStyle(.sidebarAdaptable) // Sidebar on iPad, tabs on iPhone
+            .tint(.cosmicPurple)
+        } else {
+            // Fallback for iOS 25
+            legacyTabView
+        }
+    }
+
+    // MARK: - Legacy Tab View (iOS 25)
+
+    @ViewBuilder
+    private var legacyTabView: some View {
+        TabView(selection: $selectedTab) {
             ContentListView()
                 .tabItem {
                     Label("Study", systemImage: "sparkles")
                 }
                 .tag(0)
 
-            flashcardsTab
+            flashcardsTabLegacy
 
             VoiceAssistantView()
                 .tabItem {
@@ -97,7 +141,7 @@ struct MainTabView: View {
     }
 
     @ViewBuilder
-    private var flashcardsTab: some View {
+    private var flashcardsTabLegacy: some View {
         if let badge = flashcardBadge {
             FlashcardListView()
                 .tabItem {

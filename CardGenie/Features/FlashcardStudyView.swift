@@ -234,71 +234,139 @@ struct FlashcardStudyView: View {
 
     // MARK: - Clarification Sheet
 
+    @ViewBuilder
     private var clarificationSheet: some View {
         NavigationStack {
             ZStack {
                 Color.clear
                     .ignoresSafeArea()
 
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 20) {
-                        // Original Flashcard
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Question")
-                                .font(.caption)
-                                .foregroundStyle(Color.secondaryText)
-                                .textCase(.uppercase)
+                if #available(iOS 26.0, *) {
+                    ScrollView {
+                        // Wrap glass elements in GlassEffectContainer
+                        GlassEffectContainer {
+                            VStack(alignment: .leading, spacing: 20) {
+                                // Original Flashcard
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Question")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.secondaryText)
+                                        .textCase(.uppercase)
 
-                            Text(currentCard.question)
-                                .font(.body)
-                                .foregroundStyle(Color.primaryText)
-
-                            Divider()
-                                .padding(.vertical, 4)
-
-                            Text("Answer")
-                                .font(.caption)
-                                .foregroundStyle(Color.secondaryText)
-                                .textCase(.uppercase)
-
-                            Text(currentCard.answer)
-                                .font(.body)
-                                .foregroundStyle(Color.aiAccent)
-                        }
-                        .padding()
-                        .glassPanel()
-                        .cornerRadius(12)
-
-                        // AI Explanation
-                        if isLoadingClarification {
-                            HStack {
-                                ProgressView()
-                                Text("Generating explanation...")
-                                    .foregroundStyle(Color.secondaryText)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                        } else if !clarificationText.isEmpty {
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    Image(systemName: "sparkles")
-                                        .foregroundStyle(Color.aiAccent)
-                                    Text("AI Explanation")
-                                        .font(.headline)
+                                    Text(currentCard.question)
+                                        .font(.body)
                                         .foregroundStyle(Color.primaryText)
-                                }
 
-                                Text(clarificationText)
+                                    Divider()
+                                        .padding(.vertical, 4)
+
+                                    Text("Answer")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.secondaryText)
+                                        .textCase(.uppercase)
+
+                                    Text(currentCard.answer)
+                                        .font(.body)
+                                        .foregroundStyle(Color.aiAccent)
+                                }
+                                .padding()
+                                .glassPanel()
+                                .cornerRadius(12)
+
+                                // AI Explanation
+                                if isLoadingClarification {
+                                    HStack {
+                                        ProgressView()
+                                        Text("Generating explanation...")
+                                            .foregroundStyle(Color.secondaryText)
+                                    }
+                                    .frame(maxWidth: .infinity)
+                                    .padding()
+                                } else if !clarificationText.isEmpty {
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        HStack {
+                                            Image(systemName: "sparkles")
+                                                .foregroundStyle(Color.aiAccent)
+                                            Text("AI Explanation")
+                                                .font(.headline)
+                                                .foregroundStyle(Color.primaryText)
+                                        }
+
+                                        Text(clarificationText)
+                                            .font(.body)
+                                            .foregroundStyle(Color.primaryText)
+                                            .lineSpacing(4)
+                                    }
+                                    .padding()
+                                    .glassPanel()
+                                    .cornerRadius(12)
+                                }
+                            }
+                            .padding()
+                        }
+                    }
+                } else {
+                    // Legacy fallback for iOS 25
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 20) {
+                            // Original Flashcard
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Question")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondaryText)
+                                    .textCase(.uppercase)
+
+                                Text(currentCard.question)
                                     .font(.body)
                                     .foregroundStyle(Color.primaryText)
-                                    .lineSpacing(4)
+
+                                Divider()
+                                    .padding(.vertical, 4)
+
+                                Text("Answer")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondaryText)
+                                    .textCase(.uppercase)
+
+                                Text(currentCard.answer)
+                                    .font(.body)
+                                    .foregroundStyle(Color.aiAccent)
                             }
                             .padding()
                             .glassPanel()
                             .cornerRadius(12)
+
+                            // AI Explanation
+                            if isLoadingClarification {
+                                HStack {
+                                    ProgressView()
+                                    Text("Generating explanation...")
+                                        .foregroundStyle(Color.secondaryText)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                            } else if !clarificationText.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    HStack {
+                                        Image(systemName: "sparkles")
+                                            .foregroundStyle(Color.aiAccent)
+                                        Text("AI Explanation")
+                                            .font(.headline)
+                                            .foregroundStyle(Color.primaryText)
+                                    }
+
+                                    Text(clarificationText)
+                                        .font(.body)
+                                        .foregroundStyle(Color.primaryText)
+                                        .lineSpacing(4)
+                                }
+                                .padding()
+                                .glassPanel()
+                                .cornerRadius(12)
+                            }
                         }
+                        .padding()
                     }
-                    .padding()
                 }
             }
             .navigationTitle("Clarification")

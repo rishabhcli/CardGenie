@@ -87,6 +87,7 @@ struct ContentListView: View {
                     } label: {
                         Image(systemName: "plus.circle.fill")
                             .font(.title2)
+                            .symbolEffect(.bounce, value: allContent.count) // iOS 26 SF Symbols animation
                             .foregroundStyle(
                                 LinearGradient(
                                     colors: [.cosmicPurple, .mysticBlue],
