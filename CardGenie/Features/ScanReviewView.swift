@@ -635,10 +635,12 @@ struct SectionEditorView: View {
     """
 
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: StudyContent.self, Flashcard.self, FlashcardSet.self,
         configurations: config
-    )
+    )) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self)
+    }()
 
     return ScanReviewView(
         extractedText: sampleText,

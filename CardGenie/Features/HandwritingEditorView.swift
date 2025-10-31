@@ -264,7 +264,9 @@ struct OCRResultView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: Flashcard.self, configurations: config)
+    let container = (try? ModelContainer(for: Flashcard.self, configurations: config)) ?? {
+        try! ModelContainer(for: Flashcard.self)
+    }()
 
     let card = Flashcard(
         type: .qa,

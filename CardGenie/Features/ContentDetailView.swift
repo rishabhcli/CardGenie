@@ -455,7 +455,10 @@ struct ContentDetailView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
+    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
+        // Fallback to default container if creation fails
+        try! ModelContainer(for: StudyContent.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    }()
     let context = ModelContext(container)
 
     let content = StudyContent(

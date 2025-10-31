@@ -244,10 +244,6 @@ final class FlashcardSet {
     @Relationship(deleteRule: .cascade)
     var cards: [Flashcard]
 
-    /// AR Memory Palace for this set (optional)
-    @Relationship(deleteRule: .cascade)
-    var arMemoryPalace: ARMemoryPalace?
-
     // MARK: - Initialization
 
     init(topicLabel: String, tag: String) {

@@ -494,10 +494,12 @@ private struct SessionStats {
 // MARK: - Preview
 
 #Preview {
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: FlashcardSet.self, Flashcard.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
+    )) ?? {
+        try! ModelContainer(for: FlashcardSet.self, Flashcard.self)
+    }()
 
     let set = FlashcardSet(topicLabel: "Travel", tag: "travel")
 

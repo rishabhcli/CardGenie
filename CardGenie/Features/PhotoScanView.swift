@@ -636,10 +636,12 @@ struct CameraView: UIViewControllerRepresentable {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: StudyContent.self, Flashcard.self, FlashcardSet.self,
         configurations: config
-    )
+    )) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self)
+    }()
 
     PhotoScanView()
         .modelContainer(container)

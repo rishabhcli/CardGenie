@@ -212,7 +212,10 @@ struct ContentRow: View {
 #Preview {
     // Create a preview container with sample data
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
+    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
+        // Fallback to default container if creation fails
+        try! ModelContainer(for: StudyContent.self)
+    }()
 
     // Add sample content
     let context = ModelContext(container)
@@ -249,7 +252,9 @@ struct ContentRow: View {
 #Preview("Empty State") {
     // Empty container for empty state preview
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
+    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
+        try! ModelContainer(for: StudyContent.self)
+    }()
 
     return ContentListView()
         .modelContainer(container)

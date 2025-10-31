@@ -508,10 +508,12 @@ struct StudyAnalytics {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: FlashcardSet.self, Flashcard.self,
         configurations: config
-    )
+    )) ?? {
+        try! ModelContainer(for: FlashcardSet.self, Flashcard.self)
+    }()
     let context = ModelContext(container)
 
     // Create sample data

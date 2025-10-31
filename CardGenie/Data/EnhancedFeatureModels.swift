@@ -2,119 +2,12 @@
 //  EnhancedFeatureModels.swift
 //  CardGenie
 //
-//  Data models for AR Memory Palace, Handwritten Cards,
-//  Smart Scheduler, and Concept Maps.
+//  Data models for Handwritten Cards, Smart Scheduler, and Concept Maps.
 //
 
 import Foundation
 import SwiftData
 import PencilKit
-import ARKit
-
-// MARK: - AR Memory Palace
-
-/// Stores AR world map and anchor data for a flashcard set
-@Model
-final class ARMemoryPalace {
-    @Attribute(.unique) var id: UUID
-
-    /// The flashcard set this memory palace belongs to
-    @Relationship(inverse: \FlashcardSet.arMemoryPalace)
-    var flashcardSet: FlashcardSet?
-
-    /// Serialized ARWorldMap data
-    var worldMapData: Data?
-
-    /// Card anchor configurations
-    @Relationship(deleteRule: .cascade)
-    var cardAnchors: [CardAnchor]
-
-    /// When the memory palace was created
-    var createdAt: Date
-
-    /// Last time the world map was updated
-    var lastUpdated: Date
-
-    init() {
-        self.id = UUID()
-        self.cardAnchors = []
-        self.createdAt = Date()
-        self.lastUpdated = Date()
-    }
-}
-
-/// Represents a flashcard anchored in AR space
-@Model
-final class CardAnchor {
-    @Attribute(.unique) var id: UUID
-
-    /// Reference to the flashcard
-    var flashcardID: UUID
-
-    /// Anchor name (unique identifier for ARKit)
-    var anchorName: String
-
-    /// Position in world space (serialized)
-    var positionX: Float
-    var positionY: Float
-    var positionZ: Float
-
-    /// Rotation (quaternion)
-    var rotationX: Float
-    var rotationY: Float
-    var rotationZ: Float
-    var rotationW: Float
-
-    /// Custom label for this location (e.g., "Desk", "Bed", "Door")
-    var locationLabel: String
-
-    /// Proximity radius in meters (when user is within this, card activates)
-    var proximityRadius: Float
-
-    /// Parent memory palace
-    @Relationship(inverse: \ARMemoryPalace.cardAnchors)
-    var memoryPalace: ARMemoryPalace?
-
-    init(flashcardID: UUID, anchorName: String, locationLabel: String) {
-        self.id = UUID()
-        self.flashcardID = flashcardID
-        self.anchorName = anchorName
-        self.locationLabel = locationLabel
-        self.positionX = 0
-        self.positionY = 0
-        self.positionZ = 0
-        self.rotationX = 0
-        self.rotationY = 0
-        self.rotationZ = 0
-        self.rotationW = 1
-        self.proximityRadius = 0.5 // Default 0.5 meters
-    }
-
-    /// Set position from simd_float3
-    func setPosition(_ position: simd_float3) {
-        self.positionX = position.x
-        self.positionY = position.y
-        self.positionZ = position.z
-    }
-
-    /// Set rotation from simd_quatf
-    func setRotation(_ rotation: simd_quatf) {
-        self.rotationX = rotation.vector.x
-        self.rotationY = rotation.vector.y
-        self.rotationZ = rotation.vector.z
-        self.rotationW = rotation.vector.w
-    }
-
-    /// Get position as simd_float3
-    func getPosition() -> simd_float3 {
-        simd_float3(positionX, positionY, positionZ)
-    }
-
-    /// Get rotation as simd_quatf
-    func getRotation() -> simd_quatf {
-        simd_quatf(ix: rotationX, iy: rotationY, iz: rotationZ, r: rotationW)
-    }
-}
 
 // MARK: - Handwritten Flashcards
 
@@ -390,4 +283,4 @@ final class ConceptEdge {
 }
 
 // MARK: - Helper Extensions
-// Note: Relationships are managed via inverse relationships in ARMemoryPalace and HandwritingData models
+// Note: Relationships are managed via inverse relationships in HandwritingData model
