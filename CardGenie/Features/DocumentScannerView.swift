@@ -8,15 +8,22 @@
 
 import SwiftUI
 import VisionKit
+import UIKit
 
 /// Result of a document scan operation
-struct DocumentScanResult {
+struct DocumentScanResult: Identifiable, Equatable {
+    let id: UUID
     let images: [UIImage]
     let pageCount: Int
 
     init(images: [UIImage]) {
+        self.id = UUID()
         self.images = images
         self.pageCount = images.count
+    }
+
+    static func == (lhs: DocumentScanResult, rhs: DocumentScanResult) -> Bool {
+        lhs.id == rhs.id
     }
 }
 

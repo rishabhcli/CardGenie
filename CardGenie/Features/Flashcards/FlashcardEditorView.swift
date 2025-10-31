@@ -35,6 +35,8 @@ struct FlashcardEditorView: View {
     @State private var showingSetPicker = false
     @State private var showingValidationError = false
     @State private var validationMessage = ""
+    @State private var showingNewSetAlert = false
+    @State private var newSetName = ""
 
     @Query private var allSets: [FlashcardSet]
     @Query private var allCards: [Flashcard]
@@ -110,11 +112,22 @@ struct FlashcardEditorView: View {
             } message: {
                 Text(validationMessage)
             }
+            .alert("New Deck", isPresented: $showingNewSetAlert) {
+                TextField("Deck Name", text: $newSetName)
+                    .autocapitalization(.words)
+                Button("Cancel", role: .cancel) {
+                    newSetName = ""
+                }
+                Button("Create") {
+                    confirmNewSet()
+                }
+                .disabled(newSetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            } message: {
+                Text("Enter a name for your new flashcard deck")
+            }
             .onAppear {
                 loadInitialData()
             }
-            // Keyboard shortcuts
-            .keyboardShortcut(.return, modifiers: [.command], action: saveCard)
         }
     }
 
@@ -204,7 +217,7 @@ struct FlashcardEditorView: View {
 
             // Current tags
             if !tags.isEmpty {
-                FlowLayout(spacing: 8) {
+                TagFlowLayout(spacing: 8) {
                     ForEach(tags, id: \.self) { tag in
                         TagChip(text: tag)
                             .overlay(alignment: .topTrailing) {
@@ -251,7 +264,7 @@ struct FlashcardEditorView: View {
                         .font(.caption)
                         .foregroundStyle(Color.secondaryText)
 
-                    FlowLayout(spacing: 8) {
+                    TagFlowLayout(spacing: 8) {
                         ForEach(tagSuggestions.prefix(5), id: \.self) { suggestion in
                             Button {
                                 selectTag(suggestion)
@@ -523,12 +536,19 @@ struct FlashcardEditorView: View {
     }
 
     private func createNewSet() {
-        // TODO: Show alert to get new deck name
-        // For now, create a default one
-        let newSet = FlashcardSet(topicLabel: "New Deck", tag: "new")
+        showingNewSetAlert = true
+    }
+
+    private func confirmNewSet() {
+        guard !newSetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        let trimmedName = newSetName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tag = trimmedName.lowercased().replacingOccurrences(of: " ", with: "-")
+        let newSet = FlashcardSet(topicLabel: trimmedName, tag: tag)
         modelContext.insert(newSet)
         selectedSet = newSet
         showingSetPicker = false
+        newSetName = ""
     }
 
     private func validateCard() -> Bool {
@@ -634,59 +654,6 @@ struct FlashcardEditorView: View {
     }
 }
 
-// MARK: - Flow Layout for Tags
-
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let result = FlowResult(
-            in: proposal.replacingUnspecifiedDimensions().width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        return result.size
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let result = FlowResult(
-            in: bounds.width,
-            subviews: subviews,
-            spacing: spacing
-        )
-        for (index, subview) in subviews.enumerated() {
-            subview.place(at: result.positions[index] + bounds.origin, proposal: .unspecified)
-        }
-    }
-
-    struct FlowResult {
-        var size: CGSize = .zero
-        var positions: [CGPoint] = []
-
-        init(in maxWidth: CGFloat, subviews: Subviews, spacing: CGFloat) {
-            var x: CGFloat = 0
-            var y: CGFloat = 0
-            var lineHeight: CGFloat = 0
-
-            for subview in subviews {
-                let size = subview.sizeThatFits(.unspecified)
-
-                if x + size.width > maxWidth && x > 0 {
-                    x = 0
-                    y += lineHeight + spacing
-                    lineHeight = 0
-                }
-
-                positions.append(CGPoint(x: x, y: y))
-                lineHeight = max(lineHeight, size.height)
-                x += size.width + spacing
-            }
-
-            self.size = CGSize(width: maxWidth, height: y + lineHeight)
-        }
-    }
-}
-
 // MARK: - Preview
 
 #Preview("Create Mode") {
@@ -695,10 +662,12 @@ struct FlowLayout: Layout {
 }
 
 #Preview("Edit Mode") {
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: FlashcardSet.self, Flashcard.self,
         configurations: ModelConfiguration(isStoredInMemoryOnly: true)
-    )
+    )) ?? {
+        try! ModelContainer(for: FlashcardSet.self, Flashcard.self)
+    }()
 
     let set = FlashcardSet(topicLabel: "Travel", tag: "travel")
     let card = Flashcard(

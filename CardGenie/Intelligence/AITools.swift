@@ -57,17 +57,19 @@ final class FetchNotesTool: AITool {
         log.info("Fetching notes with query: \(query)")
 
         do {
-            let descriptor = FetchDescriptor<StudyContent>(
-                predicate: #Predicate<StudyContent> { content in
-                    content.rawContent.localizedStandardContains(query) ||
-                    content.summary?.localizedStandardContains(query) ?? false ||
-                    content.topic?.localizedStandardContains(query) ?? false ||
-                    content.tags.contains(query.lowercased())
-                },
-                sortBy: [SortDescriptor<StudyContent>(\.createdDate, order: .reverse)]
+            var descriptor = FetchDescriptor<StudyContent>(
+                sortBy: [SortDescriptor<StudyContent>(\.createdAt, order: .reverse)]
             )
+            descriptor.fetchLimit = 200
 
-            let results = try modelContext.fetch(descriptor)
+            let candidates = try modelContext.fetch(descriptor)
+
+            let results = candidates.filter { content in
+                matches(query, in: content.rawContent) ||
+                matches(query, in: content.summary) ||
+                matches(query, in: content.topic) ||
+                content.tags.contains { containsCaseInsensitive($0, query) }
+            }
 
             // Limit to top 5 most recent matches to stay within context window
             let limited = Array(results.prefix(5))
@@ -81,11 +83,12 @@ final class FetchNotesTool: AITool {
             }
 
             let summaries = limited.map { content in
-                """
+                let summaryText = content.summary ?? String(content.displayText.prefix(200))
+                return """
                 ID: \(content.id)
                 Topic: \(content.topic ?? "Untitled")
                 Tags: \(content.tags.joined(separator: ", "))
-                Summary: \(content.summary ?? content.displayText.prefix(200))
+                Summary: \(summaryText)
                 """
             }.joined(separator: "\n\n")
 
@@ -104,7 +107,22 @@ final class FetchNotesTool: AITool {
                 data: "",
                 error: "Failed to search notes: \(error.localizedDescription)"
             )
-        }
+    }
+}
+
+    private func matches(_ query: String, in text: String?) -> Bool {
+        guard let text else { return false }
+        return text.range(
+            of: query,
+            options: String.CompareOptions(arrayLiteral: .caseInsensitive, .diacriticInsensitive)
+        ) != nil
+    }
+
+    private func containsCaseInsensitive(_ text: String, _ query: String) -> Bool {
+        text.range(
+            of: query,
+            options: String.CompareOptions(arrayLiteral: .caseInsensitive, .diacriticInsensitive)
+        ) != nil
     }
 }
 
@@ -281,17 +299,15 @@ final class GlossaryTool: AITool {
 
         do {
             // Search for definition-type flashcards matching the term
-            let descriptor = FetchDescriptor<Flashcard>(
-                predicate: #Predicate<Flashcard> { card in
-                    card.type == FlashcardType.definition &&
-                    card.question.localizedStandardContains(term)
-                },
-                sortBy: [SortDescriptor<Flashcard>(\.createdDate, order: .reverse)]
+            var descriptor = FetchDescriptor<Flashcard>(
+                sortBy: [SortDescriptor<Flashcard>(\.createdAt, order: .reverse)]
             )
+            descriptor.fetchLimit = 50
 
-            let results = try modelContext.fetch(descriptor)
-
-            if let match = results.first {
+            let flashcards = try modelContext.fetch(descriptor)
+            if let match = flashcards.first(where: {
+                $0.type == .definition && $0.question.localizedStandardContains(term)
+            }) {
                 return ToolResult(
                     success: true,
                     data: "\(match.question)\n\n\(match.answer)",
@@ -300,16 +316,14 @@ final class GlossaryTool: AITool {
             }
 
             // Fallback: search in study content
-            let contentDescriptor = FetchDescriptor<StudyContent>(
-                predicate: #Predicate<StudyContent> { content in
-                    content.displayText.localizedStandardContains(term)
-                },
-                sortBy: [SortDescriptor<StudyContent>(\.createdDate, order: .reverse)]
+            var contentDescriptor = FetchDescriptor<StudyContent>(
+                sortBy: [SortDescriptor<StudyContent>(\.createdAt, order: .reverse)]
             )
+            contentDescriptor.fetchLimit = 200
 
             let contentResults = try modelContext.fetch(contentDescriptor)
 
-            if let match = contentResults.first {
+            if let match = contentResults.first(where: { matchesTerm(term, in: $0.displayText) }) {
                 let excerpt = extractRelevantExcerpt(from: match.displayText, term: term)
                 return ToolResult(
                     success: true,
@@ -345,6 +359,22 @@ final class GlossaryTool: AITool {
 
         // Fallback: return first 200 chars
         return String(text.prefix(200))
+    }
+
+    private func matches(_ query: String, in text: String?) -> Bool {
+        guard let text else { return false }
+        return containsCaseInsensitive(text, query)
+    }
+
+    private func matchesTerm(_ term: String, in text: String) -> Bool {
+        containsCaseInsensitive(text, term)
+    }
+
+    private func containsCaseInsensitive(_ text: String, _ query: String) -> Bool {
+        text.range(
+            of: query,
+            options: String.CompareOptions(arrayLiteral: .caseInsensitive, .diacriticInsensitive)
+        ) != nil
     }
 }
 

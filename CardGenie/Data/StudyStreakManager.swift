@@ -14,6 +14,7 @@ final class StudyStreakManager {
     private let defaults: UserDefaults
     private let streakKey = "flashcard.streak.count"
     private let lastStudyDateKey = "flashcard.streak.lastDate"
+    private let longestStreakKey = "flashcard.streak.longest"
     private let calendar = Calendar.current
 
     private init(defaults: UserDefaults = .standard) {
@@ -51,12 +52,25 @@ final class StudyStreakManager {
         defaults.set(newStreak, forKey: streakKey)
         defaults.set(today, forKey: lastStudyDateKey)
 
+        // Update longest streak if needed
+        let currentLongest = defaults.integer(forKey: longestStreakKey)
+        if newStreak > currentLongest {
+            defaults.set(newStreak, forKey: longestStreakKey)
+        }
+
         return newStreak
+    }
+
+    /// Returns the longest streak ever recorded.
+    func longestStreak() -> Int {
+        defaults.integer(forKey: longestStreakKey)
     }
 
     /// Reset streak values. Useful for tests.
     func reset() {
         defaults.removeObject(forKey: streakKey)
         defaults.removeObject(forKey: lastStudyDateKey)
+        defaults.removeObject(forKey: longestStreakKey)
     }
 }
+

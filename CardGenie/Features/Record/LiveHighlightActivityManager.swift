@@ -60,7 +60,10 @@ final class LiveHighlightActivityManager {
                 participants: snapshot?.participants ?? []
             )
 
-            activity = try? Activity.request(attributes: attributes, contentState: state)
+            activity = try? Activity.request(
+                attributes: attributes,
+                content: ActivityContent(state: state, staleDate: nil)
+            )
             isActive = activity != nil
         } else {
             isActive = false
@@ -79,7 +82,7 @@ final class LiveHighlightActivityManager {
                 highlightCount: snapshot.highlightCount,
                 participants: snapshot.participants
             )
-            await activity.update(using: state)
+            await activity.update(ActivityContent(state: state, staleDate: nil))
         }
         #endif
     }
@@ -87,7 +90,16 @@ final class LiveHighlightActivityManager {
     func end() async {
         #if canImport(ActivityKit)
         if #available(iOS 17.0, *), let activity {
-            await activity.end(dismissalPolicy: .immediate)
+            let finalState = LectureHighlightActivityAttributes.ContentState(
+                highlightTitle: "",
+                timestampLabel: "",
+                highlightCount: 0,
+                participants: []
+            )
+            await activity.end(
+                ActivityContent(state: finalState, staleDate: nil),
+                dismissalPolicy: .immediate
+            )
             self.activity = nil
         }
         #endif

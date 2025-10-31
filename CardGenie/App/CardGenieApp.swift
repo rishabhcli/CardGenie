@@ -14,6 +14,7 @@ struct CardGenieApp: App {
     /// SwiftData container configured for local storage only
     /// All study content and flashcards are stored in the app's private sandbox
     /// with no iCloud sync or external file access.
+    /// Falls back to in-memory storage if persistent storage fails.
     var modelContainer: ModelContainer = {
         let schema = Schema([
             StudyContent.self,
@@ -38,7 +39,26 @@ struct CardGenieApp: App {
                 configurations: [modelConfiguration]
             )
         } catch {
-            fatalError("Could not create ModelContainer: \(error)")
+            // If persistent storage fails, fall back to in-memory storage
+            // This prevents app crashes while allowing the app to function
+            print("⚠️ Failed to create persistent ModelContainer: \(error)")
+            print("⚠️ Falling back to in-memory storage. Data will not persist between launches.")
+
+            let memoryConfig = ModelConfiguration(
+                schema: schema,
+                isStoredInMemoryOnly: true
+            )
+
+            do {
+                return try ModelContainer(
+                    for: schema,
+                    configurations: [memoryConfig]
+                )
+            } catch {
+                // This should never happen, but if it does, we have no choice but to crash
+                // At least we tried to recover gracefully
+                fatalError("Could not create even in-memory ModelContainer: \(error)")
+            }
         }
     }()
 
@@ -61,19 +81,136 @@ struct CardGenieApp: App {
 // MARK: - Main Tab View
 
 /// Main navigation with Study Materials, Flashcards, and Settings tabs
+/// Uses iOS 26+ Tab API for modern Liquid Glass tab bar with sidebar adaptability
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
+    @State private var selectedTab: Int = 0
+    @State private var showingAIAssistant = false
+    @State private var assistantMode: AssistantMode = .ask
 
     var body: some View {
-        TabView {
+        if #available(iOS 26.0, *) {
+            // iOS 26+ with floating AI assistant button
+            modernTabView
+                .tabViewBottomAccessory {
+                    floatingAIAssistantButton
+                }
+                .sheet(isPresented: $showingAIAssistant) {
+                    aiAssistantSheet
+                }
+        } else {
+            // Fallback for iOS 25
+            legacyTabView
+        }
+    }
+
+    // MARK: - iOS 26+ Modern Tab View
+
+    @available(iOS 26.0, *)
+    @ViewBuilder
+    private var modernTabView: some View {
+        TabView(selection: $selectedTab) {
+            Tab("Study", systemImage: "sparkles", value: 0) {
+                ContentListView()
+            }
+
+            if let badge = flashcardBadge {
+                Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
+                    FlashcardListView()
+                }
+                .badge(badge)
+            } else {
+                Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
+                    FlashcardListView()
+                }
+            }
+
+            Tab("Scan", systemImage: "camera.fill", value: 2) {
+                PhotoScanView()
+            }
+        }
+        .tabViewStyle(.sidebarAdaptable) // Sidebar on iPad, tabs on iPhone
+        .tint(.cosmicPurple)
+    }
+
+    // MARK: - Floating AI Assistant Button (iOS 26+)
+
+    @available(iOS 26.0, *)
+    @ViewBuilder
+    private var floatingAIAssistantButton: some View {
+        Menu {
+            Button {
+                assistantMode = .ask
+                showingAIAssistant = true
+            } label: {
+                Label("Ask Question", systemImage: "waveform.circle.fill")
+            }
+
+            Button {
+                assistantMode = .record
+                showingAIAssistant = true
+            } label: {
+                Label("Record Lecture", systemImage: "mic.circle.fill")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .symbolEffect(.bounce, value: showingAIAssistant)
+
+                Text("AI Assistant")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
+    }
+
+    @ViewBuilder
+    private var aiAssistantSheet: some View {
+        NavigationStack {
+            Group {
+                switch assistantMode {
+                case .ask:
+                    VoiceAssistantView()
+                case .record:
+                    VoiceRecordView()
+                }
+            }
+            .navigationTitle(assistantMode == .ask ? "Ask Question" : "Record Lecture")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        showingAIAssistant = false
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+        }
+    }
+
+    enum AssistantMode {
+        case ask
+        case record
+    }
+
+    // MARK: - Legacy Tab View (iOS 25)
+
+    @ViewBuilder
+    private var legacyTabView: some View {
+        TabView(selection: $selectedTab) {
             ContentListView()
                 .tabItem {
                     Label("Study", systemImage: "sparkles")
                 }
                 .tag(0)
 
-            flashcardsTab
+            flashcardsTabLegacy
 
             VoiceAssistantView()
                 .tabItem {
@@ -97,7 +234,7 @@ struct MainTabView: View {
     }
 
     @ViewBuilder
-    private var flashcardsTab: some View {
+    private var flashcardsTabLegacy: some View {
         if let badge = flashcardBadge {
             FlashcardListView()
                 .tabItem {

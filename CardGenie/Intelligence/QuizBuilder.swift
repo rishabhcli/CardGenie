@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 import OSLog
+import Combine
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -22,7 +23,7 @@ final class QuizBuilder: ObservableObject {
 
     @Published private(set) var isGenerating = false
     @Published private(set) var currentQuiz: QuizBatch?
-    @Published private(set) var error: String?
+    @Published private(set) var errorMessage: String?
 
     private let sessionManager = EnhancedSessionManager()
     private let toolRegistry: ToolRegistry
@@ -45,7 +46,7 @@ final class QuizBuilder: ObservableObject {
         }
 
         isGenerating = true
-        error = nil
+        errorMessage = nil
         defer { isGenerating = false }
 
         log.info("Starting quiz generation for topic: \(topic)")
@@ -75,7 +76,7 @@ final class QuizBuilder: ObservableObject {
             )
 
             guard fetchResult.success, !fetchResult.data.isEmpty else {
-                error = "No notes found for topic '\(topic)'. Please add study materials first."
+                errorMessage = "No notes found for topic '\(topic)'. Please add study materials first."
                 log.error("No notes found for topic: \(topic)")
                 return
             }
@@ -110,7 +111,7 @@ final class QuizBuilder: ObservableObject {
             )
 
             // Validate quiz structure
-            guard quiz.items.count == 6 else {
+            if quiz.items.count != 6 {
                 log.warning("Generated quiz has \(quiz.items.count) items instead of 6")
             }
 
@@ -118,11 +119,11 @@ final class QuizBuilder: ObservableObject {
             log.info("Quiz generated successfully with \(quiz.items.count) questions")
 
         } catch let safetyError as SafetyError {
-            error = safetyError.errorDescription
+            self.errorMessage = safetyError.errorDescription
             log.error("Quiz generation failed: \(safetyError.localizedDescription)")
 
         } catch {
-            error = "Failed to generate quiz: \(error.localizedDescription)"
+            self.errorMessage = "Failed to generate quiz: \(error.localizedDescription)"
             log.error("Quiz generation error: \(error.localizedDescription)")
         }
     }
@@ -130,7 +131,7 @@ final class QuizBuilder: ObservableObject {
     /// Clear current quiz
     func clearQuiz() {
         currentQuiz = nil
-        error = nil
+        errorMessage = nil
     }
 
     // MARK: - Helper Methods

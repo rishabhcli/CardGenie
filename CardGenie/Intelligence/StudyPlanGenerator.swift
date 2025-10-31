@@ -8,6 +8,7 @@
 import Foundation
 import SwiftData
 import OSLog
+import Combine
 
 #if canImport(FoundationModels)
 import FoundationModels
@@ -21,7 +22,7 @@ final class StudyPlanGenerator: ObservableObject {
     private let log = Logger(subsystem: "com.cardgenie.app", category: "StudyPlanGenerator")
 
     @Published private(set) var isGenerating = false
-    @Published private(set) var currentPlan: StudyPlan?
+    @Published private(set) var currentPlan: GeneratedStudyPlan?
     @Published private(set) var error: String?
 
     private let sessionManager = EnhancedSessionManager()
@@ -120,12 +121,12 @@ final class StudyPlanGenerator: ObservableObject {
             let plan = try await sessionManager.singleTurnRequest(
                 prompt: prompt,
                 instructions: instructions,
-                generating: StudyPlan.self,
+                generating: GeneratedStudyPlan.self,
                 options: options
             )
 
             // Validate plan structure
-            guard plan.sessions.count == 7 else {
+            if plan.sessions.count != 7 {
                 log.warning("Generated plan has \(plan.sessions.count) sessions instead of 7")
             }
 
@@ -150,11 +151,11 @@ final class StudyPlanGenerator: ObservableObject {
             log.info("Study plan generated successfully with \(plan.sessions.count) sessions")
 
         } catch let safetyError as SafetyError {
-            error = safetyError.errorDescription
+            self.error = safetyError.errorDescription
             log.error("Study plan generation failed: \(safetyError.localizedDescription)")
 
         } catch {
-            error = "Failed to generate study plan: \(error.localizedDescription)"
+            self.error = "Failed to generate study plan: \(error.localizedDescription)"
             log.error("Study plan generation error: \(error.localizedDescription)")
         }
     }
@@ -194,9 +195,9 @@ final class StudyPlanTracker: ObservableObject {
     @Published var completedSessions: Set<String> = []
     @Published var sessionNotes: [String: String] = [:]
 
-    private let plan: StudyPlan
+    private let plan: GeneratedStudyPlan
 
-    init(plan: StudyPlan) {
+    init(plan: GeneratedStudyPlan) {
         self.plan = plan
     }
 
@@ -228,7 +229,7 @@ final class StudyPlanTracker: ObservableObject {
 // MARK: - Session Reminder
 
 struct StudySessionReminder {
-    let session: StudySession
+    let session: GeneratedStudySession
     let course: String
 
     var title: String {

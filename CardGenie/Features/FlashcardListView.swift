@@ -30,13 +30,20 @@ struct FlashcardListView: View {
                     .ignoresSafeArea()
 
                 if flashcardSets.isEmpty {
-                    FlashcardsEmptyState()
+                    VStack(spacing: Spacing.lg) {
+                        GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+                            .padding(.horizontal)
+
+                        FlashcardsEmptyState()
+                    }
+                    .padding(.top, Spacing.xl)
                 } else {
                     mainContent
                 }
             }
             .navigationTitle("Flashcards")
             .toolbar {
+                // iOS 26: Settings button on leading edge
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
                         showingSettings = true
@@ -46,40 +53,36 @@ struct FlashcardListView: View {
                     }
                 }
 
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        if !flashcardSets.isEmpty {
-                            Button {
-                                showingStatistics = true
-                            } label: {
-                                Image(systemName: "chart.bar.fill")
-                                    .foregroundStyle(Color.aiAccent)
-                            }
+                // iOS 26: Grouped trailing buttons - automatic glass grouping for image buttons
+                if !flashcardSets.isEmpty {
+                    ToolbarItemGroup(placement: .topBarTrailing) {
+                        Button {
+                            showingStatistics = true
+                        } label: {
+                            Image(systemName: "chart.bar.fill")
+                                .foregroundStyle(Color.aiAccent)
                         }
 
-                        if !flashcardSets.isEmpty {
-                            Menu {
-                                Button {
-                                    studyAllDueCards()
-                                } label: {
-                                    Label("Study All Due", systemImage: "book.fill")
-                                }
-                                .disabled(totalDueCount == 0)
-
-                                Button {
-                                    updateAllNotifications()
-                                } label: {
-                                    Label("Update Reminders", systemImage: "bell.fill")
-                                }
+                        Menu {
+                            Button {
+                                studyAllDueCards()
                             } label: {
-                                Image(systemName: "ellipsis.circle")
-                                    .foregroundStyle(Color.primaryText)
+                                Label("Study All Due", systemImage: "book.fill")
                             }
+                            .disabled(totalDueCount == 0)
+
+                            Button {
+                                updateAllNotifications()
+                            } label: {
+                                Label("Update Reminders", systemImage: "bell.fill")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundStyle(Color.primaryText)
                         }
                     }
                 }
             }
-            .searchable(text: $searchText, prompt: "Search flashcard sets")
             .sheet(item: $activeSession) { session in
                 FlashcardStudyView(
                     flashcardSet: session.set,
@@ -98,21 +101,50 @@ struct FlashcardListView: View {
 
     // MARK: - Main Content
 
+    @ViewBuilder
     private var mainContent: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                // Daily Review Section
-                if totalDueCount > 0 {
-                    dailyReviewSection
+        if #available(iOS 26.0, *) {
+            ScrollView {
+                // Wrap all glass elements in GlassEffectContainer to prevent glass-on-glass sampling
+                GlassEffectContainer {
+                    VStack(spacing: 24) {
+                        GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+
+                        // Daily Review Section
+                        if totalDueCount > 0 {
+                            dailyReviewSection
+                        }
+
+                        // Statistics Summary
+                        statisticsSection
+
+                        // Flashcard Sets List
+                        flashcardSetsSection
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, Spacing.lg)
                 }
-
-                // Statistics Summary
-                statisticsSection
-
-                // Flashcard Sets List
-                flashcardSetsSection
             }
-            .padding()
+        } else {
+            // Legacy fallback for iOS 25
+            ScrollView {
+                VStack(spacing: 24) {
+                    GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+
+                    // Daily Review Section
+                    if totalDueCount > 0 {
+                        dailyReviewSection
+                    }
+
+                    // Statistics Summary
+                    statisticsSection
+
+                    // Flashcard Sets List
+                    flashcardSetsSection
+                }
+                .padding(.horizontal)
+                .padding(.vertical, Spacing.lg)
+            }
         }
     }
 
@@ -145,13 +177,12 @@ struct FlashcardListView: View {
                     Image(systemName: "play.fill")
                     Text("Start Review")
                 }
-                .font(.headline)
-                .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.aiAccent)
-                .cornerRadius(12)
             }
+            .buttonStyle(.borderedProminent) // Prominent button style
+            .tint(.aiAccent)
+            .controlSize(.large)
         }
         .padding()
         .glassPanel()
@@ -202,11 +233,21 @@ struct FlashcardListView: View {
             }
 
             if filteredSets.isEmpty {
-                Text("No flashcard sets found")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.secondaryText)
-                    .frame(maxWidth: .infinity)
-                    .padding()
+                VStack(spacing: Spacing.sm) {
+                    Text(searchText.isEmpty ? "No flashcard sets found" : "No results for “\(searchText)”")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.secondaryText)
+
+                    if searchText.isEmpty {
+                        Text("Create a set to get started with your study queue.")
+                            .font(.caption)
+                            .foregroundStyle(Color.tertiaryText)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .glassPanel()
+                .cornerRadius(16)
             } else {
                 ForEach(filteredSets) { set in
                     FlashcardSetRow(set: set)

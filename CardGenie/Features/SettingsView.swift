@@ -25,7 +25,6 @@ struct SettingsView: View {
     @AppStorage("preferredTheme") private var preferredTheme = "system"
     @AppStorage("autoPlayAudio") private var autoPlayAudio = true
     @AppStorage("showStreakNotifications") private var showStreakNotifications = true
-    @AppStorage("enableARFeatures") private var enableARFeatures = true
     @AppStorage("cardAnimationSpeed") private var cardAnimationSpeed = 1.0
     @AppStorage("enableHapticFeedback") private var enableHapticFeedback = true
     @AppStorage("spacedRepetitionAlgorithm") private var spacedRepetitionAlgorithm = "SM-2"
@@ -129,11 +128,6 @@ struct SettingsView: View {
 
                 // Features
                 Section {
-                    Toggle(isOn: $enableARFeatures) {
-                        Label("AR Memory Palace", systemImage: "arkit")
-                    }
-                    .tint(Color.mysticBlue)
-
                     Toggle(isOn: $autoPlayAudio) {
                         Label("Auto-play Voice Answers", systemImage: "speaker.wave.2.fill")
                     }
@@ -145,8 +139,6 @@ struct SettingsView: View {
                     .tint(Color.cosmicPurple)
                 } header: {
                     Text("Features")
-                } footer: {
-                    Text("AR Memory Palace uses spatial anchors to help memorization. Requires iOS 16+.")
                 }
 
                 // Data Section
@@ -498,7 +490,9 @@ struct ProgressRow: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: StudyContent.self, configurations: config)
+    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
+        try! ModelContainer(for: StudyContent.self)
+    }()
     let context = ModelContext(container)
 
     // Add some sample content

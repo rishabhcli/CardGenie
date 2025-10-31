@@ -36,99 +36,74 @@ struct PhotoScanView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                Color.clear
-                    .ignoresSafeArea()
+            navigationContent
+        }
+    }
 
-                ScrollView {
-                    VStack(spacing: Spacing.xl) {
-                        if !selectedImages.isEmpty || selectedImage != nil {
-                            // Show captured/selected images
-                            if !selectedImages.isEmpty {
-                                multiPagePreviewSection
-                            } else if let image = selectedImage {
-                                imagePreviewSection(image: image)
-                            }
-
-                            if extractor.isProcessing {
-                                // Text extraction in progress
-                                loadingSection
-                            } else if !extractedText.isEmpty {
-                                // Show extracted text
-                                extractedTextSection
-                            }
-                        } else {
-                            // Initial state - show scanning options
-                            emptyStateSection
-                        }
-                    }
-                    .padding()
-                }
-            }
+    private var navigationContent: some View {
+        let navigationConfigured = mainView
             .navigationTitle("Scan Notes")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                if selectedImage != nil {
-                    ToolbarItem(placement: .primaryAction) {
-                        Button("Reset") {
-                            resetScan()
-                        }
-                        .foregroundColor(.cosmicPurple)
+
+        let tooledView = navigationConfigured.toolbar {
+            if selectedImage != nil {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Reset") {
+                        resetScan()
                     }
+                    .foregroundColor(.cosmicPurple)
                 }
-            }
-            .sheet(isPresented: $showCamera) {
-                CameraView(image: $selectedImage)
-            }
-            .sheet(isPresented: $showDocumentScanner) {
-                DocumentScannerView(result: $documentScanResult)
-                    .ignoresSafeArea()
-            }
-            .photosPicker(
-                isPresented: $showPhotoPicker,
-                selection: $selectedPhoto,
-                matching: .images
-            )
-            .onChange(of: selectedPhoto) { oldValue, newValue in
-                Task {
-                    await loadSelectedPhoto()
-                }
-            }
-            .onChange(of: selectedImage) { oldValue, newValue in
-                if let image = newValue {
-                    isMultiPage = false
-                    Task {
-                        await extractTextFromImage(image)
-                    }
-                }
-            }
-            .onChange(of: documentScanResult) { oldValue, newValue in
-                if let result = newValue {
-                    selectedImages = result.images
-                    isMultiPage = true
-                    Task {
-                        await extractTextFromMultipleImages(result.images)
-                    }
-                }
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let errorMessage {
-                    Text(errorMessage)
-                }
-            }
-            .alert("Low OCR Confidence", isPresented: $showLowConfidenceWarning) {
-                Button("Continue Anyway", role: .none) {
-                    // User chooses to continue with current scan
-                }
-                Button("Re-Scan", role: .cancel) {
-                    resetScan()
-                }
-            } message: {
-                Text("The text extraction quality is lower than optimal. For best results, try:\n\n• Better lighting\n• Holding camera steady\n• Ensuring text is in focus\n\nWould you like to re-scan?")
             }
         }
+
+        let cameraSheetView = tooledView.sheet(isPresented: $showCamera) {
+            CameraView(image: $selectedImage)
+        }
+
+        let documentSheetView = cameraSheetView.sheet(isPresented: $showDocumentScanner) {
+            DocumentScannerView(result: $documentScanResult)
+                .ignoresSafeArea()
+        }
+
+        let photoPickerView = documentSheetView.photosPicker(
+            isPresented: $showPhotoPicker,
+            selection: $selectedPhoto,
+            matching: .images
+        )
+
+        let photoChangeView = photoPickerView.onChange(of: selectedPhoto) { _, newValue in
+            handleSelectedPhotoChange(newValue)
+        }
+
+        let imageChangeView = photoChangeView.onChange(of: selectedImage) { _, newValue in
+            handleSelectedImageChange(newValue)
+        }
+
+        let documentChangeView = imageChangeView.onChange(of: documentScanResult?.id) { _, _ in
+            handleDocumentScanChange(documentScanResult)
+        }
+
+        let errorAlertView = documentChangeView.alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let errorMessage {
+                Text(errorMessage)
+            }
+        }
+
+        let confidenceAlertView = errorAlertView.alert(
+            "Low OCR Confidence",
+            isPresented: $showLowConfidenceWarning
+        ) {
+            Button("Continue Anyway", role: .none) {}
+            Button("Re-Scan", role: .cancel) {
+                resetScan()
+            }
+        } message: {
+            Text(lowConfidenceMessage)
+        }
+
+        return AnyView(confidenceAlertView)
     }
 
     // MARK: - View Sections
@@ -176,7 +151,7 @@ struct PhotoScanView: View {
                     Label("Take Photo", systemImage: "camera.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(DocumentScanningCapability.isAvailable ? SecondaryButtonStyle() : MagicButtonStyle())
+                .buttonStyle(MagicButtonStyle())
 
                 Button {
                     showPhotoPicker = true
@@ -193,6 +168,68 @@ struct PhotoScanView: View {
             }
             .padding(.horizontal)
         }
+    }
+
+    private var scanContent: some View {
+        ScrollView {
+            VStack(spacing: Spacing.xl) {
+                if !selectedImages.isEmpty || selectedImage != nil {
+                    if !selectedImages.isEmpty {
+                        multiPagePreviewSection
+                    } else if let image = selectedImage {
+                        imagePreviewSection(image: image)
+                    }
+
+                    if extractor.isProcessing {
+                        loadingSection
+                    } else if !extractedText.isEmpty {
+                        extractedTextSection
+                    }
+                } else {
+                    emptyStateSection
+                }
+            }
+            .padding()
+        }
+    }
+
+    private var mainView: some View {
+        ZStack {
+            Color.clear
+                .ignoresSafeArea()
+
+            scanContent
+        }
+    }
+
+    private var lowConfidenceMessage: String {
+        """
+        The text extraction quality is lower than optimal. For best results, try:
+
+        • Better lighting
+        • Holding camera steady
+        • Ensuring text is in focus
+
+        Would you like to re-scan?
+        """
+    }
+
+    private func handleSelectedPhotoChange(_ newValue: PhotosPickerItem?) {
+        guard newValue != nil else { return }
+        Task { await loadSelectedPhoto() }
+    }
+
+    private func handleSelectedImageChange(_ newValue: UIImage?) {
+        guard let image = newValue else { return }
+        isMultiPage = false
+        Task { await extractTextFromImage(image) }
+    }
+
+    private func handleDocumentScanChange(_ newValue: DocumentScanResult?) {
+        guard let result = newValue else { return }
+        selectedImages = result.images
+        isMultiPage = true
+        Task { await extractTextFromMultipleImages(result.images) }
     }
 
     private func imagePreviewSection(image: UIImage) -> some View {
@@ -599,10 +636,12 @@ struct CameraView: UIViewControllerRepresentable {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(
+    let container = (try? ModelContainer(
         for: StudyContent.self, Flashcard.self, FlashcardSet.self,
         configurations: config
-    )
+    )) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self)
+    }()
 
     PhotoScanView()
         .modelContainer(container)

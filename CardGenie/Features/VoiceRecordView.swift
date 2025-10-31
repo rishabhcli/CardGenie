@@ -13,7 +13,7 @@ struct VoiceRecordView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
 
-    @StateObject private var contextManager = LiveLectureContext()
+    @State private var contextManager = LiveLectureContext()
 
     @State private var hasRequestedPermission = false
     @State private var hasPermission = false
@@ -224,7 +224,7 @@ struct VoiceRecordView: View {
             }
         }
         .padding()
-        .background(Color.secondarySystemGroupedBackground)
+        .glassPanel()
         .cornerRadius(16)
     }
 
@@ -256,7 +256,7 @@ struct VoiceRecordView: View {
                             Label(participant.name, systemImage: "person.crop.circle")
                                 .padding(.vertical, 6)
                                 .padding(.horizontal, 10)
-                                .background(Color.secondarySystemGroupedBackground)
+                                .glassPanel()
                                 .cornerRadius(12)
                         }
                     }
@@ -268,7 +268,7 @@ struct VoiceRecordView: View {
             }
         }
         .padding()
-        .background(Color.secondarySystemGroupedBackground)
+        .glassPanel()
         .cornerRadius(16)
     }
 
@@ -290,7 +290,7 @@ struct VoiceRecordView: View {
             }
         }
         .padding()
-        .background(Color.secondarySystemGroupedBackground)
+        .glassPanel()
         .cornerRadius(16)
     }
 
@@ -318,7 +318,7 @@ struct VoiceRecordView: View {
             }
         }
         .padding()
-        .background(Color.secondarySystemGroupedBackground)
+        .glassPanel()
         .cornerRadius(16)
     }
 
@@ -361,7 +361,7 @@ struct VoiceRecordView: View {
             }
         }
         .padding()
-        .background(Color.systemBackground)
+        .glassPanel()
         .cornerRadius(14)
         .shadow(color: Color.black.opacity(0.05), radius: highlight.isPinned ? 6 : 2, x: 0, y: 2)
     }
@@ -391,7 +391,7 @@ struct VoiceRecordView: View {
                     }
                     .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(MagicButtonStyle(gradient: .sharePlay))
+                .buttonStyle(MagicButtonStyle.sharePlay)
             }
 
             HStack {
