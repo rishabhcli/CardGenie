@@ -196,7 +196,7 @@ All models use `@Model` macro and persist automatically. The `ModelContainer` is
 - Automatic accessibility support (Reduce Transparency, Reduce Motion)
 - View modifiers: `.glassPanel()`, `.glassContentBackground()`, `.glassOverlay()`, `.glassSearchBar()`
 
-**Search Bar (Design/Components/GlassSearchBar.swift)**
+**Search Bar (Design/Components.swift - GlassSearchBar section)**
 - Uses iOS 26 `.glassEffect(.regular.interactive(), in: .capsule)` for native Liquid Glass
 - Interactive mode provides shimmer effect on user input
 - Capsule shape is optimal for search bars (vs. rect)
@@ -270,24 +270,24 @@ This ensures the app is **fully functional on all iOS 26+ devices**, even those 
 
 ### Adding a New Content Source
 
-1. Add enum case to `ContentSource` in `Data/CoreModels.swift` or `SourceKind` in `Data/SourceModels.swift`
-2. Create a processor in `Processors/Input/` or relevant subdirectory (e.g., `WebArticleProcessor.swift`)
+1. Add enum case to `ContentSource` in `Data/Models.swift`
+2. Create a processor in `Processors/InputProcessors.swift` (add new MARK section for your processor)
 3. Add source icon/label in `StudyContent.sourceIcon` and `StudyContent.sourceLabel`
-4. Create a UI view in `Features/Content/` or relevant subdirectory for the import flow
+4. Add UI view to `Features/ContentViews.swift` or create new feature file if it's a major feature
 5. Wire up to `MainTabView` if needed
 
 ### Adding a New AI Feature
 
-1. Add method to `Intelligence/Core/FMClient.swift` with proper capability checking
+1. Add method to `Intelligence/AICore.swift` in the FMClient section with proper capability checking
 2. Implement placeholder logic in `#else` block for fallback
-3. Add corresponding UI in appropriate `Features/` subdirectory
-4. Write unit tests in `CardGenieTests/Unit/Intelligence/FMClientTests.swift`
+3. Add corresponding UI in appropriate Features file
+4. Write unit tests in `CardGenieTests/Unit/Intelligence/`
 
 ### Modifying Flashcard Types
 
 1. Add enum case to `FlashcardType` in `Data/FlashcardModels.swift`
-2. Update `Processors/CardGeneration/FlashcardGenerator.swift` generation logic
-3. Update UI rendering in `Features/Flashcards/FlashcardStudyView.swift` or related views
+2. Update `Processors/FlashcardProcessors.swift` generation logic (FlashcardGenerator section)
+3. Update UI rendering in `Features/FlashcardStudyViews.swift` or `Features/FlashcardEditorViews.swift`
 4. Add mastery level logic if needed in `Flashcard.masteryLevel`
 
 ### Adding Spaced Repetition Features
@@ -295,130 +295,50 @@ This ensures the app is **fully functional on all iOS 26+ devices**, even those 
 - Core SR logic lives in `Data/SpacedRepetitionManager.swift`
 - Review scheduling uses SM-2: modify `scheduleNext()` for algorithm changes
 - Statistics are computed in `FlashcardSet.updatePerformanceMetrics()`
-- Study session state managed in `Intelligence/Managers/EnhancedSessionManager.swift`
+- Study session state managed in `Intelligence/SessionManagers.swift` (EnhancedSessionManager section)
 
 ## File Organization
 
-### Data/ - Core data models and persistence
-- `CoreModels.swift`: Primary content model (`StudyContent`, `ContentSource`)
+### Data/ - Core data models and persistence (9 files)
+- `Models.swift`: All core data models (StudyContent, ContentSource, SourceDocument, NoteChunk, feature models)
 - `FlashcardModels.swift`: Flashcard and deck models with SR properties
-- `SourceModels.swift`: Multi-source support (`SourceDocument`, `NoteChunk`)
-- `FeatureModels.swift`: Feature-specific models
 - `FlashcardGenerationModels.swift`: @Generable models for AI flashcard generation
-- `Store.swift`: Simple CRUD wrapper over ModelContext
 - `SpacedRepetitionManager.swift`: SM-2 algorithm implementation
 - `StudyStreakManager.swift`: Track study streaks and consistency
+- `Store.swift`: Simple CRUD wrapper over ModelContext
 - `FlashcardExporter.swift`: Export to CSV, PDF, Anki
 - `CacheManager.swift`: Image/asset caching
 - `VectorStore.swift`: Embeddings for RAG (experimental)
 
-### Intelligence/ - AI and ML features (organized into subdirectories)
-
-**Core/** - Core AI engines and clients
-- `FMClient.swift`: Foundation Models API wrapper (primary AI client)
-- `AIEngine.swift`: Generic LLM engine interface
-- `AISafety.swift`: Safety and content filtering
-- `AITools.swift`: Tool calling for structured generation
-- `FlashcardFM.swift`: Flashcard-specific AI generation using Apple Intelligence
-
-**Extractors/** - Text, vision, and audio extraction
-- `VisionTextExtractor.swift`: OCR using Vision framework
-- `SpeechToTextConverter.swift`: Voice transcription
-- `ImagePreprocessor.swift`: Image enhancement before OCR
-
-**Managers/** - Session and state management
-- `EnhancedSessionManager.swift`: Manages study sessions and state
-- `NotificationManager.swift`: Study reminders and notifications
-- `ScanQueue.swift`: Queue for processing scanned documents
-- `ScanAnalytics.swift`: Track scanning performance and usage
-
-**Generators/** - Content generation beyond flashcards
-- `QuizBuilder.swift`: Generate practice quizzes
-- `StudyPlanGenerator.swift`: Create personalized study schedules
-- `AutoCategorizer.swift`: Auto-categorize content by topic
-
-**Root Level:**
+### Intelligence/ - AI and ML features (5 files)
+- `AICore.swift`: Core AI infrastructure (FMClient, AIEngine, AISafety, AITools, FlashcardFM)
+- `ContentExtractors.swift`: Text, vision, and audio extraction (VisionTextExtractor, SpeechToTextConverter, ImagePreprocessor)
+- `SessionManagers.swift`: Session and state management (EnhancedSessionManager, NotificationManager, ScanQueue, ScanAnalytics)
+- `ContentGenerators.swift`: Content generation (QuizBuilder, StudyPlanGenerator, AutoCategorizer)
 - `WritingTextEditor.swift`: UIKit bridge for Writing Tools integration
-- `Prompts/`: Markdown prompt templates for AI interactions
+- `Prompts/`: Markdown prompt templates for AI interactions (directory)
 
-### Processors/ - Content processing pipeline (organized into subdirectories)
+### Processors/ - Content processing pipeline (5 files)
+- `InputProcessors.swift`: Source material processing (PDFProcessor, ImageProcessor, HandwritingProcessor, VideoProcessor)
+- `FlashcardProcessors.swift`: Flashcard creation (FlashcardGenerator, HighlightExtractor, HighlightCardBuilder)
+- `LectureProcessors.swift`: Lecture recording and transcription (LectureRecorder, OnDeviceTranscriber)
+- `AdvancedProcessors.swift`: Advanced features (MathSolver, ConceptMapGenerator, VoiceTutor)
+- `ProcessorUtilities.swift`: Helper processors (CSVImporter, SmartScheduler)
 
-**Input/** - Source material processors
-- `PDFProcessor.swift`: PDF parsing and text extraction
-- `ImageProcessor.swift`: Photo analysis and OCR
-- `HandwritingProcessor.swift`: Handwriting OCR
-- `VideoProcessor.swift`: Video transcript extraction
-
-**CardGeneration/** - Flashcard creation
-- `FlashcardGenerator.swift`: AI-powered flashcard creation from NoteChunks
-- `HighlightExtractor.swift`: Extract highlights from documents
-- `HighlightCardBuilder.swift`: Convert highlights to flashcards
-
-**Lecture/** - Lecture recording and transcription
-- `LectureRecorder.swift`: Live lecture recording + real-time transcription
-- `OnDeviceTranscriber.swift`: Local speech-to-text for lectures
-
-**Advanced/** - Advanced processing features
-- `MathSolver.swift`: Solve math problems in notes
-- `ConceptMapGenerator.swift`: Generate concept maps from content
-- `VoiceTutor.swift`: Interactive voice tutoring
-
-**Utilities/** - Helper processors
-- `CSVImporter.swift`: Import flashcards from CSV
-- `SmartScheduler.swift`: Intelligent scheduling algorithms
-
-### Features/ - UI views and screens (organized by feature area)
-
-**Content/** - Content management
-- `ContentListView.swift`: Main study materials list
-- `ContentDetailView.swift`: Edit/view study content
-
-**Flashcards/** - Flashcard study interface
-- `FlashcardListView.swift`: Browse flashcard decks
-- `FlashcardStudyView.swift`: Active study session UI
-- `FlashcardEditorView.swift`: Create/edit flashcards manually
-- `FlashcardStatisticsView.swift`: Detailed flashcard performance stats
-- `HandwritingEditorView.swift`: Draw and annotate flashcards
-- `SessionBuilderView.swift`: Configure custom study sessions
-- `StudyResultsView.swift`: Review session results
-
-**Scanning/** - Document and photo scanning
-- `PhotoScanView.swift`: Camera interface for scanning notes
-- `ScanReviewView.swift`: Review and edit scanned content
-- `DocumentScannerView.swift`: Document scanning interface
-
-**Voice/** - Voice features
-- `VoiceAssistantView.swift`: Voice Q&A interface
-- `VoiceRecordView.swift`: Record lectures/notes
-- `LectureCollaborationController.swift`: Collaborative lecture features
-- `LiveHighlightActivityManager.swift`: Live Activities for lecture recording
-- `LiveLectureContext.swift`: Context management for live lectures
-
-**Analytics/** - Study analytics
+### Features/ - UI views and screens (8 files)
+- `ContentViews.swift`: Content management and AI availability (ContentListView, ContentDetailView, AIAvailabilityViews)
+- `FlashcardStudyViews.swift`: Study sessions (FlashcardListView, FlashcardStudyView, SessionBuilderView, StudyResultsView)
+- `FlashcardEditorViews.swift`: Flashcard editing (FlashcardEditorView, FlashcardStatisticsView, HandwritingEditorView)
+- `ScanningViews.swift`: Document scanning (PhotoScanView, ScanReviewView, DocumentScannerView)
+- `VoiceViews.swift`: Voice features (VoiceAssistantView, VoiceRecordView, LectureCollaborationController, LiveHighlightActivityManager, LiveLectureContext)
 - `StatisticsView.swift`: Study analytics and progress tracking
-
-**Settings/** - App configuration
 - `SettingsView.swift`: App settings and preferences
+- `AdvancedViews.swift`: Experimental features (ConceptMapView, StudyPlanView)
 
-**Advanced/** - Experimental features
-- `ConceptMapView.swift`: Concept map visualization
-- `StudyPlanView.swift`: Study plan interface
-
-**Root Level:**
-- `AIAvailabilityViews.swift`: Apple Intelligence availability status views
-
-### Design/ - UI design system
+### Design/ - UI design system (3 files)
 - `Theme.swift`: Liquid Glass materials, colors, spacing, and view modifiers
 - `MagicEffects.swift`: Particle effects and animations
-- **Components/** - Reusable UI components (organized by type)
-  - `Buttons.swift`: Button components (GlassButton, etc.)
-  - `Cards.swift`: Card components (AISummaryCard, FlashcardCardView, etc.)
-  - `TextComponents.swift`: Text elements (Badge, TagChip, EmptyStateView, etc.)
-  - `Containers.swift`: Container views (LoadingView, SessionSummaryView)
-  - `Modifiers.swift`: View modifiers (ErrorAlert, etc.)
-  - `StudyControls.swift`: Study-specific controls (ReviewButton, StudyProgressBar)
-  - `GlassSearchBar.swift`: Native Liquid Glass search bar
-  - `TagFlowLayout.swift`: Tag cloud layout
+- `Components.swift`: Reusable UI components (Buttons, Cards, Text Components, Containers, Modifiers, Study Controls, GlassSearchBar, TagFlowLayout)
 
 ### App/ - App entry point
 - `CardGenieApp.swift`: Main app struct with ModelContainer configuration
