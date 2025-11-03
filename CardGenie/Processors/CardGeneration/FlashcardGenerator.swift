@@ -2,7 +2,18 @@
 //  FlashcardGenerator.swift
 //  CardGenie
 //
-//  Enhanced flashcard generation from note chunks.
+//  Enhanced flashcard generation from note chunks using a generic LLMEngine.
+//
+//  NOTE: This generator works with NoteChunk objects and generic LLM engines.
+//  For StudyContent-based generation using Apple Intelligence, see FlashcardFM.swift.
+//
+//  Use FlashcardGenerator when:
+//  - Processing multi-source content (PDFs, lectures, etc.) that produce NoteChunks
+//  - Need flexibility with different LLM backends
+//
+//  Use FlashcardFM when:
+//  - Working directly with StudyContent
+//  - Want Apple Intelligence integration with @Generable structured output
 //
 
 import Foundation

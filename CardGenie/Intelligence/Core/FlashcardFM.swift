@@ -5,6 +5,11 @@
 //  AI-powered flashcard generation and clarification using Apple's Foundation Models.
 //  All processing happens on-device via the Neural Engine.
 //
+//  NOTE: This generator works with StudyContent and uses Apple Intelligence (@Generable).
+//  For NoteChunk-based generation with generic LLM backends, see Processors/FlashcardGenerator.swift.
+//
+//  Data models used for structured output are defined in Data/FlashcardGenerationModels.swift.
+//
 
 import Foundation
 import OSLog
