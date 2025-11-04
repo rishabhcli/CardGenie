@@ -1830,9 +1830,13 @@ final class LiveLectureContext: LectureRecorderDelegate {
 /// Provides streaming text responses with voice input support
 @available(iOS 26.0, *)
 struct AIChatView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Query private var flashcardSets: [FlashcardSet]
     @StateObject private var chatEngine = AIChatEngine()
     @State private var messageText = ""
     @State private var showPermissionAlert = false
+    @State private var showModeSelector = false
+    @State private var currentMode: ChatMode = .general
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
@@ -1843,13 +1847,16 @@ struct AIChatView: View {
                     .ignoresSafeArea()
 
                 VStack(spacing: 0) {
+                    // Mode selector banner
+                    modeSelectorBanner
+
                     // Messages list
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(spacing: 12) {
                                 if chatEngine.messages.isEmpty {
                                     emptyStateView
-                                        .padding(.top, 60)
+                                        .padding(.top, 20)
                                 } else {
                                     ForEach(chatEngine.messages) { message in
                                         AIChatMessageBubble(message: message)
@@ -1869,6 +1876,11 @@ struct AIChatView: View {
                                     proxy.scrollTo(lastMessage.id, anchor: .bottom)
                                 }
                             }
+                        }
+                        .onChange(of: currentMode) { oldMode, newMode in
+                            // Update engine mode and context
+                            let context = PromptContext.from(flashcardSets: flashcardSets)
+                            chatEngine.setMode(newMode, context: context)
                         }
                     }
 
@@ -1901,6 +1913,42 @@ struct AIChatView: View {
             } message: {
                 Text(chatEngine.availabilityMessage)
             }
+        }
+    }
+
+    private var modeSelectorBanner: some View {
+        Button {
+            showModeSelector = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: currentMode.icon)
+                    .font(.title3)
+                    .foregroundStyle(Color(currentMode.color))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(currentMode.displayName)
+                        .font(.subheadline.bold())
+                        .foregroundStyle(.primary)
+
+                    Text(currentMode.description)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.down")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(.ultraThinMaterial)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showModeSelector) {
+            ModeSelectorSheet(selectedMode: $currentMode)
         }
     }
 
@@ -2092,19 +2140,70 @@ struct AIChatMessageBubble: View {
     }
 }
 
-// MARK: - AI Chat Message Model
+// MARK: - Mode Selector Sheet
 
-struct AIChatMessage: Identifiable {
-    let id: UUID
-    let text: String
-    let isUser: Bool
-    var isStreaming: Bool
+@available(iOS 26.0, *)
+struct ModeSelectorSheet: View {
+    @Binding var selectedMode: ChatMode
+    @Environment(\.dismiss) private var dismiss
 
-    init(text: String, isUser: Bool, isStreaming: Bool = false) {
-        self.id = UUID()
-        self.text = text
-        self.isUser = isUser
-        self.isStreaming = isStreaming
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(ChatMode.allCases) { mode in
+                    Button {
+                        selectedMode = mode
+                        dismiss()
+                    } label: {
+                        HStack(spacing: 16) {
+                            // Icon
+                            ZStack {
+                                Circle()
+                                    .fill(Color(mode.color).opacity(0.15))
+                                    .frame(width: 50, height: 50)
+
+                                Image(systemName: mode.icon)
+                                    .font(.title3)
+                                    .foregroundStyle(Color(mode.color))
+                            }
+
+                            // Info
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(mode.displayName)
+                                    .font(.headline)
+                                    .foregroundStyle(.primary)
+
+                                Text(mode.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+
+                            Spacer()
+
+                            if selectedMode == mode {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(Color(mode.color))
+                                    .font(.title3)
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .navigationTitle("Choose AI Mode")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
     }
 }
 
@@ -2119,7 +2218,9 @@ class AIChatEngine: ObservableObject {
     @Published private(set) var availabilityMessage = ""
 
     private let fmClient = FMClient()
-    private var conversationHistory: [String] = []
+    private let promptManager = PromptManager.shared
+    private var currentMode: ChatMode = .general
+    private var promptContext: PromptContext = PromptContext()
 
     #if canImport(Speech)
     private var speechRecognizer: SFSpeechRecognizer?
@@ -2135,6 +2236,13 @@ class AIChatEngine: ObservableObject {
         #endif
     }
 
+    func setMode(_ mode: ChatMode, context: PromptContext) {
+        self.currentMode = mode
+        self.promptContext = context
+        // Optionally clear messages when switching modes
+        messages.removeAll()
+    }
+
     func sendMessage(_ text: String) async -> Bool {
         // Check availability
         guard fmClient.capability() == .available else {
@@ -2145,7 +2253,6 @@ class AIChatEngine: ObservableObject {
         // Add user message
         let userMessage = AIChatMessage(text: text, isUser: true)
         messages.append(userMessage)
-        conversationHistory.append("User: \(text)")
 
         // Create placeholder for assistant response
         var assistantMessage = AIChatMessage(text: "", isUser: false, isStreaming: true)
@@ -2156,21 +2263,21 @@ class AIChatEngine: ObservableObject {
         defer { isGenerating = false }
 
         do {
-            // Build conversation context
-            let context = conversationHistory.suffix(10).joined(separator: "\n\n")
-            let prompt = """
-            Previous conversation:
-            \(context)
-
-            User: \(text)
-            """
+            // Build prompt with context
+            let systemPrompt = promptManager.getPrompt(mode: currentMode, context: promptContext)
+            let conversationHistory = promptManager.buildConversationContext(messages: messages, maxMessages: 10)
+            let fullPrompt = promptManager.formatForLLM(
+                systemPrompt: systemPrompt,
+                conversationHistory: conversationHistory,
+                userMessage: text
+            )
 
             // Stream response
             var fullResponse = ""
 
             #if canImport(FoundationModels)
             // Use actual Foundation Models streaming
-            for try await chunk in fmClient.streamChat(prompt) {
+            for try await chunk in fmClient.streamChat(fullPrompt) {
                 fullResponse = chunk
                 messages[assistantIndex] = AIChatMessage(
                     text: fullResponse,
@@ -2179,9 +2286,8 @@ class AIChatEngine: ObservableObject {
                 )
             }
             #else
-            // Fallback simulation
-            let response = try await fmClient.reflection(for: text)
-            fullResponse = response
+            // Fallback: use complete method
+            fullResponse = try await fmClient.complete(fullPrompt, maxTokens: 500)
             #endif
 
             // Finalize message
@@ -2190,7 +2296,6 @@ class AIChatEngine: ObservableObject {
                 isUser: false,
                 isStreaming: false
             )
-            conversationHistory.append("Assistant: \(fullResponse)")
 
             return true
 
@@ -2304,7 +2409,6 @@ class AIChatEngine: ObservableObject {
 
     func clearConversation() {
         messages.removeAll()
-        conversationHistory.removeAll()
     }
 
     private func checkAvailability() {
