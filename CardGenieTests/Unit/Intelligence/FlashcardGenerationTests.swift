@@ -272,7 +272,7 @@ final class FlashcardGenerationTests: XCTestCase {
 
 /// Mock LLM engine for testing that returns predictable responses
 class MockLLMEngine: LLMEngine {
-    func complete(_ prompt: String, maxTokens: Int) async throws -> String {
+    func complete(_ prompt: String) async throws -> String {
         // Return mock flashcard data based on prompt type
         if prompt.contains("question-answer") || prompt.contains("Q1") {
             return """

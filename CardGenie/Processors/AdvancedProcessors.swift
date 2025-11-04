@@ -99,7 +99,7 @@ final class MathSolver {
             EXPLANATION:
             """
 
-            feedback = try await llm.complete(prompt, maxTokens: 250)
+            feedback = try await llm.complete(prompt)
             correction = correctStep.result
         } else {
             feedback = "Your work looks correct!"
@@ -286,8 +286,8 @@ final class MathSolver {
             EXPLANATION:
             """
 
-            let explanation = try await llm.complete(prompt, maxTokens: 100)
-            explanations.append(explanation.trimmingCharacters(in: .whitespacesAndNewlines))
+            let explanation = try await llm.complete(prompt)
+            explanations.append(explanation.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines))
         }
 
         return explanations
@@ -566,7 +566,7 @@ final class ConceptMapGenerator {
             DEFINITION:
             """
 
-            definition = try await llm.complete(prompt, maxTokens: 100)
+            definition = try await llm.complete(prompt)
         } else {
             definition = entity.name
         }
@@ -612,16 +612,16 @@ final class ConceptMapGenerator {
         List relationships (one per line):
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 400)
+        let response = try await llm.complete(prompt)
 
         // Parse response
-        let lines = response.components(separatedBy: .newlines)
+        let lines = response.components(separatedBy: CharacterSet.newlines)
 
         for line in lines {
             guard !line.isEmpty, line.contains("|") else { continue }
 
             let parts = line.components(separatedBy: "|").map {
-                $0.trimmingCharacters(in: .whitespaces)
+                $0.trimmingCharacters(in: CharacterSet.whitespaces)
             }
 
             guard parts.count >= 4 else { continue }
@@ -968,8 +968,8 @@ final class VoiceTutor: NSObject, AVSpeechSynthesizerDelegate {
         TUTOR RESPONSE:
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 200)
-        return response.trimmingCharacters(in: .whitespacesAndNewlines)
+        let response = try await llm.complete(prompt)
+        return response.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
     // MARK: - Speech

@@ -574,8 +574,8 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         Provide a clear, concise answer:
         """
 
-        let answer = try await llm.complete(prompt, maxTokens: 200)
-        return answer.trimmingCharacters(in: .whitespacesAndNewlines)
+        let answer = try await llm.complete(prompt)
+        return answer.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
     // MARK: - Speaking
@@ -2287,7 +2287,7 @@ class AIChatEngine: ObservableObject {
             }
             #else
             // Fallback: use complete method
-            fullResponse = try await fmClient.complete(fullPrompt, maxTokens: 500)
+            fullResponse = try await fmClient.complete(fullPrompt)
             #endif
 
             // Finalize message

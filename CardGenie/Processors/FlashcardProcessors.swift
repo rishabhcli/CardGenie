@@ -78,7 +78,7 @@ final class FlashcardGenerator {
         CARDS:
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 400)
+        let response = try await llm.complete(prompt)
         return parseQACards(response, sourceChunk: chunk)
     }
 
@@ -137,7 +137,7 @@ final class FlashcardGenerator {
         CARD:
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 200)
+        let response = try await llm.complete(prompt)
         return parseClozeCards(response, sourceChunk: chunk)
     }
 
@@ -349,7 +349,7 @@ final class HighlightCardBuilder {
         A: [answer]
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 180)
+        let response = try await llm.complete(prompt)
         if let parsed = parseQA(response: response) {
             return Flashcard(
                 type: .qa,

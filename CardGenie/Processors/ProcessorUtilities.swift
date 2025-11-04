@@ -46,17 +46,17 @@ final class CSVImporter {
         for row in dataRows {
             guard row.count >= 2 else { continue }
 
-            let question = row[0].trimmingCharacters(in: .whitespacesAndNewlines)
-            let answer = row[1].trimmingCharacters(in: .whitespacesAndNewlines)
+            let question = row[0].trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            let answer = row[1].trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
 
             guard !question.isEmpty && !answer.isEmpty else { continue }
 
             // Extract tags if present
             var tags: [String] = []
             if row.count >= 3 {
-                let tagString = row[2].trimmingCharacters(in: .whitespacesAndNewlines)
+                let tagString = row[2].trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
                 tags = tagString.components(separatedBy: ",")
-                    .map { $0.trimmingCharacters(in: .whitespaces) }
+                    .map { $0.trimmingCharacters(in: CharacterSet.whitespaces) }
                     .filter { !$0.isEmpty }
             }
 
@@ -192,21 +192,21 @@ final class CSVImporter {
         CARD:
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 150)
+        let response = try await llm.complete(prompt)
 
         // Parse response
         var question: String?
         var answer: String?
 
-        for line in response.components(separatedBy: .newlines) {
-            let trimmed = line.trimmingCharacters(in: .whitespaces)
+        for line in response.components(separatedBy: CharacterSet.newlines) {
+            let trimmed = line.trimmingCharacters(in: CharacterSet.whitespaces)
 
             if trimmed.hasPrefix("Q:") {
                 question = trimmed.replacingOccurrences(of: "Q:", with: "")
-                    .trimmingCharacters(in: .whitespaces)
+                    .trimmingCharacters(in: CharacterSet.whitespaces)
             } else if trimmed.hasPrefix("A:"), let q = question {
                 answer = trimmed.replacingOccurrences(of: "A:", with: "")
-                    .trimmingCharacters(in: .whitespaces)
+                    .trimmingCharacters(in: CharacterSet.whitespaces)
 
                 let card = Flashcard(
                     type: .qa,
@@ -405,17 +405,17 @@ final class SmartScheduler {
         Day X | Morning/Afternoon/Evening | 30 min | New Cards
         """
 
-        let response = try await llm.complete(prompt, maxTokens: 500)
+        let response = try await llm.complete(prompt)
 
         // Parse AI response
-        let lines = response.components(separatedBy: .newlines)
+        let lines = response.components(separatedBy: CharacterSet.newlines)
         var currentDay = 0
 
         for line in lines {
             guard !line.isEmpty,
                   line.contains("|") else { continue }
 
-            let parts = line.components(separatedBy: "|").map { $0.trimmingCharacters(in: .whitespaces) }
+            let parts = line.components(separatedBy: "|").map { $0.trimmingCharacters(in: CharacterSet.whitespaces) }
             guard parts.count >= 4 else { continue }
 
             // Parse day offset

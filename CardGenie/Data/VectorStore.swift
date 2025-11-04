@@ -167,7 +167,7 @@ final class RAGChatManager {
         """
 
         // Get LLM response
-        let answer = try await llm.complete(prompt, maxTokens: 400)
+        let answer = try await llm.complete(prompt)
 
         // Build citations
         let citations = chunks.enumerated().map { index, chunk in

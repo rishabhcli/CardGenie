@@ -274,7 +274,7 @@ final class LectureRecorder: NSObject {
         NOTES (bullets):
         """
 
-        if let summary = try? await llm.complete(prompt, maxTokens: 300) {
+        if let summary = try? await llm.complete(prompt) {
             let timestamp = String(format: "[%02d:%02d]",
                                  Int(duration) / 60,
                                  Int(duration) % 60)

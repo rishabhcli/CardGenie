@@ -231,8 +231,8 @@ final class PDFProcessor {
         SUMMARY (bullets):
         """
 
-        let summary = try await llm.complete(prompt, maxTokens: 200)
-        return summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary = try await llm.complete(prompt)
+        return summary.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 }
 
@@ -444,8 +444,8 @@ final class ImageProcessor {
         SUMMARY (bullets):
         """
 
-        let summary = try await llm.complete(prompt, maxTokens: 150)
-        return summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary = try await llm.complete(prompt)
+        return summary.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 }
 
@@ -1059,8 +1059,8 @@ final class VideoProcessor {
         SUMMARY (bullets):
         """
 
-        let summary = try await llm.complete(prompt, maxTokens: 200)
-        return summary.trimmingCharacters(in: .whitespacesAndNewlines)
+        let summary = try await llm.complete(prompt)
+        return summary.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
     }
 
     // MARK: - Helpers

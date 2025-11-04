@@ -256,10 +256,9 @@ final class FMClient: ObservableObject {
     /// General-purpose text completion for RAG, chat, and other uses
     /// - Parameters:
     ///   - prompt: The prompt/instruction for the model
-    ///   - maxTokens: Maximum tokens to generate
     /// - Returns: Generated text response
     /// - Throws: Error if the model is unavailable or processing fails
-    func complete(_ prompt: String, maxTokens: Int = 500) async throws -> String {
+    func complete(_ prompt: String) async throws -> String {
         #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else {
             throw FMError.unsupportedOS
@@ -657,10 +656,10 @@ enum FMError: LocalizedError {
 /// Protocol for large language model inference
 protocol LLMEngine {
     /// Generate text completion from prompt
-    func complete(_ prompt: String, maxTokens: Int) async throws -> String
+    func complete(_ prompt: String) async throws -> String
 
     /// Stream text completion (for chat/tutoring)
-    func streamComplete(_ prompt: String, maxTokens: Int) -> AsyncThrowingStream<String, Error>
+    func streamComplete(_ prompt: String) -> AsyncThrowingStream<String, Error>
 
     /// Check if engine is available
     var isAvailable: Bool { get }
@@ -712,20 +711,20 @@ final class AppleOnDeviceLLM: LLMEngine {
         fmClient.capability() == .available
     }
 
-    func complete(_ prompt: String, maxTokens: Int) async throws -> String {
+    func complete(_ prompt: String) async throws -> String {
         guard isAvailable else {
             throw LLMError.notAvailable
         }
 
         // Use general-purpose completion method for RAG and chat
-        return try await fmClient.complete(prompt, maxTokens: maxTokens)
+        return try await fmClient.complete(prompt)
     }
 
-    func streamComplete(_ prompt: String, maxTokens: Int) -> AsyncThrowingStream<String, Error> {
+    func streamComplete(_ prompt: String) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    let result = try await complete(prompt, maxTokens: maxTokens)
+                    let result = try await complete(prompt)
                     continuation.yield(result)
                     continuation.finish()
                 } catch {
