@@ -100,14 +100,14 @@ final class FMClient: ObservableObject {
         log.info("Starting summarization...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are a helpful journaling assistant.
                 Summarize journal entries concisely in 2-3 sentences.
                 Write in first person and maintain the original tone.
                 Do not add facts not present in the entry.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -155,13 +155,13 @@ final class FMClient: ObservableObject {
         log.info("Extracting tags...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 Extract up to three short topic tags from the text.
                 Each tag should be 1-2 words maximum.
                 Examples: work, planning, travel, health, learning
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -213,7 +213,8 @@ final class FMClient: ObservableObject {
         log.info("Generating reflection...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are a supportive journaling companion.
                 Read the user's entry and respond with ONE kind, uplifting sentence.
                 Be empathetic but concise.
@@ -221,8 +222,7 @@ final class FMClient: ObservableObject {
                 If they express joy, celebrate with them.
                 ALWAYS respond respectfully and supportively.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -273,13 +273,13 @@ final class FMClient: ObservableObject {
         log.info("Generating completion...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are a helpful AI assistant for studying and learning.
                 Provide accurate, concise, and well-structured responses.
                 When answering questions about lecture notes or study materials, cite sources if provided.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -337,7 +337,8 @@ final class FMClient: ObservableObject {
         let accuracy = totalCount > 0 ? Double(correctCount) / Double(totalCount) : 0.0
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are CardGenie, a supportive and enthusiastic AI study coach.
                 Encourage students with warmth and positivity.
                 Keep messages brief (1-2 sentences maximum).
@@ -345,8 +346,7 @@ final class FMClient: ObservableObject {
                 Celebrate progress and effort, not just perfection.
                 Be specific about their performance when possible.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let prompt = """
                 Generate an encouraging message for a student who just completed a study session.
@@ -406,15 +406,15 @@ final class FMClient: ObservableObject {
         log.info("Generating study insight...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are CardGenie, an AI study coach.
                 Provide brief, actionable insights about study patterns.
                 Be encouraging and specific.
                 One sentence maximum.
                 Focus on positive observations or helpful tips.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let prompt = """
                 Generate a study insight for a student with these statistics:
@@ -531,22 +531,23 @@ final class FMClient: ObservableObject {
         log.info("Starting streaming summarization...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are a helpful journaling assistant.
                 Summarize journal entries concisely in 2-3 sentences.
                 Write in first person and maintain the original tone.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
                 temperature: 0.3
             )
 
-            let stream = session.streamResponse(options: options) {
-                "Summarize this journal entry using three sentences:\n\n\(text)"
-            }
+            let stream = session.streamResponse(
+                to: "Summarize this journal entry using three sentences:\n\n\(text)",
+                options: options
+            )
 
             for try await partialResponse in stream {
                 onPartialContent(partialResponse.content)
@@ -583,23 +584,21 @@ final class FMClient: ObservableObject {
                 log.info("Starting chat streaming...")
 
                 do {
-                    let instructions = """
+                    let session = LanguageModelSession {
+                        """
                         You are a helpful, friendly AI assistant.
                         Provide clear, concise, and accurate responses.
                         Be conversational but professional.
                         Keep responses focused and relevant.
                         """
-
-                    let session = LanguageModelSession(instructions: instructions)
+                    }
 
                     let options = GenerationOptions(
                         sampling: .greedy,
                         temperature: 0.7
                     )
 
-                    let stream = session.streamResponse(options: options) {
-                        prompt
-                    }
+                    let stream = session.streamResponse(to: prompt, options: options)
 
                     for try await partialResponse in stream {
                         continuation.yield(partialResponse.content)
@@ -1875,13 +1874,13 @@ extension FMClient {
         flashcardLog.info("Extracting entities and topics...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 Extract important entities (names, places, dates, key terms) from the text.
                 Also identify the main topic category (e.g., Travel, Work, Health, History, Learning).
                 Focus on terms that would be valuable for creating flashcards.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -1970,14 +1969,14 @@ extension FMClient {
         flashcardLog.info("Generating cloze deletion cards...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 Create cloze deletion flashcards from the text.
                 A cloze card has a sentence with an important term replaced by ______.
                 Choose sentences that contain key concepts, names, dates, or important details.
                 Replace the most important term in each sentence with ______.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -2038,14 +2037,14 @@ extension FMClient {
         flashcardLog.info("Generating Q&A cards...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 Create question-and-answer flashcards from the text.
                 Each Q&A should focus on a specific fact, detail, or concept.
                 Questions should be clear and specific.
                 Answers should be concise and factual.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -2104,13 +2103,13 @@ extension FMClient {
         flashcardLog.info("Generating definition cards...")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 Create term-definition flashcards from the text.
                 Each card should define a key term, concept, or entity based on the context.
                 Definitions should be concise (1-2 sentences) and based only on information in the text.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -2189,15 +2188,15 @@ extension FMClient {
         flashcardLog.info("Generating clarification for flashcard")
 
         do {
-            let instructions = """
+            let session = LanguageModelSession {
+                """
                 You are a helpful tutor assistant.
                 Explain flashcard answers clearly and concisely.
                 Use simple terms and provide context when helpful.
                 Keep explanations to 2-3 sentences.
                 ALWAYS be respectful and supportive.
                 """
-
-            let session = LanguageModelSession(instructions: instructions)
+            }
 
             let options = GenerationOptions(
                 sampling: .greedy,
