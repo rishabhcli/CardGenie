@@ -357,7 +357,7 @@ struct ContentDetailView: View {
                 }
             }
         }
-        .alert("Apple Intelligence Unavailable", isPresented: $showAIUnavailable) {
+        .alert("AI Unavailable", isPresented: $showAIUnavailable) {
             Button("OK", role: .cancel) {}
             Button("Settings", action: openSettings)
         } message: {
@@ -697,13 +697,13 @@ struct ContentDetailView: View {
         case .available:
             return ""
         case .notEnabled:
-            return "Apple Intelligence is disabled. Enable it in Settings > Apple Intelligence & Siri to use AI features."
+            return "AI features are disabled. Enable them in Settings to use AI features."
         case .notSupported:
-            return "This device doesn't support Apple Intelligence. An iPhone 15 Pro or newer is required."
+            return "This device doesn't support AI features. An iPhone 15 Pro or newer is required."
         case .modelNotReady:
-            return "Apple Intelligence is loading. Please try again in a moment."
+            return "AI is loading. Please try again in a moment."
         case .unknown:
-            return "Unable to determine Apple Intelligence availability."
+            return "Unable to determine AI availability."
         }
     }
 }
@@ -779,7 +779,7 @@ private struct AIAvailabilityWrapper<Content: View>: View {
             DeviceNotSupportedView()
 
         case .unavailable(.appleIntelligenceNotEnabled):
-            EnableAppleIntelligenceView()
+            EnableAIView()
 
         case .unavailable(.modelNotReady):
             ModelDownloadingView()
@@ -804,7 +804,7 @@ struct DeviceNotSupportedView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Apple Intelligence requires an iPhone 15 Pro or later with iOS 26+")
+                Text("AI features require an iPhone 15 Pro or later")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -830,9 +830,9 @@ struct DeviceNotSupportedView: View {
     }
 }
 
-// MARK: - Enable Apple Intelligence View
+// MARK: - Enable AI View
 
-struct EnableAppleIntelligenceView: View {
+struct EnableAIView: View {
     var body: some View {
         VStack(spacing: 24) {
             Image(systemName: "brain.fill")
@@ -840,11 +840,11 @@ struct EnableAppleIntelligenceView: View {
                 .foregroundStyle(.purple)
 
             VStack(spacing: 12) {
-                Text("Enable Apple Intelligence")
+                Text("Enable AI Features")
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("AI-powered features require Apple Intelligence to be turned on")
+                Text("AI-powered features need to be enabled in Settings")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -857,9 +857,8 @@ struct EnableAppleIntelligenceView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     InstructionRow(number: 1, text: "Open Settings")
-                    InstructionRow(number: 2, text: "Tap 'Apple Intelligence & Siri'")
-                    InstructionRow(number: 3, text: "Turn on 'Apple Intelligence'")
-                    InstructionRow(number: 4, text: "Return to CardGenie")
+                    InstructionRow(number: 2, text: "Enable AI features")
+                    InstructionRow(number: 3, text: "Return to CardGenie")
                 }
             }
             .padding()
@@ -901,7 +900,7 @@ struct ModelDownloadingView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Apple Intelligence is downloading or initializing. This may take a few minutes.")
+                Text("AI model is downloading or initializing. This may take a few minutes.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -961,7 +960,7 @@ struct GenericUnavailableView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("Apple Intelligence features are currently unavailable. Please try again later.")
+                Text("AI features are currently unavailable. Please try again later.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -1045,8 +1044,8 @@ private struct StatusRow: View {
     DeviceNotSupportedView()
 }
 
-#Preview("Enable Apple Intelligence") {
-    EnableAppleIntelligenceView()
+#Preview("Enable AI") {
+    EnableAIView()
 }
 
 #Preview("Model Downloading") {

@@ -42,7 +42,7 @@ struct SettingsView: View {
                 // AI Status Section
                 Section {
                     HStack {
-                        Label("Apple Intelligence", systemImage: "sparkles")
+                        Label("AI Features", systemImage: "sparkles")
                             .foregroundStyle(Color.cosmicPurple)
                         Spacer()
                         AvailabilityBadge(state: fmClient.capability())

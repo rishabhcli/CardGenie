@@ -509,6 +509,67 @@ final class FMClient: ObservableObject {
         onPartialContent(fallbackSummary(for: text))
         #endif
     }
+
+    /// Stream a conversational chat response for real-time UI updates
+    /// - Parameter prompt: The chat message or conversation context
+    /// - Returns: AsyncStream of partial responses as they're generated
+    /// - Throws: Error if streaming fails
+    @available(iOS 26.0, *)
+    func streamChat(_ prompt: String) -> AsyncThrowingStream<String, Error> {
+        return AsyncThrowingStream { continuation in
+            Task {
+                #if canImport(FoundationModels)
+                let model = SystemLanguageModel.default
+                guard case .available = model.availability else {
+                    continuation.finish(throwing: FMError.modelUnavailable)
+                    return
+                }
+
+                log.info("Starting chat streaming...")
+
+                do {
+                    let instructions = """
+                        You are a helpful, friendly AI assistant.
+                        Provide clear, concise, and accurate responses.
+                        Be conversational but professional.
+                        Keep responses focused and relevant.
+                        """
+
+                    let session = LanguageModelSession(instructions: instructions)
+
+                    let options = GenerationOptions(
+                        sampling: .greedy,
+                        temperature: 0.7
+                    )
+
+                    let stream = session.streamResponse(options: options) {
+                        prompt
+                    }
+
+                    for try await partialResponse in stream {
+                        continuation.yield(partialResponse.content)
+                    }
+
+                    continuation.finish()
+
+                } catch LanguageModelSession.GenerationError.guardrailViolation {
+                    log.error("Guardrail violation during chat streaming")
+                    continuation.finish(throwing: FMError.processingFailed)
+                } catch LanguageModelSession.GenerationError.refusal {
+                    log.error("Model refused to respond")
+                    continuation.finish(throwing: FMError.processingFailed)
+                } catch {
+                    log.error("Chat streaming failed: \(error.localizedDescription)")
+                    continuation.finish(throwing: FMError.processingFailed)
+                }
+                #else
+                log.info("Using fallback chat implementation")
+                continuation.yield("I'm currently unavailable. Apple Intelligence is not enabled on this device.")
+                continuation.finish()
+                #endif
+            }
+        }
+    }
 }
 
 // MARK: - Error Types

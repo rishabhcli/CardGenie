@@ -23,7 +23,22 @@ struct CardGenieApp: App {
             SourceDocument.self,
             NoteChunk.self,
             LectureSession.self,
-            HighlightMarker.self
+            HighlightMarker.self,
+            // Conversational Learning Models
+            ConversationalSession.self,
+            ChatMessage.self,
+            // Game Mode Models
+            MatchingGame.self,
+            MatchPair.self,
+            TrueFalseGame.self,
+            MultipleChoiceGame.self,
+            TeachBackSession.self,
+            FeynmanSession.self,
+            GameStatistics.self,
+            // Content Generation Models
+            GeneratedPracticeSet.self,
+            GeneratedScenarioSet.self,
+            GeneratedConnectionSet.self
         ])
 
         let modelConfiguration = ModelConfiguration(
@@ -86,19 +101,11 @@ struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
     @State private var selectedTab: Int = 0
-    @State private var showingAIAssistant = false
-    @State private var assistantMode: AssistantMode = .ask
 
     var body: some View {
         if #available(iOS 26.0, *) {
-            // iOS 26+ with floating AI assistant button
+            // iOS 26+ with AI Chat tab
             modernTabView
-                .tabViewBottomAccessory {
-                    floatingAIAssistantButton
-                }
-                .sheet(isPresented: $showingAIAssistant) {
-                    aiAssistantSheet
-                }
         } else {
             // Fallback for iOS 25
             legacyTabView
@@ -126,77 +133,20 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("Scan", systemImage: "camera.fill", value: 2) {
+            Tab("AI Chat", systemImage: "message.fill", value: 2) {
+                AIChatView()
+            }
+
+            Tab("Record", systemImage: "mic.circle.fill", value: 3) {
+                VoiceRecordView()
+            }
+
+            Tab("Scan", systemImage: "camera.fill", value: 4) {
                 PhotoScanView()
             }
         }
         .tabViewStyle(.sidebarAdaptable) // Sidebar on iPad, tabs on iPhone
         .tint(.cosmicPurple)
-    }
-
-    // MARK: - Floating AI Assistant Button (iOS 26+)
-
-    @available(iOS 26.0, *)
-    @ViewBuilder
-    private var floatingAIAssistantButton: some View {
-        Menu {
-            Button {
-                assistantMode = .ask
-                showingAIAssistant = true
-            } label: {
-                Label("Ask Question", systemImage: "waveform.circle.fill")
-            }
-
-            Button {
-                assistantMode = .record
-                showingAIAssistant = true
-            } label: {
-                Label("Record Lecture", systemImage: "mic.circle.fill")
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16, weight: .semibold))
-                    .symbolEffect(.bounce, value: showingAIAssistant)
-
-                Text("AI Assistant")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-    }
-
-    @ViewBuilder
-    private var aiAssistantSheet: some View {
-        NavigationStack {
-            Group {
-                switch assistantMode {
-                case .ask:
-                    VoiceAssistantView()
-                case .record:
-                    VoiceRecordView()
-                }
-            }
-            .navigationTitle(assistantMode == .ask ? "Ask Question" : "Record Lecture")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") {
-                        showingAIAssistant = false
-                    }
-                    .fontWeight(.semibold)
-                }
-            }
-        }
-    }
-
-    enum AssistantMode {
-        case ask
-        case record
     }
 
     // MARK: - Legacy Tab View (iOS 25)

@@ -186,13 +186,20 @@ struct FlashcardSetRow: View {
 
     var body: some View {
         HStack(spacing: Spacing.md) {
-            // Topic icon
-            Image(systemName: topicIcon)
-                .font(.title2)
-                .foregroundStyle(Color.aiAccent)
-                .frame(width: 44, height: 44)
-                .background(Color.aiAccent.opacity(0.1))
-                .cornerRadius(CornerRadius.md)
+            // Topic icon with glow effect
+            ZStack {
+                Circle()
+                    .fill(Color.aiAccent.opacity(0.2))
+                    .frame(width: 50, height: 50)
+                    .blur(radius: 8)
+
+                Image(systemName: topicIcon)
+                    .font(.title2)
+                    .foregroundStyle(Color.aiAccent)
+                    .frame(width: 44, height: 44)
+                    .background(Color.aiAccent.opacity(0.15))
+                    .cornerRadius(CornerRadius.md)
+            }
 
             // Content
             VStack(alignment: .leading, spacing: Spacing.xs) {
@@ -231,13 +238,31 @@ struct FlashcardSetRow: View {
 
             Spacer()
 
-            Image(systemName: "chevron.right")
-                .font(.caption)
-                .foregroundStyle(Color.tertiaryText)
+            // More obvious "tap here" indicator
+            VStack(spacing: 4) {
+                Text("VIEW")
+                    .font(.caption2.bold())
+                    .foregroundStyle(Color.cosmicPurple)
+
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(Color.cosmicPurple)
+            }
         }
         .padding()
-        .glassPanel()
-        .cornerRadius(CornerRadius.lg)
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .fill(Color(.systemBackground))
+                .glassEffect(.regular, in: .rect(cornerRadius: CornerRadius.lg))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.lg)
+                .stroke(Color.cosmicPurple.opacity(0.3), lineWidth: 1)
+        )
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Flashcard set: \(set.topicLabel). \(set.cardCount) cards, \(set.dueCount) due")
+        .accessibilityHint("Double tap to view set details and learning modes")
+        .accessibilityAddTraits(.isButton)
     }
 }
 

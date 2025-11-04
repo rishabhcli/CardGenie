@@ -112,6 +112,11 @@ struct FlashcardListView: View {
                     VStack(spacing: 24) {
                         GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
 
+                        // Quick Play Section - NEW!
+                        if !flashcardSets.isEmpty {
+                            quickPlaySection
+                        }
+
                         // Daily Review Section
                         if totalDueCount > 0 {
                             dailyReviewSection
@@ -132,6 +137,11 @@ struct FlashcardListView: View {
             ScrollView {
                 VStack(spacing: 24) {
                     GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+
+                    // Quick Play Section - NEW!
+                    if !flashcardSets.isEmpty {
+                        quickPlaySection
+                    }
 
                     // Daily Review Section
                     if totalDueCount > 0 {
@@ -189,6 +199,96 @@ struct FlashcardListView: View {
         .padding()
         .glassPanel()
         .cornerRadius(16)
+    }
+
+    // MARK: - Quick Play Section
+
+    private var quickPlaySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Image(systemName: "gamecontroller.fill")
+                    .foregroundStyle(
+                        LinearGradient(colors: [.blue, .cyan], startPoint: .leading, endPoint: .trailing)
+                    )
+                    .font(.title2)
+
+                Text("Quick Play")
+                    .font(.title3.bold())
+                    .foregroundStyle(Color.primaryText)
+
+                Spacer()
+
+                Text("\(flashcardSets.count) sets")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text("Jump straight into games with any flashcard set")
+                .font(.subheadline)
+                .foregroundStyle(Color.secondaryText)
+
+            // Game mode buttons
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    QuickGameButton(
+                        mode: .matching,
+                        flashcardSets: flashcardSets,
+                        onTap: { set in
+                            quickStartGame(.matching, for: set)
+                        }
+                    )
+
+                    QuickGameButton(
+                        mode: .trueFalse,
+                        flashcardSets: flashcardSets,
+                        onTap: { set in
+                            quickStartGame(.trueFalse, for: set)
+                        }
+                    )
+
+                    QuickGameButton(
+                        mode: .multipleChoice,
+                        flashcardSets: flashcardSets,
+                        onTap: { set in
+                            quickStartGame(.multipleChoice, for: set)
+                        }
+                    )
+
+                    QuickGameButton(
+                        mode: .teachBack,
+                        flashcardSets: flashcardSets,
+                        onTap: { set in
+                            quickStartGame(.teachBack, for: set)
+                        }
+                    )
+
+                    QuickGameButton(
+                        mode: .feynman,
+                        flashcardSets: flashcardSets,
+                        onTap: { set in
+                            quickStartGame(.feynman, for: set)
+                        }
+                    )
+                }
+                .padding(.horizontal, 4)
+            }
+        }
+        .padding()
+        .background(
+            LinearGradient(
+                colors: [Color.blue.opacity(0.08), Color.cyan.opacity(0.05)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .stroke(
+                    LinearGradient(colors: [.blue.opacity(0.3), .cyan.opacity(0.2)], startPoint: .leading, endPoint: .trailing),
+                    lineWidth: 2
+                )
+        )
+        .cornerRadius(20)
     }
 
     // MARK: - Statistics Section
@@ -252,23 +352,25 @@ struct FlashcardListView: View {
                 .cornerRadius(16)
             } else {
                 ForEach(filteredSets) { set in
-                    FlashcardSetRow(set: set)
-                        .onTapGesture {
+                    NavigationLink {
+                        FlashcardSetDetailView(flashcardSet: set)
+                    } label: {
+                        FlashcardSetRow(set: set)
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
                             startStudySession(for: set)
+                        } label: {
+                            Label("Study Now", systemImage: "play.fill")
                         }
-                        .contextMenu {
-                            Button {
-                                startStudySession(for: set)
-                            } label: {
-                                Label("Study", systemImage: "play.fill")
-                            }
 
-                            Button(role: .destructive) {
-                                deleteSet(set)
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
+                        Button(role: .destructive) {
+                            deleteSet(set)
+                        } label: {
+                            Label("Delete", systemImage: "trash")
                         }
+                    }
                         // MARK: - Accessibility
                         .accessibilityElement(children: .combine)
                         .accessibilityLabel("\(set.topicLabel) flashcard set")
@@ -401,6 +503,11 @@ struct FlashcardListView: View {
             NotificationManager.shared.updateBadgeCount(totalDueCount)
         }
     }
+
+    private func quickStartGame(_ mode: StudyGameMode, for set: FlashcardSet) {
+        // Store the selected game mode and flashcard set for navigation
+        // This will be handled by the QuickGameButton's NavigationLink
+    }
 }
 
 // MARK: - Stat Card Component
@@ -431,6 +538,96 @@ private struct StatCard: View {
         .padding()
         .glassPanel()
         .cornerRadius(12)
+    }
+}
+
+// MARK: - Quick Game Button Component
+
+private struct QuickGameButton: View {
+    let mode: StudyGameMode
+    let flashcardSets: [FlashcardSet]
+    let onTap: (FlashcardSet) -> Void
+
+    @State private var showingSetPicker = false
+    @State private var selectedSet: FlashcardSet?
+
+    var body: some View {
+        Button {
+            if flashcardSets.count == 1 {
+                // Auto-select if only one set
+                if let set = flashcardSets.first {
+                    selectedSet = set
+                }
+            } else {
+                showingSetPicker = true
+            }
+        } label: {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle()
+                        .fill(Color(mode.color).opacity(0.2))
+                        .frame(width: 60, height: 60)
+
+                    Image(systemName: mode.icon)
+                        .font(.title2)
+                        .foregroundStyle(Color(mode.color))
+                }
+
+                Text(mode.displayName)
+                    .font(.caption.bold())
+                    .foregroundStyle(Color.primaryText)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: 90)
+            }
+            .padding(.vertical, 12)
+            .padding(.horizontal, 8)
+            .background(Color(.systemBackground))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color(mode.color).opacity(0.3), lineWidth: 2)
+            )
+            .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
+        .confirmationDialog("Choose a flashcard set", isPresented: $showingSetPicker) {
+            ForEach(flashcardSets) { set in
+                Button(set.topicLabel) {
+                    selectedSet = set
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        }
+        .background(
+            NavigationLink(
+                destination: selectedSet.map { set in
+                    gameModeView(for: mode, with: set)
+                },
+                isActive: Binding(
+                    get: { selectedSet != nil },
+                    set: { if !$0 { selectedSet = nil } }
+                )
+            ) {
+                EmptyView()
+            }
+            .hidden()
+        )
+    }
+
+    @ViewBuilder
+    func gameModeView(for mode: StudyGameMode, with set: FlashcardSet) -> some View {
+        switch mode {
+        case .matching:
+            MatchingGameView(flashcardSet: set)
+        case .trueFalse:
+            TrueFalseGameView(flashcardSet: set)
+        case .multipleChoice:
+            MultipleChoiceGameView(flashcardSet: set)
+        case .teachBack:
+            TeachBackGameView(flashcardSet: set)
+        case .feynman:
+            FeynmanGameView(flashcardSet: set)
+        }
     }
 }
 
@@ -1839,6 +2036,223 @@ private enum PerformanceLevel {
         onRetry: { print("Retry tapped") },
         onDismiss: { print("Done tapped") }
     )
+}
+
+// MARK: - Flashcard Set Detail View
+
+struct FlashcardSetDetailView: View {
+    @Environment(\.modelContext) private var modelContext
+    let flashcardSet: FlashcardSet
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 24) {
+                // Hero Statistics Card
+                statsHeroCard
+
+                // Feature Cards
+                VStack(spacing: 16) {
+                    Text("Choose Your Learning Mode")
+                        .font(.title3.bold())
+                        .foregroundStyle(Color.primaryText)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    // Study Mode Card
+                    FeatureCard(
+                        title: "Study Session",
+                        subtitle: "Traditional Review",
+                        description: "Spaced repetition flashcard study",
+                        icon: "play.circle.fill",
+                        gradient: [Color.cosmicPurple, Color.cosmicPurple.opacity(0.7)]
+                    ) {
+                        SessionBuilderView(flashcardSet: flashcardSet) { _ in }
+                    }
+
+                    // Game Modes Card - HIGHLIGHTED
+                    FeatureCard(
+                        title: "🎮 Game Modes",
+                        subtitle: "5 Fun Ways to Learn",
+                        description: "Matching, Quiz, Teach-Back & More",
+                        icon: "gamecontroller.fill",
+                        gradient: [Color.blue, Color.cyan],
+                        isHighlighted: true
+                    ) {
+                        GameModeSelectionView(flashcardSet: flashcardSet)
+                    }
+
+                    // AI Tutoring Card
+                    FeatureCard(
+                        title: "🧠 AI Tutoring",
+                        subtitle: "Conversational Learning",
+                        description: "Socratic Tutor, Debate, Explain-to-AI",
+                        icon: "brain.head.profile",
+                        gradient: [Color.orange, Color.red]
+                    ) {
+                        ConversationalLearningView(flashcardSet: flashcardSet)
+                    }
+
+                    // Practice Generator Card
+                    FeatureCard(
+                        title: "⚡ Practice Generator",
+                        subtitle: "AI-Powered Content",
+                        description: "Problems, Scenarios, Connections",
+                        icon: "wand.and.stars",
+                        gradient: [Color.green, Color.green.opacity(0.8)]
+                    ) {
+                        ContentGenerationView(flashcardSet: flashcardSet)
+                    }
+                }
+            }
+            .padding()
+        }
+        .navigationTitle(flashcardSet.topicLabel)
+        .navigationBarTitleDisplayMode(.large)
+    }
+
+    private var statsHeroCard: some View {
+        VStack(spacing: 16) {
+            HStack(spacing: 20) {
+                StatPill(label: "Total", value: "\(flashcardSet.cardCount)", color: .blue)
+                StatPill(label: "Due", value: "\(flashcardSet.dueCount)", color: .red)
+                StatPill(label: "New", value: "\(flashcardSet.newCount)", color: .purple)
+            }
+
+            HStack {
+                Text("Success Rate")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(String(format: "%.0f%%", flashcardSet.successRate * 100))
+                    .font(.title2.bold())
+                    .foregroundStyle(.green)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(.systemBackground))
+                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+        )
+    }
+}
+
+struct FeatureCard<Destination: View>: View {
+    let title: String
+    let subtitle: String
+    let description: String
+    let icon: String
+    let gradient: [Color]
+    @ViewBuilder let destination: () -> Destination
+    var isHighlighted: Bool = false
+
+    var body: some View {
+        NavigationLink {
+            destination()
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Image(systemName: icon)
+                        .font(.system(size: 32))
+                        .foregroundStyle(.white)
+                        .frame(width: 60, height: 60)
+                        .background(
+                            LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+                        .cornerRadius(12)
+
+                    Spacer()
+
+                    Image(systemName: "arrow.right.circle.fill")
+                        .font(.title2)
+                        .foregroundStyle(.white.opacity(0.9))
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.title3.bold())
+                        .foregroundStyle(.white)
+
+                    Text(subtitle)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.9))
+
+                    Text(description)
+                        .font(.caption)
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+            .padding(20)
+            .background(
+                LinearGradient(colors: gradient, startPoint: .topLeading, endPoint: .bottomTrailing)
+            )
+            .cornerRadius(20)
+            .shadow(color: gradient[0].opacity(0.3), radius: 12, x: 0, y: 8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 20)
+                    .stroke(isHighlighted ? Color.white.opacity(0.5) : Color.clear, lineWidth: 2)
+            )
+            .scaleEffect(isHighlighted ? 1.02 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle). \(description)")
+        .accessibilityHint("Double tap to open")
+        .accessibilityAddTraits(.isButton)
+    }
+}
+
+struct StatPill: View {
+    let label: String
+    let value: String
+    let color: Color
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(color)
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(color.opacity(0.1))
+        .cornerRadius(12)
+    }
+}
+
+struct ModeRow: View {
+    let title: String
+    let icon: String
+    let description: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 16) {
+            Image(systemName: icon)
+                .font(.system(size: 24))
+                .foregroundStyle(color)
+                .frame(width: 40)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.headline)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.tertiary)
+        }
+        .padding(.vertical, 8)
+    }
 }
 
 #Preview("Perfect Score") {

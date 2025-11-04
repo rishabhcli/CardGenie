@@ -1822,3 +1822,503 @@ final class LiveLectureContext: LectureRecorderDelegate {
         }
     }
 }
+
+// MARK: - AI Chat View
+
+/// Conversational AI chat interface powered by Apple Intelligence Foundation Models
+/// Provides streaming text responses with voice input support
+@available(iOS 26.0, *)
+struct AIChatView: View {
+    @StateObject private var chatEngine = AIChatEngine()
+    @State private var messageText = ""
+    @State private var showPermissionAlert = false
+    @FocusState private var isInputFocused: Bool
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                // Background - clean for iOS 26
+                Color(.systemGroupedBackground)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    // Messages list
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 12) {
+                                if chatEngine.messages.isEmpty {
+                                    emptyStateView
+                                        .padding(.top, 60)
+                                } else {
+                                    ForEach(chatEngine.messages) { message in
+                                        AIChatMessageBubble(message: message)
+                                            .id(message.id)
+                                            .transition(.scale.combined(with: .opacity))
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                            .padding(.bottom, 100)
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                        .onChange(of: chatEngine.messages.count) { _, _ in
+                            if let lastMessage = chatEngine.messages.last {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                                }
+                            }
+                        }
+                    }
+
+                    // Input bar at bottom
+                    VStack(spacing: 0) {
+                        Divider()
+                            .opacity(0.3)
+
+                        inputBar
+                    }
+                    .background(.ultraThinMaterial)
+                }
+            }
+            .navigationTitle("AI Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        chatEngine.clearConversation()
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(Color.cosmicPurple)
+                    }
+                    .buttonStyle(.glass)
+                    .disabled(chatEngine.messages.isEmpty)
+                }
+            }
+            .alert("AI Not Available", isPresented: $showPermissionAlert) {
+                Button("OK") {}
+            } message: {
+                Text(chatEngine.availabilityMessage)
+            }
+        }
+    }
+
+    private var emptyStateView: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Icon with glass effect
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.cosmicPurple.opacity(0.2), .mysticBlue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 120, height: 120)
+                    .glassEffect(.regular, in: .circle)
+
+                Image(systemName: "sparkles")
+                    .font(.system(size: 50, weight: .medium))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.cosmicPurple, .mysticBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .symbolEffect(.variableColor.iterative.reversing)
+            }
+
+            VStack(spacing: 12) {
+                Text("Ask me anything")
+                    .font(.title2.bold())
+                    .foregroundStyle(.primary)
+
+                Text("100% on-device, private, and secure")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var inputBar: some View {
+        HStack(spacing: 12) {
+            // Voice input button
+            Button {
+                chatEngine.toggleVoiceInput()
+            } label: {
+                Image(systemName: chatEngine.isListening ? "mic.fill" : "mic")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundStyle(chatEngine.isListening ? Color.white : Color.cosmicPurple)
+                    .frame(width: 36, height: 36)
+                    .background(chatEngine.isListening ? Color.red : Color.clear)
+                    .clipShape(Circle())
+                    .symbolEffect(.bounce, value: chatEngine.isListening)
+            }
+            .buttonStyle(.glass)
+            .disabled(chatEngine.isGenerating)
+
+            // Text input with iOS 26 styling
+            TextField("Message", text: $messageText, axis: .vertical)
+                .textFieldStyle(.plain)
+                .focused($isInputFocused)
+                .lineLimit(1...5)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 20)
+                        .fill(Color(.tertiarySystemFill))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
+                )
+                .submitLabel(.send)
+                .onSubmit {
+                    sendMessage()
+                }
+
+            // Send button with Glass style
+            Button {
+                sendMessage()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(messageText.isEmpty ? Color(.systemGray3) : Color.cosmicPurple)
+                    .symbolEffect(.bounce, value: chatEngine.messages.count)
+            }
+            .buttonStyle(.plain)
+            .disabled(messageText.isEmpty || chatEngine.isGenerating)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+    }
+
+    private func sendMessage() {
+        let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        messageText = ""
+        isInputFocused = false
+
+        Task {
+            let success = await chatEngine.sendMessage(text)
+            if !success {
+                showPermissionAlert = true
+            }
+        }
+    }
+}
+
+// MARK: - AI Chat Message Bubble
+
+@available(iOS 26.0, *)
+struct AIChatMessageBubble: View {
+    let message: AIChatMessage
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 0) {
+            if message.isUser {
+                Spacer(minLength: 40)
+            }
+
+            VStack(alignment: message.isUser ? .trailing : .leading, spacing: 6) {
+                Text(message.text)
+                    .font(.body)
+                    .foregroundStyle(message.isUser ? .white : .primary)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 12)
+                    .background(
+                        Group {
+                            if message.isUser {
+                                // User messages with gradient and glass effect
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.cosmicPurple, .mysticBlue],
+                                            startPoint: .topLeading,
+                                            endPoint: .bottomTrailing
+                                        )
+                                    )
+                            } else {
+                                // AI messages with Liquid Glass
+                                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                    .fill(Color(.secondarySystemBackground))
+                            }
+                        }
+                    )
+                    .shadow(
+                        color: message.isUser
+                            ? Color.cosmicPurple.opacity(0.3)
+                            : Color.black.opacity(0.05),
+                        radius: message.isUser ? 8 : 4,
+                        x: 0,
+                        y: 2
+                    )
+
+                if !message.isUser && message.isStreaming {
+                    HStack(spacing: 4) {
+                        ForEach(0..<3) { index in
+                            Circle()
+                                .fill(.secondary)
+                                .frame(width: 6, height: 6)
+                                .scaleEffect(message.isStreaming ? 1.0 : 0.5)
+                                .animation(
+                                    .easeInOut(duration: 0.6)
+                                        .repeatForever()
+                                        .delay(Double(index) * 0.2),
+                                    value: message.isStreaming
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                }
+            }
+
+            if !message.isUser {
+                Spacer(minLength: 40)
+            }
+        }
+    }
+}
+
+// MARK: - AI Chat Message Model
+
+struct AIChatMessage: Identifiable {
+    let id: UUID
+    let text: String
+    let isUser: Bool
+    var isStreaming: Bool
+
+    init(text: String, isUser: Bool, isStreaming: Bool = false) {
+        self.id = UUID()
+        self.text = text
+        self.isUser = isUser
+        self.isStreaming = isStreaming
+    }
+}
+
+// MARK: - AI Chat Engine
+
+@MainActor
+@available(iOS 26.0, *)
+class AIChatEngine: ObservableObject {
+    @Published private(set) var messages: [AIChatMessage] = []
+    @Published private(set) var isGenerating = false
+    @Published private(set) var isListening = false
+    @Published private(set) var availabilityMessage = ""
+
+    private let fmClient = FMClient()
+    private var conversationHistory: [String] = []
+
+    #if canImport(Speech)
+    private var speechRecognizer: SFSpeechRecognizer?
+    private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
+    private var recognitionTask: SFSpeechRecognitionTask?
+    private let audioEngine = AVAudioEngine()
+    #endif
+
+    init() {
+        checkAvailability()
+        #if canImport(Speech)
+        speechRecognizer = SFSpeechRecognizer(locale: Locale.current)
+        #endif
+    }
+
+    func sendMessage(_ text: String) async -> Bool {
+        // Check availability
+        guard fmClient.capability() == .available else {
+            checkAvailability()
+            return false
+        }
+
+        // Add user message
+        let userMessage = AIChatMessage(text: text, isUser: true)
+        messages.append(userMessage)
+        conversationHistory.append("User: \(text)")
+
+        // Create placeholder for assistant response
+        var assistantMessage = AIChatMessage(text: "", isUser: false, isStreaming: true)
+        messages.append(assistantMessage)
+        let assistantIndex = messages.count - 1
+
+        isGenerating = true
+        defer { isGenerating = false }
+
+        do {
+            // Build conversation context
+            let context = conversationHistory.suffix(10).joined(separator: "\n\n")
+            let prompt = """
+            Previous conversation:
+            \(context)
+
+            User: \(text)
+            """
+
+            // Stream response
+            var fullResponse = ""
+
+            #if canImport(FoundationModels)
+            // Use actual Foundation Models streaming
+            for try await chunk in fmClient.streamChat(prompt) {
+                fullResponse = chunk
+                messages[assistantIndex] = AIChatMessage(
+                    text: fullResponse,
+                    isUser: false,
+                    isStreaming: true
+                )
+            }
+            #else
+            // Fallback simulation
+            let response = try await fmClient.reflection(for: text)
+            fullResponse = response
+            #endif
+
+            // Finalize message
+            messages[assistantIndex] = AIChatMessage(
+                text: fullResponse,
+                isUser: false,
+                isStreaming: false
+            )
+            conversationHistory.append("Assistant: \(fullResponse)")
+
+            return true
+
+        } catch {
+            // Remove failed message
+            if assistantIndex < messages.count {
+                messages.remove(at: assistantIndex)
+            }
+
+            // Add error message
+            messages.append(AIChatMessage(
+                text: "Sorry, I encountered an error. Please try again.",
+                isUser: false
+            ))
+
+            return false
+        }
+    }
+
+    func toggleVoiceInput() {
+        #if canImport(Speech)
+        if isListening {
+            stopListening()
+        } else {
+            Task {
+                await startListening()
+            }
+        }
+        #endif
+    }
+
+    #if canImport(Speech)
+    private func startListening() async {
+        // Request permissions
+        let status = await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { authStatus in
+                continuation.resume(returning: authStatus)
+            }
+        }
+
+        guard status == .authorized else {
+            availabilityMessage = "Speech recognition not authorized"
+            return
+        }
+
+        let micPermission = await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
+            }
+        }
+
+        guard micPermission else {
+            availabilityMessage = "Microphone access not authorized"
+            return
+        }
+
+        do {
+            let audioSession = AVAudioSession.sharedInstance()
+            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+
+            recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
+            guard let recognitionRequest else { return }
+
+            recognitionRequest.shouldReportPartialResults = true
+
+            let inputNode = audioEngine.inputNode
+            recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
+                guard let self else { return }
+
+                if let result {
+                    Task { @MainActor in
+                        // Auto-send when speech pauses
+                        let text = result.bestTranscription.formattedString
+                        if result.isFinal {
+                            await self.sendMessage(text)
+                            self.stopListening()
+                        }
+                    }
+                }
+
+                if error != nil {
+                    self.stopListening()
+                }
+            }
+
+            let recordingFormat = inputNode.outputFormat(forBus: 0)
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: recordingFormat) { buffer, _ in
+                recognitionRequest.append(buffer)
+            }
+
+            audioEngine.prepare()
+            try audioEngine.start()
+            isListening = true
+
+        } catch {
+            availabilityMessage = "Could not start speech recognition"
+        }
+    }
+
+    private func stopListening() {
+        audioEngine.stop()
+        audioEngine.inputNode.removeTap(onBus: 0)
+        recognitionRequest?.endAudio()
+        recognitionTask?.cancel()
+        recognitionRequest = nil
+        recognitionTask = nil
+        isListening = false
+    }
+    #endif
+
+    func clearConversation() {
+        messages.removeAll()
+        conversationHistory.removeAll()
+    }
+
+    private func checkAvailability() {
+        let status = fmClient.capability()
+        switch status {
+        case .available:
+            availabilityMessage = ""
+        case .notEnabled:
+            availabilityMessage = "Please enable AI features in Settings"
+        case .notSupported:
+            availabilityMessage = "AI features require iPhone 15 Pro or newer"
+        case .modelNotReady:
+            availabilityMessage = "AI model is downloading"
+        case .unknown:
+            availabilityMessage = "AI status unknown"
+        }
+    }
+}
