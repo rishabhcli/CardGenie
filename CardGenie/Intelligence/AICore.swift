@@ -251,6 +251,62 @@ final class FMClient: ObservableObject {
         #endif
     }
 
+    // MARK: - General Completion
+
+    /// General-purpose text completion for RAG, chat, and other uses
+    /// - Parameters:
+    ///   - prompt: The prompt/instruction for the model
+    ///   - maxTokens: Maximum tokens to generate
+    /// - Returns: Generated text response
+    /// - Throws: Error if the model is unavailable or processing fails
+    func complete(_ prompt: String, maxTokens: Int = 500) async throws -> String {
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, *) else {
+            throw FMError.unsupportedOS
+        }
+
+        let model = SystemLanguageModel.default
+        guard case .available = model.availability else {
+            log.error("Model not available")
+            throw FMError.modelUnavailable
+        }
+
+        log.info("Generating completion...")
+
+        do {
+            let instructions = """
+                You are a helpful AI assistant for studying and learning.
+                Provide accurate, concise, and well-structured responses.
+                When answering questions about lecture notes or study materials, cite sources if provided.
+                """
+
+            let session = LanguageModelSession(instructions: instructions)
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.5 // Balanced between creativity and accuracy
+            )
+
+            let response = try await session.respond(to: prompt, options: options)
+            let completion = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+
+            log.info("Completion generated")
+            return completion
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            log.error("Guardrail violation during completion")
+            throw FMError.processingFailed
+        } catch {
+            log.error("Completion failed: \(error.localizedDescription)")
+            throw FMError.processingFailed
+        }
+        #else
+        log.info("Using fallback completion implementation")
+        // Fallback: return a generic response
+        return "I'm unable to process this request without Apple Intelligence enabled."
+        #endif
+    }
+
     // MARK: - Study Coach
 
     /// Generate encouraging message based on study performance
@@ -661,8 +717,8 @@ final class AppleOnDeviceLLM: LLMEngine {
             throw LLMError.notAvailable
         }
 
-        // Use existing FMClient methods
-        return try await fmClient.reflection(for: prompt)
+        // Use general-purpose completion method for RAG and chat
+        return try await fmClient.complete(prompt, maxTokens: maxTokens)
     }
 
     func streamComplete(_ prompt: String, maxTokens: Int) -> AsyncThrowingStream<String, Error> {

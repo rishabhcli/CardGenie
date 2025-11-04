@@ -8,6 +8,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 import UniformTypeIdentifiers
 
 /// Settings view with privacy info and AI status

@@ -79,6 +79,9 @@ final class Flashcard {
     /// Last review date
     var lastReviewed: Date?
 
+    /// JSON-encoded metadata for advanced card types (multiple choice, etc.)
+    var metadataJSON: String?
+
     // MARK: - Relationship
 
     /// The flashcard set this card belongs to
@@ -115,6 +118,7 @@ final class Flashcard {
         self.goodCount = 0
         self.easyCount = 0
         self.lastReviewed = nil
+        self.metadataJSON = nil
     }
 
     // MARK: - Computed Properties

@@ -11,6 +11,7 @@ import SwiftData
 // MARK: - Vector Store
 
 /// Simple in-memory vector store with cosine similarity search
+@MainActor
 final class VectorStore {
     private let modelContext: ModelContext
 
@@ -94,6 +95,7 @@ final class VectorStore {
 // MARK: - RAG Chat Manager
 
 /// Manages chat interactions with local RAG
+@MainActor
 final class RAGChatManager {
     private let vectorStore: VectorStore
     private let llm: LLMEngine

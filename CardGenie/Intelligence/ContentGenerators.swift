@@ -9,7 +9,9 @@ import Foundation
 import SwiftData
 import Combine
 import OSLog
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 // MARK: - QuizBuilder
 

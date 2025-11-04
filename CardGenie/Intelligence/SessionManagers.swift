@@ -8,7 +8,9 @@
 import Foundation
 import SwiftData
 import UserNotifications
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 import Combine
 import OSLog
 import UIKit

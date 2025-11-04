@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
 import AVFoundation
 import ActivityKit
 import Speech

@@ -236,7 +236,7 @@ final class NoteChunk {
 
     func setEmbedding(_ vector: [Float]) {
         // Encode Float array to Data
-        self.embedding = Data(bytes: vector, count: vector.count * MemoryLayout<Float>.size)
+        self.embedding = vector.withUnsafeBytes { Data($0) }
     }
 
     func getEmbedding() -> [Float]? {
@@ -374,12 +374,21 @@ extension Flashcard {
 
     var metadata: [String: Any]? {
         get {
-            // Store as JSON in a string property
-            // This is a simplified approach
-            return nil
+            guard let json = metadataJSON,
+                  let data = json.data(using: .utf8),
+                  let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+            else { return nil }
+            return dict
         }
         set {
-            // Store metadata
+            guard let dict = newValue,
+                  let data = try? JSONSerialization.data(withJSONObject: dict),
+                  let json = String(data: data, encoding: .utf8)
+            else {
+                metadataJSON = nil
+                return
+            }
+            metadataJSON = json
         }
     }
 }

@@ -7,7 +7,10 @@
 
 import SwiftUI
 import SwiftData
+import UIKit
+#if canImport(FoundationModels)
 import FoundationModels
+#endif
 
 // MARK: - ContentListView
 

@@ -24,6 +24,12 @@ struct CardGenieApp: App {
             NoteChunk.self,
             LectureSession.self,
             HighlightMarker.self,
+            HandwritingData.self,
+            StudyPlan.self,
+            StudySession.self,
+            ConceptMap.self,
+            ConceptNode.self,
+            ConceptEdge.self,
             // Conversational Learning Models
             ConversationalSession.self,
             ChatMessage.self,
