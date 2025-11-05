@@ -769,6 +769,10 @@ struct FlashcardStudyView: View {
 
     private var revealButton: some View {
         Button {
+            // Heavy haptic feedback for reveal action
+            let impact = UIImpactFeedbackGenerator(style: .heavy)
+            impact.impactOccurred()
+
             withAnimation(.spring(response: 0.3)) {
                 showAnswer = true
             }
@@ -781,8 +785,16 @@ struct FlashcardStudyView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.aiAccent)
-            .cornerRadius(12)
+            .background {
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.aiAccent)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.aiAccent)
+                }
+            }
         }
         .accessibilityLabel("Reveal answer")
     }

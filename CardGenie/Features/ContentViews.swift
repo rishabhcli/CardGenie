@@ -31,8 +31,16 @@ struct ContentListView: View {
     @State private var selectedContent: StudyContent?
     @State private var showingSettings = false
 
+    // App Intent integration
+    @Binding var pendingGenerationText: String?
+    @State private var showingGenerationSheet = false
+
     // Animation
     @Environment(\.accessibilityReduceMotion) var reduceMotion
+
+    init(pendingGenerationText: Binding<String?> = .constant(nil)) {
+        self._pendingGenerationText = pendingGenerationText
+    }
 
     var body: some View {
         NavigationStack {
@@ -156,6 +164,22 @@ struct ContentListView: View {
             }
             .sheet(isPresented: $showingFilters) {
                 FilterSheet(selectedFilters: $selectedFilters)
+            }
+            .sheet(isPresented: $showingGenerationSheet) {
+                if let text = pendingGenerationText {
+                    FlashcardGenerationSheet(
+                        sourceText: text,
+                        onDismiss: {
+                            pendingGenerationText = nil
+                            showingGenerationSheet = false
+                        }
+                    )
+                }
+            }
+            .onChange(of: pendingGenerationText) { _, newValue in
+                if newValue != nil {
+                    showingGenerationSheet = true
+                }
             }
         }
     }
@@ -1353,6 +1377,234 @@ struct FilterChip: View {
         .padding(.vertical, 6)
         .background(filter.color.opacity(0.15))
         .cornerRadius(16)
+    }
+}
+
+// MARK: - Flashcard Generation Sheet
+
+/// Sheet for generating flashcards from text provided via Shortcuts
+struct FlashcardGenerationSheet: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    @Query private var flashcardSets: [FlashcardSet]
+
+    let sourceText: String
+    let onDismiss: () -> Void
+
+    @State private var isGenerating = false
+    @State private var selectedSet: FlashcardSet?
+    @State private var showingSetPicker = false
+    @State private var generatedCount = 0
+    @State private var showSuccess = false
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 24) {
+                // Preview of source text
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Source Text")
+                        .font(.headline)
+                        .foregroundStyle(Color.primaryText)
+
+                    ScrollView {
+                        Text(sourceText)
+                            .font(.body)
+                            .foregroundStyle(Color.secondaryText)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .frame(height: 150)
+                    .padding()
+                    .background(Color.primaryText.opacity(0.05))
+                    .cornerRadius(12)
+                }
+                .padding()
+                .glassPanel()
+                .cornerRadius(16)
+
+                // Deck selector
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Target Deck")
+                        .font(.headline)
+                        .foregroundStyle(Color.primaryText)
+
+                    Button {
+                        showingSetPicker = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(Color.aiAccent)
+
+                            Text(selectedSet?.topicLabel ?? "Select a deck...")
+                                .foregroundStyle(selectedSet != nil ? Color.primaryText : Color.secondaryText)
+
+                            Spacer()
+
+                            Image(systemName: "chevron.down")
+                                .foregroundStyle(Color.tertiaryText)
+                                .font(.caption)
+                        }
+                        .padding()
+                        .background(Color.primaryText.opacity(0.05))
+                        .cornerRadius(12)
+                    }
+                }
+                .padding()
+                .glassPanel()
+                .cornerRadius(16)
+
+                Spacer()
+
+                // Generate button
+                Button {
+                    generateFlashcards()
+                } label: {
+                    HStack {
+                        if isGenerating {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Image(systemName: "sparkles")
+                        }
+                        Text(isGenerating ? "Generating..." : "Generate Flashcards")
+                    }
+                    .font(.headline)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background {
+                        if #available(iOS 26.0, *) {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.aiAccent)
+                                .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                        } else {
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.aiAccent)
+                        }
+                    }
+                }
+                .disabled(isGenerating || selectedSet == nil)
+            }
+            .padding()
+            .navigationTitle("Generate Flashcards")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        onDismiss()
+                        dismiss()
+                    }
+                }
+            }
+            .sheet(isPresented: $showingSetPicker) {
+                SetPickerView(selectedSet: $selectedSet, flashcardSets: flashcardSets)
+            }
+            .alert("Success!", isPresented: $showSuccess) {
+                Button("OK") {
+                    onDismiss()
+                    dismiss()
+                }
+            } message: {
+                Text("Generated \(generatedCount) flashcards successfully!")
+            }
+            .onAppear {
+                selectedSet = flashcardSets.first
+            }
+        }
+    }
+
+    private func generateFlashcards() {
+        isGenerating = true
+
+        Task {
+            guard let targetSet = selectedSet else { return }
+
+            // Create a source document
+            let sourceDoc = SourceDocument(
+                type: .text,
+                title: "Shortcut Import",
+                rawText: sourceText
+            )
+            modelContext.insert(sourceDoc)
+
+            // Create a note chunk
+            let chunk = NoteChunk(
+                text: sourceText,
+                sourceDocument: sourceDoc
+            )
+            modelContext.insert(chunk)
+
+            // Generate flashcards using the flashcard generator
+            let generator = FlashcardGenerator(modelContext: modelContext)
+            do {
+                let flashcards = try await generator.generateFlashcards(
+                    from: [chunk],
+                    targetSet: targetSet
+                )
+
+                await MainActor.run {
+                    generatedCount = flashcards.count
+                    isGenerating = false
+                    showSuccess = true
+                }
+            } catch {
+                print("Error generating flashcards: \(error)")
+                await MainActor.run {
+                    isGenerating = false
+                    // Show error to user
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Set Picker View
+
+private struct SetPickerView: View {
+    @Environment(\.dismiss) private var dismiss
+    @Binding var selectedSet: FlashcardSet?
+    let flashcardSets: [FlashcardSet]
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(flashcardSets) { set in
+                    Button {
+                        selectedSet = set
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "folder.fill")
+                                .foregroundStyle(Color.aiAccent)
+
+                            VStack(alignment: .leading) {
+                                Text(set.topicLabel)
+                                    .foregroundStyle(Color.primaryText)
+
+                                Text("\(set.cardCount) cards")
+                                    .font(.caption)
+                                    .foregroundStyle(Color.secondaryText)
+                            }
+
+                            Spacer()
+
+                            if selectedSet?.id == set.id {
+                                Image(systemName: "checkmark")
+                                    .foregroundStyle(Color.aiAccent)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Select Deck")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") {
+                        dismiss()
+                    }
+                }
+            }
+        }
     }
 }
 

@@ -124,6 +124,7 @@ struct MainTabView: View {
     // App Intent handling
     @State private var shouldStartStudySession = false
     @State private var aiChatQuestion: String?
+    @State private var pendingGenerationText: String?
 
     var body: some View {
         if #available(iOS 26.0, *) {
@@ -181,9 +182,9 @@ struct MainTabView: View {
             object: nil,
             queue: .main
         ) { notification in
-            if let _ = notification.userInfo?["text"] as? String {
+            if let text = notification.userInfo?["text"] as? String {
                 selectedTab = 0 // Switch to Study tab
-                // TODO: Pass text to content generation flow
+                pendingGenerationText = text
             }
         }
     }
@@ -196,7 +197,7 @@ struct MainTabView: View {
         TabView(selection: $selectedTab) {
             Tab("Study", systemImage: "book.fill", value: 0) {
                 NavigationStack {
-                    ContentListView()
+                    ContentListView(pendingGenerationText: $pendingGenerationText)
                         .navigationTitle("Study")
                         .navigationBarTitleDisplayMode(.large)
                         .toolbar {
@@ -269,7 +270,7 @@ struct MainTabView: View {
     @ViewBuilder
     private var legacyTabView: some View {
         TabView(selection: $selectedTab) {
-            ContentListView()
+            ContentListView(pendingGenerationText: $pendingGenerationText)
                 .tabItem {
                     Label("Study", systemImage: "sparkles")
                 }

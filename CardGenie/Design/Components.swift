@@ -827,7 +827,7 @@ extension View {
 
 // MARK: - Review Button
 
-/// Review button for spaced repetition ratings
+/// Review button for spaced repetition ratings with iOS 26 glass effects and haptic feedback
 struct ReviewButton: View {
     let response: SpacedRepetitionManager.ReviewResponse
     let action: () -> Void
@@ -840,7 +840,13 @@ struct ReviewButton: View {
     }
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            // Haptic feedback based on response type
+            let impact = UIImpactFeedbackGenerator(style: hapticStyle)
+            impact.impactOccurred()
+
+            action()
+        } label: {
             VStack(spacing: Spacing.xs) {
                 Text(response.displayName)
                     .font(.headline)
@@ -851,9 +857,17 @@ struct ReviewButton: View {
             }
             .frame(maxWidth: .infinity)
             .padding()
-            .background(backgroundColor)
+            .background {
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(backgroundColor)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(backgroundColor)
+                }
+            }
             .foregroundStyle(isEnabled ? foregroundColor : .gray)
-            .cornerRadius(CornerRadius.md)
         }
         .disabled(!isEnabled)
         // MARK: - Accessibility
@@ -876,6 +890,14 @@ struct ReviewButton: View {
         case .again: return .red
         case .good: return .blue
         case .easy: return .green
+        }
+    }
+
+    private var hapticStyle: UIImpactFeedbackGenerator.FeedbackStyle {
+        switch response {
+        case .again: return .medium
+        case .good: return .medium
+        case .easy: return .light
         }
     }
 
