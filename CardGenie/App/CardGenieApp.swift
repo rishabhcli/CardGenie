@@ -16,61 +16,34 @@ struct CardGenieApp: App {
     /// with no iCloud sync or external file access.
     /// Falls back to in-memory storage if persistent storage fails.
     var modelContainer: ModelContainer = {
+        // Create schema with only core models first to diagnose the issue
         let schema = Schema([
             StudyContent.self,
             Flashcard.self,
-            FlashcardSet.self,
-            SourceDocument.self,
-            NoteChunk.self,
-            LectureSession.self,
-            HighlightMarker.self,
-            HandwritingData.self,
-            StudyPlan.self,
-            StudySession.self,
-            ConceptMap.self,
-            ConceptNode.self,
-            ConceptEdge.self,
-            // Conversational Learning Models
-            ConversationalSession.self,
-            ChatMessage.self,
-            // Game Mode Models
-            MatchingGame.self,
-            MatchPair.self,
-            TrueFalseGame.self,
-            MultipleChoiceGame.self,
-            TeachBackSession.self,
-            FeynmanSession.self,
-            GameStatistics.self,
-            // Content Generation Models
-            GeneratedPracticeSet.self,
-            GeneratedScenarioSet.self,
-            GeneratedConnectionSet.self
+            FlashcardSet.self
         ])
 
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            // Data is stored locally in app sandbox, not exposed to Files app
-            allowsSave: true,
-            // App Group for widget data sharing
-            groupContainer: .identifier("group.com.cardgenie.shared")
+            allowsSave: true
         )
 
         do {
-            return try ModelContainer(
+            let container = try ModelContainer(
                 for: schema,
                 configurations: [modelConfiguration]
             )
+            print("✅ ModelContainer created successfully with core models")
+            return container
         } catch {
-            // If persistent storage fails, fall back to in-memory storage
-            // This prevents app crashes while allowing the app to function
             print("⚠️ Failed to create persistent ModelContainer: \(error)")
-            print("⚠️ Falling back to in-memory storage. Data will not persist between launches.")
+            print("⚠️ Error details: \(error.localizedDescription)")
+            print("⚠️ Falling back to in-memory storage.")
 
             let memoryConfig = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: true,
-                groupContainer: .identifier("group.com.cardgenie.shared")
+                isStoredInMemoryOnly: true
             )
 
             do {
@@ -79,8 +52,6 @@ struct CardGenieApp: App {
                     configurations: [memoryConfig]
                 )
             } catch {
-                // This should never happen, but if it does, we have no choice but to crash
-                // At least we tried to recover gracefully
                 fatalError("Could not create even in-memory ModelContainer: \(error)")
             }
         }
@@ -147,10 +118,6 @@ struct MainTabView: View {
     @State private var selectedTab: Int = 0
     @State private var showingSettings = false
 
-    // Floating AI Assistant (iOS 26+)
-    @State private var showingAIAssistant = false
-    @State private var assistantMode: AssistantMode = .ask
-
     // App Intent handling
     @State private var shouldStartStudySession = false
     @State private var aiChatQuestion: String?
@@ -191,7 +158,7 @@ struct MainTabView: View {
             object: nil,
             queue: .main
         ) { _ in
-            selectedTab = 2 // Switch to AI Chat tab
+            selectedTab = 2 // Switch to AI tab (iOS 26+) or tab 2 (iOS 25)
         }
 
         // Open AI chat with question
@@ -201,7 +168,7 @@ struct MainTabView: View {
             queue: .main
         ) { notification in
             if let question = notification.userInfo?["question"] as? String {
-                selectedTab = 2 // Switch to AI Chat tab
+                selectedTab = 2 // Switch to AI tab
                 aiChatQuestion = question
             }
         }
@@ -262,7 +229,23 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("Scan", systemImage: "doc.viewfinder", value: 2) {
+            Tab("AI", systemImage: "sparkles", value: 2) {
+                NavigationStack {
+                    AIChatView()
+                        .navigationTitle("AI Assistant")
+                        .navigationBarTitleDisplayMode(.large)
+                }
+            }
+
+            Tab("Record", systemImage: "mic.circle.fill", value: 3) {
+                NavigationStack {
+                    VoiceRecordView()
+                        .navigationTitle("Record")
+                        .navigationBarTitleDisplayMode(.large)
+                }
+            }
+
+            Tab("Scan", systemImage: "doc.viewfinder", value: 4) {
                 NavigationStack {
                     PhotoScanView()
                         .navigationTitle("Scan")
@@ -272,31 +255,9 @@ struct MainTabView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(.cosmicPurple)
-        .tabViewBottomAccessory {
-            floatingAIAssistantButton
-        }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 SettingsView()
-            }
-        }
-        .sheet(isPresented: $showingAIAssistant) {
-            NavigationStack {
-                Group {
-                    switch assistantMode {
-                    case .ask:
-                        AIChatView()
-                    case .record:
-                        VoiceRecordView()
-                    }
-                }
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("Done") {
-                            showingAIAssistant = false
-                        }
-                    }
-                }
             }
         }
     }
@@ -353,41 +314,6 @@ struct MainTabView: View {
         }
     }
 
-    // MARK: - Floating AI Assistant Button (iOS 26+)
-
-    @available(iOS 26.0, *)
-    private var floatingAIAssistantButton: some View {
-        Menu {
-            Button {
-                assistantMode = .ask
-                showingAIAssistant = true
-            } label: {
-                Label("Ask Question", systemImage: "waveform.circle.fill")
-            }
-
-            Button {
-                assistantMode = .record
-                showingAIAssistant = true
-            } label: {
-                Label("Record Lecture", systemImage: "mic.circle.fill")
-            }
-        } label: {
-            HStack(spacing: 8) {
-                Image(systemName: "sparkles")
-                    .font(.system(size: 16, weight: .semibold))
-                    .symbolEffect(.bounce, value: showingAIAssistant)
-
-                Text("AI Assistant")
-                    .font(.system(size: 15, weight: .semibold))
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-        }
-        .buttonStyle(.plain)
-        .contentShape(Capsule())
-    }
-
     // MARK: - Helper Properties
 
     /// Total due flashcards across all sets
@@ -402,14 +328,6 @@ struct MainTabView: View {
     }
 }
 
-// MARK: - Assistant Mode
-
-/// Mode for the floating AI assistant
-enum AssistantMode {
-    case ask      // Voice Q&A assistant
-    case record   // Lecture recording
-}
-
 // MARK: - App Configuration Notes
 /*
  iOS 26 Configuration Requirements:
@@ -422,16 +340,27 @@ enum AssistantMode {
     - FoundationModels (for on-device AI - iOS 26+)
     - UIKit (for Writing Tools bridge)
 
- 4. Capabilities:
+ 4. Tab Bar Layout:
+    iOS 26+ Modern Layout (5 tabs):
+    - Study: View and manage study content
+    - Cards: Flashcard sets and spaced repetition
+    - AI: AI chat assistant powered by Foundation Models
+    - Record: Voice recording for lecture capture
+    - Scan: Document and photo scanning
+    
+    iOS 25 Legacy Layout (5 tabs):
+    - Study, Cards, AI Chat, Record, Scan (same functionality)
+
+ 5. Capabilities:
     - No special entitlements needed for offline features
     - Apple Intelligence features work automatically on supported devices
     - Writing Tools are enabled at the text view level
 
- 5. Info.plist Keys (if adding media later):
+ 6. Info.plist Keys (if adding media later):
     - NSCameraUsageDescription (for photos)
     - NSMicrophoneUsageDescription (for voice notes)
 
- 6. Privacy:
+ 7. Privacy:
     - All data stays on device
     - No network calls
     - No analytics

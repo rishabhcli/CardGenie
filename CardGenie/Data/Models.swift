@@ -167,7 +167,7 @@ enum SourceKind: String, Codable {
 
 @Model
 final class SourceDocument {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var kind: SourceKind
     var fileName: String
     var fileURL: URL?
@@ -200,7 +200,7 @@ final class SourceDocument {
 
 @Model
 final class NoteChunk {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var text: String
     var summary: String?
     var chunkIndex: Int
@@ -252,7 +252,7 @@ final class NoteChunk {
 
 @Model
 final class LectureSession {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var title: String
     var recordedAt: Date
     var duration: TimeInterval
@@ -397,7 +397,7 @@ extension Flashcard {
 
 @Model
 final class HighlightMarker {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var createdAt: Date
     var startTime: Double
     var endTime: Double

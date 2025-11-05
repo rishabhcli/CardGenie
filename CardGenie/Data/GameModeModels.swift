@@ -26,16 +26,19 @@ enum StudyGameMode: String, Codable {
 
 @Model
 final class MatchingGame {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardSetID: UUID
-    var pairs: [MatchPair]
+    
+    @Relationship(deleteRule: .cascade)
+    var pairs: [MatchPair] = []
+    
     var timeLimit: Int // seconds
     var startTime: Date?
     var endTime: Date?
     var score: Int
     var mistakes: Int
 
-    init(flashcardSetID: UUID, pairs: [MatchPair], timeLimit: Int = 120) {
+    init(flashcardSetID: UUID, pairs: [MatchPair] = [], timeLimit: Int = 120) {
         self.id = UUID()
         self.flashcardSetID = flashcardSetID
         self.pairs = pairs
@@ -65,7 +68,7 @@ final class MatchingGame {
 
 @Model
 final class MatchPair {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var term: String
     var definition: String
     var isMatched: Bool
@@ -117,7 +120,7 @@ struct TrueFalseBatch: Equatable {
 
 @Model
 final class TrueFalseGame {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardSetID: UUID
     var currentIndex: Int
     var correctCount: Int
@@ -187,7 +190,7 @@ struct MCQBatch: Equatable {
 
 @Model
 final class MultipleChoiceGame {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardSetID: UUID
     var currentIndex: Int
     var correctCount: Int
@@ -216,7 +219,7 @@ final class MultipleChoiceGame {
 
 @Model
 final class TeachBackSession {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardID: UUID
     var recordingURL: URL?
     var transcription: String?
@@ -297,7 +300,7 @@ struct FeynmanEvaluation: Codable, Equatable {
 
 @Model
 final class FeynmanSession {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardID: UUID
     var userExplanation: String
     var evaluationData: Data? // Encoded FeynmanEvaluation
@@ -316,7 +319,7 @@ final class FeynmanSession {
 
 @Model
 final class GameStatistics {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var mode: StudyGameMode
     var totalGamesPlayed: Int
     var averageScore: Double

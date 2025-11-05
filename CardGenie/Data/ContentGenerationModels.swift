@@ -141,7 +141,7 @@ struct ConnectionBatch: Equatable, Codable {
 
 @Model
 final class GeneratedPracticeSet {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var sourceFlashcardID: UUID
     var problemsData: Data // Encoded [PracticeProblem]
     var createdAt: Date
@@ -158,7 +158,7 @@ final class GeneratedPracticeSet {
 
 @Model
 final class GeneratedScenarioSet {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var sourceFlashcardID: UUID
     var scenariosData: Data // Encoded [ScenarioQuestion]
     var createdAt: Date
@@ -175,7 +175,7 @@ final class GeneratedScenarioSet {
 
 @Model
 final class GeneratedConnectionSet {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcard1ID: UUID
     var flashcard2ID: UUID
     var challengesData: Data // Encoded [ConnectionChallenge]

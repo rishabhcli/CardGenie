@@ -631,20 +631,14 @@ struct ContentDetailView: View {
         #if canImport(FoundationModels)
         guard #available(iOS 26.0, *) else { return }
 
-        // Check if AI is available before prewarming
+        // Check if AI is available
         guard fmClient.capability() == .available else { return }
 
-        // Prewarm in background to avoid blocking UI
+        // Initialize a lightweight session in background to prepare the model
         Task(priority: .utility) {
-            do {
-                // Create a lightweight session just to prewarm
-                let session = LanguageModelSession {
-                    "You are a helpful journaling assistant."
-                }
-                try await session.prewarm()
-            } catch {
-                // Prewarming failure is non-critical, just log it
-                print("⚠️ AI prewarm failed: \(error.localizedDescription)")
+            // Creating a session helps prepare the model for later use
+            _ = LanguageModelSession {
+                "You are a helpful journaling assistant."
             }
         }
         #endif

@@ -138,13 +138,15 @@ struct ExplanationEvaluation: Equatable {
 
 @Model
 final class ConversationalSession {
-    var id: UUID
+    @Attribute(.unique) var id: UUID
     var flashcardID: UUID
     var mode: ConversationalMode
     var startTime: Date
     var endTime: Date?
     var turnCount: Int
-    var messages: [ChatMessage]
+    
+    @Relationship(deleteRule: .cascade)
+    var messages: [ChatMessage] = []
 
     init(flashcardID: UUID, mode: ConversationalMode) {
         self.id = UUID()

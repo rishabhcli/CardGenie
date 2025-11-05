@@ -12,8 +12,8 @@ import AppIntents
 // MARK: - Widget Configuration Intent
 
 struct DueCardsConfiguration: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "Due Cards Configuration"
-    static var description = IntentDescription("Configure your due cards widget")
+    static let title: LocalizedStringResource = "Due Cards Configuration"
+    static let description = IntentDescription("Configure your due cards widget")
 }
 
 // MARK: - Timeline Entry

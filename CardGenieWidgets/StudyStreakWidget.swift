@@ -12,8 +12,8 @@ import AppIntents
 // MARK: - Widget Configuration Intent
 
 struct StudyStreakConfiguration: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource = "Study Streak Configuration"
-    static var description = IntentDescription("Configure your study streak widget")
+    static let title: LocalizedStringResource = "Study Streak Configuration"
+    static let description = IntentDescription("Configure your study streak widget")
 }
 
 // MARK: - Timeline Entry
