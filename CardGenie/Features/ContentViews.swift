@@ -500,6 +500,10 @@ struct ContentDetailView: View {
             Text("Successfully generated \(generatedFlashcardCount) flashcard\(generatedFlashcardCount == 1 ? "" : "s")! View them in the Flashcards tab.")
         }
         .errorAlert($error)
+        .task {
+            // Prewarm AI session for faster first response
+            await prewarmAISession()
+        }
     }
 
     // MARK: - AI Generated Content
@@ -621,6 +625,30 @@ struct ContentDetailView: View {
     }
 
     // MARK: - AI Actions
+
+    /// Prewarm the AI session for faster first response
+    private func prewarmAISession() async {
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, *) else { return }
+
+        // Check if AI is available before prewarming
+        guard fmClient.capability() == .available else { return }
+
+        // Prewarm in background to avoid blocking UI
+        Task(priority: .utility) {
+            do {
+                // Create a lightweight session just to prewarm
+                let session = LanguageModelSession {
+                    "You are a helpful journaling assistant."
+                }
+                try await session.prewarm()
+            } catch {
+                // Prewarming failure is non-critical, just log it
+                print("⚠️ AI prewarm failed: \(error.localizedDescription)")
+            }
+        }
+        #endif
+    }
 
     /// Summarize the content using Foundation Models
     private func summarize() async {

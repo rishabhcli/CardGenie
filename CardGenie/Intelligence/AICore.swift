@@ -116,16 +116,20 @@ final class FMClient: ObservableObject {
             )
 
             let response = try await session.respond(
-                to: "Summarize this journal entry using three sentences:\n\n\(trimmed)",
+                to: "Summarize this journal entry:\n\n\(trimmed)",
+                generating: ContentSummary.self,
                 options: options
             )
 
-            let summary = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            let summary = response.content.summary
             log.info("Summary generated: \(summary.count) chars")
             return summary
 
         } catch LanguageModelSession.GenerationError.guardrailViolation {
             log.error("Guardrail violation during summarization")
+            throw FMError.processingFailed
+        } catch LanguageModelSession.GenerationError.refusal {
+            log.error("Model refused summarization request")
             throw FMError.processingFailed
         } catch {
             log.error("Summarization failed: \(error.localizedDescription)")
@@ -231,16 +235,20 @@ final class FMClient: ObservableObject {
             )
 
             let response = try await session.respond(
-                to: "Provide a supportive reflection for this journal entry in one sentence:\n\n\(text)",
+                to: "Provide a supportive reflection for this journal entry:\n\n\(text)",
+                generating: ContentReflection.self,
                 options: options
             )
 
-            let reflection = response.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            let reflection = response.content.reflection
             log.info("Reflection generated")
             return reflection
 
         } catch LanguageModelSession.GenerationError.guardrailViolation {
             log.error("Guardrail violation during reflection generation")
+            throw FMError.processingFailed
+        } catch LanguageModelSession.GenerationError.refusal {
+            log.error("Model refused reflection request")
             throw FMError.processingFailed
         } catch {
             log.error("Reflection generation failed: \(error.localizedDescription)")

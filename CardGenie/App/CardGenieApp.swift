@@ -51,9 +51,9 @@ struct CardGenieApp: App {
             schema: schema,
             isStoredInMemoryOnly: false,
             // Data is stored locally in app sandbox, not exposed to Files app
-            allowsSave: true
-            // Note: groupContainer will be added when widgets are fully configured
-            // groupContainer: .identifier("group.com.cardgenie.shared")
+            allowsSave: true,
+            // App Group for widget data sharing
+            groupContainer: .identifier("group.com.cardgenie.shared")
         )
 
         do {
@@ -69,7 +69,8 @@ struct CardGenieApp: App {
 
             let memoryConfig = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: true
+                isStoredInMemoryOnly: true,
+                groupContainer: .identifier("group.com.cardgenie.shared")
             )
 
             do {
@@ -137,13 +138,18 @@ struct CardGenieApp: App {
 
 // MARK: - Main Tab View
 
-/// Main navigation with Study Materials, Flashcards, AI Chat, Record, and Scan tabs
-/// iOS 26+ and iOS 25 both use 5-tab layout for consistency
+/// Main navigation with Study Materials, Flashcards, and Scan tabs
+/// iOS 26+ uses 3 tabs + floating AI assistant button
+/// iOS 25 uses legacy 5-tab layout for compatibility
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
     @State private var selectedTab: Int = 0
     @State private var showingSettings = false
+
+    // Floating AI Assistant (iOS 26+)
+    @State private var showingAIAssistant = false
+    @State private var assistantMode: AssistantMode = .ask
 
     // App Intent handling
     @State private var shouldStartStudySession = false
@@ -152,7 +158,7 @@ struct MainTabView: View {
 
     var body: some View {
         if #available(iOS 26.0, *) {
-            // iOS 26+ with 5 tabs
+            // iOS 26+ with 3 tabs + floating AI assistant
             modernTabView
                 .onAppear {
                     setupIntentObservers()
@@ -256,23 +262,7 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("AI Chat", systemImage: "bubble.left.and.bubble.right.fill", value: 2) {
-                NavigationStack {
-                    AIChatView()
-                        .navigationTitle("AI Chat")
-                        .navigationBarTitleDisplayMode(.large)
-                }
-            }
-
-            Tab("Record", systemImage: "mic.circle.fill", value: 3) {
-                NavigationStack {
-                    VoiceRecordView()
-                        .navigationTitle("Record")
-                        .navigationBarTitleDisplayMode(.large)
-                }
-            }
-
-            Tab("Scan", systemImage: "doc.viewfinder", value: 4) {
+            Tab("Scan", systemImage: "doc.viewfinder", value: 2) {
                 NavigationStack {
                     PhotoScanView()
                         .navigationTitle("Scan")
@@ -282,9 +272,31 @@ struct MainTabView: View {
         }
         .tabViewStyle(.sidebarAdaptable)
         .tint(.cosmicPurple)
+        .tabViewBottomAccessory {
+            floatingAIAssistantButton
+        }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
                 SettingsView()
+            }
+        }
+        .sheet(isPresented: $showingAIAssistant) {
+            NavigationStack {
+                Group {
+                    switch assistantMode {
+                    case .ask:
+                        AIChatView()
+                    case .record:
+                        VoiceRecordView()
+                    }
+                }
+                .toolbar {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button("Done") {
+                            showingAIAssistant = false
+                        }
+                    }
+                }
             }
         }
     }
@@ -341,6 +353,43 @@ struct MainTabView: View {
         }
     }
 
+    // MARK: - Floating AI Assistant Button (iOS 26+)
+
+    @available(iOS 26.0, *)
+    private var floatingAIAssistantButton: some View {
+        Menu {
+            Button {
+                assistantMode = .ask
+                showingAIAssistant = true
+            } label: {
+                Label("Ask Question", systemImage: "waveform.circle.fill")
+            }
+
+            Button {
+                assistantMode = .record
+                showingAIAssistant = true
+            } label: {
+                Label("Record Lecture", systemImage: "mic.circle.fill")
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 16, weight: .semibold))
+                    .symbolEffect(.bounce, value: showingAIAssistant)
+
+                Text("AI Assistant")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+        .buttonStyle(.plain)
+        .contentShape(Capsule())
+    }
+
+    // MARK: - Helper Properties
+
     /// Total due flashcards across all sets
     private var totalDueCount: Int {
         flashcardSets.reduce(0) { $0 + $1.dueCount }
@@ -351,6 +400,14 @@ struct MainTabView: View {
         let count = totalDueCount
         return count > 0 ? count : nil
     }
+}
+
+// MARK: - Assistant Mode
+
+/// Mode for the floating AI assistant
+enum AssistantMode {
+    case ask      // Voice Q&A assistant
+    case record   // Lecture recording
 }
 
 // MARK: - App Configuration Notes

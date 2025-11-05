@@ -153,6 +153,22 @@ struct JournalTags: Equatable {
     let tags: [String]
 }
 
+// MARK: - Content Summary
+
+@Generable
+struct ContentSummary: Equatable {
+    @Guide(description: "A concise 2-3 sentence summary maintaining first-person perspective and original tone")
+    let summary: String
+}
+
+// MARK: - Reflection
+
+@Generable
+struct ContentReflection: Equatable {
+    @Guide(description: "One kind, uplifting sentence providing empathetic reflection on the content")
+    let reflection: String
+}
+
 #else
 struct EntityExtractionResult: Equatable {
     let entities: [String]
@@ -204,6 +220,14 @@ struct DefinitionCard: Equatable {
 
 struct JournalTags: Equatable {
     let tags: [String]
+}
+
+struct ContentSummary: Equatable {
+    let summary: String
+}
+
+struct ContentReflection: Equatable {
+    let reflection: String
 }
 
 // MARK: - Quiz Generation (Fallback)

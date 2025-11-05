@@ -179,8 +179,7 @@ struct VoiceAssistantView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
                     .padding(.vertical, 8)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(12)
+                    .glassOverlay(cornerRadius: 12)
                     .transition(.scale.combined(with: .opacity))
             }
 
@@ -282,8 +281,7 @@ struct VoiceAssistantView: View {
                 .padding()
             }
             .frame(maxHeight: 350)
-            .background(.ultraThinMaterial)
-            .cornerRadius(16)
+            .glassPanel()
             .onChange(of: assistant.conversation.count) { _, _ in
                 if let lastMessage = assistant.conversation.last {
                     withAnimation {
@@ -2014,7 +2012,7 @@ struct AIChatView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .background(.ultraThinMaterial)
+        .glassPanel()
         .animation(.easeInOut(duration: 0.2), value: chatEngine.isListening)
         .animation(.easeInOut(duration: 0.2), value: chatEngine.isSpeaking)
         .animation(.easeInOut(duration: 0.2), value: chatEngine.isGenerating)
@@ -2091,10 +2089,6 @@ struct AIChatView: View {
                 .lineLimit(1...5)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 12)
-                .background {
-                    RoundedRectangle(cornerRadius: 20, style: .continuous)
-                        .fill(.regularMaterial)
-                }
                 .glassEffect(.regular, in: .rect(cornerRadius: 20))
                 .submitLabel(.send)
                 .onSubmit {
@@ -2234,7 +2228,6 @@ struct AIChatMessageBubble: View {
                         } else {
                             // AI messages with iOS 26 Liquid Glass
                             RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                .fill(.thinMaterial)
                                 .glassEffect(.regular, in: .rect(cornerRadius: 20))
                         }
                     }
@@ -2256,8 +2249,7 @@ struct AIChatMessageBubble: View {
                                 }
                             }
                             .padding(8)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
+                            .glassOverlay(cornerRadius: 20)
                             .offset(x: -8, y: 8)
                             .transition(.scale.combined(with: .opacity))
                         }

@@ -8,6 +8,9 @@
 import WidgetKit
 import SwiftUI
 import SwiftData
+#if canImport(ActivityKit)
+import ActivityKit
+#endif
 
 // MARK: - Widget Bundle
 
@@ -16,6 +19,12 @@ struct CardGenieWidgets: WidgetBundle {
     var body: some Widget {
         DueCardsWidget()
         StudyStreakWidget()
+
+        #if canImport(ActivityKit)
+        if #available(iOS 26.0, *) {
+            LectureHighlightLiveActivity()
+        }
+        #endif
     }
 }
 
@@ -103,9 +112,9 @@ actor WidgetDataProvider {
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            allowsSave: true
-            // Note: groupContainer will be added when App Groups are configured in Xcode
-            // groupContainer: .identifier("group.com.cardgenie.shared")
+            allowsSave: true,
+            // App Group for sharing data with main app
+            groupContainer: .identifier("group.com.cardgenie.shared")
         )
 
         return try ModelContainer(for: schema, configurations: [modelConfiguration])
