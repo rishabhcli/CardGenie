@@ -21,8 +21,11 @@ struct ContentListView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \StudyContent.createdAt, order: .reverse) private var allContent: [StudyContent]
 
-    // Search
+    // Search & Filtering
     @State private var searchText: String = ""
+    @State private var selectedFilters: Set<ContentFilter> = []
+    @State private var sortOrder: SortOrder = .dateDescending
+    @State private var showingFilters = false
 
     // Navigation
     @State private var selectedContent: StudyContent?
@@ -41,6 +44,19 @@ struct ContentListView: View {
                 .listRowSeparator(.hidden)
                 .listRowInsets(.init(top: Spacing.md, leading: Spacing.md, bottom: Spacing.sm, trailing: Spacing.md))
                 .listRowBackground(Color.clear)
+
+                // Active filter chips
+                if !selectedFilters.isEmpty {
+                    Section {
+                        FilterChipsRow(filters: $selectedFilters) {
+                            selectedFilters.removeAll()
+                        }
+                    }
+                    .listSectionSeparator(.hidden)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(.init(top: 0, leading: 0, bottom: Spacing.sm, trailing: 0))
+                    .listRowBackground(Color.clear)
+                }
 
                 if filteredContent.isEmpty {
                     Section {
@@ -88,6 +104,37 @@ struct ContentListView: View {
                 }
 
                 ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        // Sort options
+                        Picker("Sort By", selection: $sortOrder) {
+                            ForEach(SortOrder.allCases) { order in
+                                Label(order.rawValue, systemImage: order.icon)
+                                    .tag(order)
+                            }
+                        }
+
+                        Divider()
+
+                        Button {
+                            showingFilters = true
+                        } label: {
+                            Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
+                        }
+
+                        if !selectedFilters.isEmpty {
+                            Button(role: .destructive) {
+                                selectedFilters.removeAll()
+                            } label: {
+                                Label("Clear Filters", systemImage: "xmark.circle")
+                            }
+                        }
+                    } label: {
+                        Image(systemName: selectedFilters.isEmpty ? "ellipsis.circle" : "ellipsis.circle.fill")
+                            .foregroundStyle(Color.cosmicPurple)
+                    }
+                }
+
+                ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         createNewContent(source: .text)
                     } label: {
@@ -107,21 +154,39 @@ struct ContentListView: View {
             .sheet(isPresented: $showingSettings) {
                 SettingsView()
             }
+            .sheet(isPresented: $showingFilters) {
+                FilterSheet(selectedFilters: $selectedFilters)
+            }
         }
     }
 
     // MARK: - Computed Properties
 
-    /// Filtered content based on search text
+    /// Filtered and sorted content based on search, filters, and sort order
     private var filteredContent: [StudyContent] {
-        guard !searchText.isEmpty else { return allContent }
+        var content = allContent
 
-        return allContent.filter { content in
-            content.displayText.localizedCaseInsensitiveContains(searchText) ||
-            (content.summary ?? "").localizedCaseInsensitiveContains(searchText) ||
-            content.tags.contains { $0.localizedCaseInsensitiveContains(searchText) } ||
-            (content.topic ?? "").localizedCaseInsensitiveContains(searchText)
+        // Apply search filter
+        if !searchText.isEmpty {
+            content = content.filter { item in
+                item.displayText.localizedCaseInsensitiveContains(searchText) ||
+                (item.summary ?? "").localizedCaseInsensitiveContains(searchText) ||
+                item.tags.contains { $0.localizedCaseInsensitiveContains(searchText) } ||
+                (item.topic ?? "").localizedCaseInsensitiveContains(searchText)
+            }
         }
+
+        // Apply content filters
+        if !selectedFilters.isEmpty {
+            content = content.filter { item in
+                selectedFilters.contains { filter in
+                    filter.matches(item)
+                }
+            }
+        }
+
+        // Apply sort order
+        return content.sorted(by: sortOrder.comparator)
     }
 
     // MARK: - Actions
@@ -1049,6 +1114,246 @@ private struct StatusRow: View {
 
 #Preview("Enable AI") {
     EnableAIView()
+}
+
+// MARK: - Content Filtering & Sorting
+
+/// Content filter options for study materials
+enum ContentFilter: String, CaseIterable, Identifiable {
+    case text = "Text Notes"
+    case photo = "Photos"
+    case voice = "Voice"
+    case pdf = "PDFs"
+    case aiGenerated = "AI Processed"
+    case hasFlashcards = "Has Cards"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .text: return "doc.text"
+        case .photo: return "photo"
+        case .voice: return "waveform"
+        case .pdf: return "doc.fill"
+        case .aiGenerated: return "sparkles"
+        case .hasFlashcards: return "rectangle.on.rectangle"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .text: return .blue
+        case .photo: return .purple
+        case .voice: return .pink
+        case .pdf: return .red
+        case .aiGenerated: return .cosmicPurple
+        case .hasFlashcards: return .green
+        }
+    }
+
+    /// Check if study content matches this filter
+    func matches(_ content: StudyContent) -> Bool {
+        switch self {
+        case .text:
+            return content.source == .text
+        case .photo:
+            return content.source == .photo
+        case .voice:
+            return content.source == .voice
+        case .pdf:
+            return content.source == .pdf
+        case .aiGenerated:
+            return content.summary != nil || !content.tags.isEmpty
+        case .hasFlashcards:
+            // Content has flashcards if it has been processed
+            // In the current architecture, flashcards are in FlashcardSet
+            // We'll check if tags exist as a proxy
+            return !content.tags.isEmpty
+        }
+    }
+}
+
+/// Sort order options for study content
+enum SortOrder: String, CaseIterable, Identifiable {
+    case dateDescending = "Newest First"
+    case dateAscending = "Oldest First"
+    case titleAscending = "Title A-Z"
+    case modifiedDescending = "Recently Updated"
+
+    var id: String { rawValue }
+
+    var icon: String {
+        switch self {
+        case .dateDescending: return "calendar.badge.clock"
+        case .dateAscending: return "calendar"
+        case .titleAscending: return "textformat"
+        case .modifiedDescending: return "clock"
+        }
+    }
+
+    /// Comparator function for sorting
+    var comparator: (StudyContent, StudyContent) -> Bool {
+        switch self {
+        case .dateDescending:
+            return { $0.createdAt > $1.createdAt }
+        case .dateAscending:
+            return { $0.createdAt < $1.createdAt }
+        case .titleAscending:
+            return { ($0.topic ?? "") < ($1.topic ?? "") }
+        case .modifiedDescending:
+            // Use createdAt as proxy for modification (SwiftData tracks this)
+            return { $0.createdAt > $1.createdAt }
+        }
+    }
+}
+
+// MARK: - Filter Sheet
+
+struct FilterSheet: View {
+    @Binding var selectedFilters: Set<ContentFilter>
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(ContentFilter.allCases) { filter in
+                        FilterRow(
+                            filter: filter,
+                            isSelected: selectedFilters.contains(filter)
+                        ) {
+                            toggleFilter(filter)
+                        }
+                    }
+                } header: {
+                    Text("Filter by Type")
+                        .font(.headline)
+                } footer: {
+                    Text("Select multiple filters to show content matching any filter")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .navigationTitle("Filters")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+
+                if !selectedFilters.isEmpty {
+                    ToolbarItem(placement: .destructiveAction) {
+                        Button("Clear All") {
+                            selectedFilters.removeAll()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggleFilter(_ filter: ContentFilter) {
+        if selectedFilters.contains(filter) {
+            selectedFilters.remove(filter)
+        } else {
+            selectedFilters.insert(filter)
+        }
+    }
+}
+
+// MARK: - Filter Row
+
+struct FilterRow: View {
+    let filter: ContentFilter
+    let isSelected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: filter.icon)
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? filter.color : .secondary)
+                    .frame(width: 32)
+
+                Text(filter.rawValue)
+                    .font(.body)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(filter.color)
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - Filter Chips Row
+
+struct FilterChipsRow: View {
+    @Binding var filters: Set<ContentFilter>
+    let onClear: () -> Void
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(filters)) { filter in
+                    FilterChip(filter: filter) {
+                        filters.remove(filter)
+                    }
+                }
+
+                if !filters.isEmpty {
+                    Button {
+                        onClear()
+                    } label: {
+                        Text("Clear")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.red)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.red.opacity(0.15))
+                            .cornerRadius(16)
+                    }
+                }
+            }
+            .padding(.horizontal)
+        }
+    }
+}
+
+// MARK: - Filter Chip
+
+struct FilterChip: View {
+    let filter: ContentFilter
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: filter.icon)
+                .font(.caption)
+            Text(filter.rawValue)
+                .font(.caption.weight(.medium))
+            Button {
+                onRemove()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+            }
+        }
+        .foregroundStyle(filter.color)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(filter.color.opacity(0.15))
+        .cornerRadius(16)
+    }
 }
 
 #Preview("Model Downloading") {

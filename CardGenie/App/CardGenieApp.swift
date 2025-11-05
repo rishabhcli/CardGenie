@@ -83,17 +83,27 @@ struct CardGenieApp: App {
         }
     }()
 
+    @StateObject private var onboardingCoordinator = OnboardingCoordinator()
+
     var body: some Scene {
         WindowGroup {
-            MainTabView()
-                .environment(\.font, .system(.body, design: .rounded)) // Rounded font for genie theme
-                .tint(.cosmicPurple) // Genie theme accent color
-                .onAppear {
-                    // Setup notifications on first launch
-                    Task {
-                        await NotificationManager.shared.setupNotificationsIfNeeded()
+            ZStack {
+                MainTabView()
+                    .environment(\.font, .system(.body, design: .rounded)) // Rounded font for genie theme
+                    .tint(.cosmicPurple) // Genie theme accent color
+                    .onAppear {
+                        // Setup notifications on first launch
+                        Task {
+                            await NotificationManager.shared.setupNotificationsIfNeeded()
+                        }
                     }
+
+                // Onboarding overlay
+                if !onboardingCoordinator.isCompleted {
+                    OnboardingView(coordinator: onboardingCoordinator)
+                        .transition(.opacity)
                 }
+            }
         }
         .modelContainer(modelContainer) // Inject SwiftData container
     }
@@ -101,19 +111,20 @@ struct CardGenieApp: App {
 
 // MARK: - Main Tab View
 
-/// Main navigation with Study Materials, Flashcards, and Settings tabs
-/// Uses iOS 26+ Tab API for modern Liquid Glass tab bar with sidebar adaptability
+/// Main navigation with Study Materials, Flashcards, AI Chat, Record, and Scan tabs
+/// iOS 26+ and iOS 25 both use 5-tab layout for consistency
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Query private var flashcardSets: [FlashcardSet]
     @State private var selectedTab: Int = 0
+    @State private var showingSettings = false
 
     var body: some View {
         if #available(iOS 26.0, *) {
-            // iOS 26+ with AI Chat tab
+            // iOS 26+ with 5 tabs
             modernTabView
         } else {
-            // Fallback for iOS 25
+            // Fallback for iOS 25 (5 tabs)
             legacyTabView
         }
     }
@@ -124,35 +135,74 @@ struct MainTabView: View {
     @ViewBuilder
     private var modernTabView: some View {
         TabView(selection: $selectedTab) {
-            Tab("Study", systemImage: "sparkles", value: 0) {
-                ContentListView()
+            Tab("Study", systemImage: "book.fill", value: 0) {
+                NavigationStack {
+                    ContentListView()
+                        .navigationTitle("Study")
+                        .navigationBarTitleDisplayMode(.large)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    showingSettings = true
+                                } label: {
+                                    Image(systemName: "gearshape")
+                                }
+                                .accessible(label: "Settings")
+                            }
+                        }
+                }
             }
 
             if let badge = flashcardBadge {
-                Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
-                    FlashcardListView()
+                Tab("Cards", systemImage: "rectangle.on.rectangle", value: 1) {
+                    NavigationStack {
+                        FlashcardListView()
+                            .navigationTitle("Flashcards")
+                            .navigationBarTitleDisplayMode(.large)
+                    }
                 }
                 .badge(badge)
             } else {
-                Tab("Flashcards", systemImage: "rectangle.on.rectangle.angled", value: 1) {
-                    FlashcardListView()
+                Tab("Cards", systemImage: "rectangle.on.rectangle", value: 1) {
+                    NavigationStack {
+                        FlashcardListView()
+                            .navigationTitle("Flashcards")
+                            .navigationBarTitleDisplayMode(.large)
+                    }
                 }
             }
 
-            Tab("AI Chat", systemImage: "message.fill", value: 2) {
-                AIChatView()
+            Tab("AI Chat", systemImage: "bubble.left.and.bubble.right.fill", value: 2) {
+                NavigationStack {
+                    AIChatView()
+                        .navigationTitle("AI Chat")
+                        .navigationBarTitleDisplayMode(.large)
+                }
             }
 
             Tab("Record", systemImage: "mic.circle.fill", value: 3) {
-                VoiceRecordView()
+                NavigationStack {
+                    VoiceRecordView()
+                        .navigationTitle("Record")
+                        .navigationBarTitleDisplayMode(.large)
+                }
             }
 
-            Tab("Scan", systemImage: "camera.fill", value: 4) {
-                PhotoScanView()
+            Tab("Scan", systemImage: "doc.viewfinder", value: 4) {
+                NavigationStack {
+                    PhotoScanView()
+                        .navigationTitle("Scan")
+                        .navigationBarTitleDisplayMode(.large)
+                }
             }
         }
-        .tabViewStyle(.sidebarAdaptable) // Sidebar on iPad, tabs on iPhone
+        .tabViewStyle(.sidebarAdaptable)
         .tint(.cosmicPurple)
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
+            }
+        }
     }
 
     // MARK: - Legacy Tab View (iOS 25)
@@ -168,9 +218,9 @@ struct MainTabView: View {
 
             flashcardsTabLegacy
 
-            VoiceAssistantView()
+            AIChatView()
                 .tabItem {
-                    Label("Ask", systemImage: "waveform.circle.fill")
+                    Label("AI Chat", systemImage: "bubble.left.and.bubble.right.fill")
                 }
                 .tag(2)
 

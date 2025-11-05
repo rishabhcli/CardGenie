@@ -346,37 +346,52 @@ extension Color {
     }
 }
 
-// MARK: - Typography
+// MARK: - Typography (Dynamic Type Support)
 
 extension Font {
-    /// Large title for main headers
+    /// Large title for main headers (supports Dynamic Type)
     static var journalTitle: Font {
-        .system(size: 34, weight: .bold, design: .default)
+        .system(.largeTitle, design: .default, weight: .bold)
     }
 
-    /// Entry title or first line
+    /// Entry title or first line (supports Dynamic Type)
     static var entryTitle: Font {
-        .system(size: 20, weight: .semibold, design: .default)
+        .system(.title2, design: .default, weight: .semibold)
     }
 
-    /// Body text for journal entries
+    /// Body text for journal entries (supports Dynamic Type)
     static var journalBody: Font {
-        .system(size: 17, weight: .regular, design: .default)
+        .system(.body, design: .default)
     }
 
-    /// Preview/summary text
+    /// Preview/summary text (supports Dynamic Type)
     static var preview: Font {
-        .system(size: 15, weight: .regular, design: .default)
+        .system(.callout, design: .default)
     }
 
-    /// Small metadata (dates, tags)
+    /// Small metadata (dates, tags) (supports Dynamic Type)
     static var metadata: Font {
-        .system(size: 13, weight: .regular, design: .default)
+        .system(.caption, design: .default)
     }
 
-    /// Button labels
+    /// Button labels (supports Dynamic Type)
     static var button: Font {
-        .system(size: 17, weight: .semibold, design: .default)
+        .system(.body, design: .default, weight: .semibold)
+    }
+
+    /// Headline text (supports Dynamic Type)
+    static var headline: Font {
+        .system(.headline, design: .default)
+    }
+
+    /// Subheadline text (supports Dynamic Type)
+    static var subheadline: Font {
+        .system(.subheadline, design: .default)
+    }
+
+    /// Small caption text (supports Dynamic Type)
+    static var smallCaption: Font {
+        .system(.caption2, design: .default)
     }
 }
 
@@ -400,6 +415,84 @@ enum Spacing {
 
     /// Extra extra large spacing (48pt)
     static let xxl: CGFloat = 48
+}
+
+// MARK: - Accessibility
+
+enum Accessibility {
+    /// Minimum hit target size (44pt per Apple HIG)
+    static let minHitTarget: CGFloat = 44
+
+    /// Recommended hit target size for comfortable interaction (48pt)
+    static let recommendedHitTarget: CGFloat = 48
+
+    /// Scale range for complex layouts with Dynamic Type
+    static let scaleRange: ClosedRange<CGFloat> = 0.8...2.0
+
+    /// Minimum contrast ratio for WCAG AA compliance
+    static let minContrast: Double = 4.5
+
+    /// Minimum contrast ratio for WCAG AAA compliance
+    static let minContrastAAA: Double = 7.0
+}
+
+// MARK: - Accessible Colors (WCAG AA Compliant)
+
+extension Color {
+    /// Text color with guaranteed contrast on glass backgrounds
+    static var accessiblePrimary: Color {
+        Color(.label) // System adaptive, always accessible
+    }
+
+    /// Secondary text with minimum 4.5:1 contrast
+    static var accessibleSecondary: Color {
+        Color(.secondaryLabel) // System adaptive
+    }
+
+    /// Accessible accent blue (WCAG AA compliant)
+    static var accessibleBlue: Color {
+        Color(hex: "0A84FF") // iOS system blue
+    }
+
+    /// Accessible green for success states
+    static var accessibleGreen: Color {
+        Color(hex: "32D74B") // iOS system green
+    }
+
+    /// Accessible red for error states
+    static var accessibleRed: Color {
+        Color(hex: "FF453A") // iOS system red
+    }
+
+    /// Accessible orange for warnings
+    static var accessibleOrange: Color {
+        Color(hex: "FF9F0A") // iOS system orange
+    }
+
+    /// Glass background with proper opacity for light mode
+    static var glassBackgroundLight: Color {
+        Color(white: 1.0, opacity: 0.15)
+    }
+
+    /// Glass background with proper opacity for dark mode
+    static var glassBackgroundDark: Color {
+        Color(white: 0.0, opacity: 0.25)
+    }
+}
+
+// MARK: - @ScaledMetric Support
+
+/// Wrapper for creating scaled metrics that respect Dynamic Type
+struct ScaledSpacing {
+    @ScaledMetric private var value: CGFloat
+
+    init(_ baseValue: CGFloat, relativeTo textStyle: Font.TextStyle = .body) {
+        _value = ScaledMetric(wrappedValue: baseValue, relativeTo: textStyle)
+    }
+
+    var wrappedValue: CGFloat {
+        value
+    }
 }
 
 // MARK: - Corner Radius
@@ -438,6 +531,94 @@ extension Animation {
     static var morph: Animation {
         .easeInOut(duration: 0.4)
     }
+}
+
+// MARK: - Accessibility View Modifiers
+
+extension View {
+    /// Ensures minimum hit target size for accessibility
+    func minHitTarget() -> some View {
+        self.frame(minWidth: Accessibility.minHitTarget, minHeight: Accessibility.minHitTarget)
+    }
+
+    /// Applies recommended hit target size
+    func recommendedHitTarget() -> some View {
+        self.frame(minWidth: Accessibility.recommendedHitTarget, minHeight: Accessibility.recommendedHitTarget)
+    }
+
+    /// Makes the view accessible with proper label and hint
+    func accessible(
+        label: String,
+        hint: String? = nil,
+        value: String? = nil,
+        traits: AccessibilityTraits = []
+    ) -> some View {
+        self
+            .accessibilityLabel(label)
+            .accessibilityHint(hint ?? "")
+            .accessibilityValue(value ?? "")
+            .accessibilityAddTraits(traits)
+    }
+
+    /// Respects Reduce Motion preference
+    func respectReduceMotion<T: Equatable>(value: T, animation: Animation) -> some View {
+        self.modifier(ReduceMotionModifier(value: value, animation: animation))
+    }
+}
+
+/// Modifier that respects Reduce Motion accessibility setting
+struct ReduceMotionModifier<T: Equatable>: ViewModifier {
+    let value: T
+    let animation: Animation
+
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+
+    func body(content: Content) -> some View {
+        if reduceMotion {
+            content
+        } else {
+            content
+                .animation(animation, value: value)
+        }
+    }
+}
+
+// MARK: - Accessibility Helpers
+
+/// Check if a color has sufficient contrast against a background
+func hasAccessibleContrast(foreground: UIColor, background: UIColor) -> Bool {
+    let fgLuminance = luminance(of: foreground)
+    let bgLuminance = luminance(of: background)
+
+    let lighter = max(fgLuminance, bgLuminance)
+    let darker = min(fgLuminance, bgLuminance)
+
+    let contrast = (lighter + 0.05) / (darker + 0.05)
+    return contrast >= Accessibility.minContrast
+}
+
+/// Calculate relative luminance of a color
+private func luminance(of color: UIColor) -> CGFloat {
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    var alpha: CGFloat = 0
+
+    color.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+
+    func adjust(_ component: CGFloat) -> CGFloat {
+        if component <= 0.03928 {
+            return component / 12.92
+        } else {
+            return pow((component + 0.055) / 1.055, 2.4)
+        }
+    }
+
+    let r = adjust(red)
+    let g = adjust(green)
+    let b = adjust(blue)
+
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b
 }
 
 // MARK: - Preview

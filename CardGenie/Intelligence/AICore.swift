@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import OSLog
 import Combine
 import SwiftData
@@ -2229,4 +2230,125 @@ extension FMClient {
             throw FMError.processingFailed
         }
 }
+}
+
+/// Inline AI capability badge
+struct AICapabilityBadge: View {
+    @StateObject private var fmClient = FMClient()
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.caption)
+            Text(statusText)
+                .font(.caption2)
+                .fontWeight(.medium)
+        }
+        .foregroundStyle(color)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(color.opacity(0.15))
+        .cornerRadius(6)
+    }
+
+    var icon: String {
+        switch fmClient.capability() {
+        case .available: return "checkmark.circle.fill"
+        case .notEnabled: return "exclamationmark.triangle.fill"
+        case .notSupported: return "xmark.circle.fill"
+        case .modelNotReady: return "arrow.down.circle.fill"
+        case .unknown: return "questionmark.circle.fill"
+        }
+    }
+
+    var statusText: String {
+        switch fmClient.capability() {
+        case .available: return "AI Ready"
+        case .notEnabled: return "AI Disabled"
+        case .notSupported: return "AI Unavailable"
+        case .modelNotReady: return "Downloading"
+        case .unknown: return "Checking"
+        }
+    }
+
+    var color: Color {
+        switch fmClient.capability() {
+        case .available: return .green
+        case .notEnabled: return .orange
+        case .notSupported: return .red
+        case .modelNotReady: return .blue
+        case .unknown: return .gray
+        }
+    }
+}
+
+// MARK: - AI Button with Capability Check
+
+/// Button that handles AI capability states automatically
+struct AIActionButton: View {
+    let title: String
+    let icon: String
+    let action: () async throws -> Void
+
+    @StateObject private var fmClient = FMClient()
+    @State private var isLoading = false
+    @State private var showError: Error?
+
+    var body: some View {
+        Button {
+            Task {
+                await performAction()
+            }
+        } label: {
+            HStack {
+                if isLoading {
+                    ProgressView()
+                        .scaleEffect(0.8)
+                } else {
+                    Image(systemName: icon)
+                }
+                Text(title)
+            }
+        }
+        .disabled(isLoading || !isAvailable)
+        .alert("AI Unavailable", isPresented: .constant(showError != nil)) {
+            Button("OK") {
+                showError = nil
+            }
+        } message: {
+            if let error = showError {
+                Text(error.localizedDescription)
+            }
+        }
+    }
+
+    var isAvailable: Bool {
+        fmClient.capability() == .available
+    }
+
+    func performAction() async {
+        guard isAvailable else {
+            showError = FMError.modelUnavailable
+            return
+        }
+
+        isLoading = true
+        defer { isLoading = false }
+
+        do {
+            try await action()
+        } catch {
+            showError = error
+        }
+    }
+}
+
+// MARK: - Preview
+
+#Preview("AI Badge") {
+    VStack {
+        AICapabilityBadge()
+        AICapabilityBadge()
+        AICapabilityBadge()
+    }
 }
