@@ -73,7 +73,7 @@ struct ContentListView: View {
                                 .frame(maxWidth: .infinity, maxHeight: 400)
                                 .padding(.vertical, Spacing.xl)
                         } else {
-                            Text("No results for "\(searchText)"")
+                            Text("No results for \"\(searchText)\"")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondaryText)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -1553,25 +1553,25 @@ struct FlashcardGenerationSheet: View {
 
             // Create a source document
             let sourceDoc = SourceDocument(
-                type: .text,
-                title: "Shortcut Import",
-                rawText: sourceText
+                kind: .text,
+                fileName: "Shortcut Import"
             )
             modelContext.insert(sourceDoc)
 
             // Create a note chunk
             let chunk = NoteChunk(
                 text: sourceText,
-                sourceDocument: sourceDoc
+                chunkIndex: 0
             )
+            chunk.sourceDocument = sourceDoc
             modelContext.insert(chunk)
 
             // Generate flashcards using the flashcard generator
-            let generator = FlashcardGenerator(modelContext: modelContext)
+            let generator = FlashcardGenerator()
             do {
-                let flashcards = try await generator.generateFlashcards(
+                let flashcards = try await generator.generateCards(
                     from: [chunk],
-                    targetSet: targetSet
+                    deck: targetSet
                 )
 
                 await MainActor.run {

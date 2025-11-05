@@ -533,10 +533,10 @@ struct Badge: View {
     }
 }
 
-// MARK: - Empty State
+// MARK: - Simple Empty State
 
-/// Empty state view for when there are no journal entries
-struct EmptyStateView: View {
+/// Simple empty state view (legacy, kept for backward compatibility)
+struct SimpleEmptyStateView: View {
     var body: some View {
         VStack(spacing: Spacing.lg) {
             Image(systemName: "book.closed.fill")
@@ -548,7 +548,7 @@ struct EmptyStateView: View {
                     .font(.entryTitle)
                     .foregroundStyle(Color.primaryText)
 
-                Text("Tap the + button to create your first journal entry")
+                Text("Tap the + button to create your first entry")
                     .font(.preview)
                     .foregroundStyle(Color.secondaryText)
                     .multilineTextAlignment(.center)
@@ -678,7 +678,7 @@ struct AvailabilityBadge: View {
 }
 
 #Preview("Empty State") {
-    EmptyStateView()
+    SimpleEmptyStateView()
 }
 
 #Preview("Availability Badges") {
@@ -1448,7 +1448,7 @@ struct EmptyStateView: View {
                                 if #available(iOS 26.0, *) {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .fill(Color.cosmicPurple.opacity(0.1))
-                                        .glassEffect(.thin, in: .rect(cornerRadius: 12))
+                                        .glassEffect(.regular, in: .rect(cornerRadius: 12))
                                 } else {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .fill(Color.cosmicPurple.opacity(0.1))
@@ -1474,7 +1474,7 @@ struct EmptyStateView: View {
                                 if #available(iOS 26.0, *) {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .fill(Color.cosmicPurple.opacity(0.1))
-                                        .glassEffect(.thin, in: .rect(cornerRadius: 12))
+                                        .glassEffect(.regular, in: .rect(cornerRadius: 12))
                                 } else {
                                     RoundedRectangle(cornerRadius: 12, style: .continuous)
                                         .fill(Color.cosmicPurple.opacity(0.1))

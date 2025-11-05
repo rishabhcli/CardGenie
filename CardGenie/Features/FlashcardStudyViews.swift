@@ -2235,7 +2235,7 @@ private struct StatisticCard: View {
                 .scaleEffect(isAppearing ? 1.0 : 0.5)
                 .opacity(isAppearing ? 1.0 : 0.0)
 
-            if let targetValue = numericValue {
+            if numericValue != nil {
                 Text("\(animatedValue)")
                     .font(.title2)
                     .fontWeight(.bold)
