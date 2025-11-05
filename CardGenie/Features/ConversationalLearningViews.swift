@@ -95,7 +95,7 @@ struct SocraticTutorView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let card = selectedCard, let session = session {
+            if selectedCard != nil, let session = session {
                 // Chat interface
                 ScrollViewReader { proxy in
                     ScrollView {

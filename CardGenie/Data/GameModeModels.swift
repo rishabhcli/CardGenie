@@ -394,7 +394,7 @@ extension StudyGameMode {
 
 extension MultipleChoiceQuestion {
     var allOptions: [String] {
-        var options = [correctAnswer] + distractors
+        let options = [correctAnswer] + distractors
         return options.shuffled()
     }
 

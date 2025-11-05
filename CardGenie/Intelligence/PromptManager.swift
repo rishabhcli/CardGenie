@@ -209,15 +209,17 @@ class PromptManager {
     /// Get rendered prompt with context substitution
     func getPrompt(
         mode: ChatMode,
-        context: PromptContext = PromptContext()
+        context: PromptContext? = nil
     ) -> String {
+        let finalContext = context ?? PromptContext()
+
         // Get base prompt
         guard let basePrompt = promptCache[mode] else {
             return getFallbackPrompt(mode: mode)
         }
 
         // Substitute template variables
-        return substituteVariables(in: basePrompt, context: context)
+        return substituteVariables(in: basePrompt, context: finalContext)
     }
 
     /// Substitute {{variable}} placeholders with actual values

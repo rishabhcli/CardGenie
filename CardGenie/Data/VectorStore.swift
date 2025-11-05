@@ -103,12 +103,12 @@ final class RAGChatManager {
 
     init(
         vectorStore: VectorStore,
-        llm: LLMEngine = AIEngineFactory.createLLMEngine(),
-        embedding: EmbeddingEngine = AIEngineFactory.createEmbeddingEngine()
+        llm: LLMEngine? = nil,
+        embedding: EmbeddingEngine? = nil
     ) {
         self.vectorStore = vectorStore
-        self.llm = llm
-        self.embedding = embedding
+        self.llm = llm ?? AIEngineFactory.createLLMEngine()
+        self.embedding = embedding ?? AIEngineFactory.createEmbeddingEngine()
     }
 
     // MARK: - Chat

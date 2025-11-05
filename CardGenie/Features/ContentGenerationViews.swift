@@ -102,7 +102,7 @@ struct PracticeProblemsView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let card = selectedCard {
+            if selectedCard != nil {
                 if isGenerating {
                     ProgressView("Generating practice problems...")
                         .frame(maxHeight: .infinity)
@@ -302,7 +302,7 @@ struct ScenariosView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if let card = selectedCard {
+            if selectedCard != nil {
                 if isGenerating {
                     ProgressView("Generating scenarios...")
                         .frame(maxHeight: .infinity)

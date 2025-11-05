@@ -598,20 +598,9 @@ private struct QuickGameButton: View {
             }
             Button("Cancel", role: .cancel) {}
         }
-        .background(
-            NavigationLink(
-                destination: selectedSet.map { set in
-                    gameModeView(for: mode, with: set)
-                },
-                isActive: Binding(
-                    get: { selectedSet != nil },
-                    set: { if !$0 { selectedSet = nil } }
-                )
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
+        .navigationDestination(item: $selectedSet) { set in
+            gameModeView(for: mode, with: set)
+        }
     }
 
     @ViewBuilder
@@ -2075,10 +2064,11 @@ struct FlashcardSetDetailView: View {
                         description: "Matching, Quiz, Teach-Back & More",
                         icon: "gamecontroller.fill",
                         gradient: [Color.blue, Color.cyan],
+                        destination: {
+                            GameModeSelectionView(flashcardSet: flashcardSet)
+                        },
                         isHighlighted: true
-                    ) {
-                        GameModeSelectionView(flashcardSet: flashcardSet)
-                    }
+                    )
 
                     // AI Tutoring Card
                     FeatureCard(

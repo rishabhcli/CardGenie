@@ -6,6 +6,10 @@ A modern, privacy-first journaling app for iOS 26+ that leverages Apple Intellig
 
 CardGenie is a native iPhone app built for iOS 26 that combines beautiful design with intelligent features - all while keeping your data completely private and offline.
 
+## 📚 Full Documentation
+
+For a consolidated, easy-to-browse index of all documents, see `docs/README.md`.
+
 ### Key Features
 
 - 📝 **Rich Text Journaling** - Write and organize your thoughts with ease
