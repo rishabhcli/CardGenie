@@ -1835,7 +1835,6 @@ struct AIChatView: View {
     @StateObject private var chatEngine = AIChatEngine()
     @State private var messageText = ""
     @State private var showPermissionAlert = false
-    @State private var showModeSelector = false
     @State private var currentMode: ChatMode = .general
     @FocusState private var isInputFocused: Bool
 
@@ -1917,8 +1916,25 @@ struct AIChatView: View {
     }
 
     private var modeSelectorBanner: some View {
-        Button {
-            showModeSelector = true
+        Menu {
+            Picker("AI Mode", selection: $currentMode) {
+                ForEach(ChatMode.allCases) { mode in
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(mode.displayName)
+                                .font(.subheadline.bold())
+                            Text(mode.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: mode.icon)
+                            .foregroundStyle(Color(mode.color))
+                    }
+                    .tag(mode)
+                }
+            }
+            .pickerStyle(.menu)
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: currentMode.icon)
@@ -1946,10 +1962,7 @@ struct AIChatView: View {
             .padding(.vertical, 12)
             .background(.ultraThinMaterial)
         }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showModeSelector) {
-            ModeSelectorSheet(selectedMode: $currentMode)
-        }
+        .menuStyle(.button)
     }
 
     private var emptyStateView: some View {
