@@ -200,9 +200,11 @@ struct MagicButtonStyle: ButtonStyle {
             .foregroundColor(.white)
             .padding(.vertical, 14)
             .padding(.horizontal, 24)
-            .background(gradient)
-            .cornerRadius(CornerRadius.lg)
-            .shadow(color: shadowColor.opacity(0.3), radius: 8, y: 4)
+            .background {
+                RoundedRectangle(cornerRadius: CornerRadius.lg, style: .continuous)
+                    .fill(gradient)
+                    .glassEffect(.regular, in: .rect(cornerRadius: CornerRadius.lg))
+            }
             .scaleEffect(configuration.isPressed ? 0.95 : 1.0)
             .opacity(configuration.isPressed ? 0.9 : 1.0)
             .animation(reduceMotion ? .none : .spring(response: 0.3, dampingFraction: 0.6), value: configuration.isPressed)

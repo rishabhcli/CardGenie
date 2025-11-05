@@ -200,7 +200,7 @@ All models use `@Model` macro and persist automatically. The `ModelContainer` is
 - Uses iOS 26 `.glassEffect(.regular.interactive(), in: .capsule)` for native Liquid Glass
 - Interactive mode provides shimmer effect on user input
 - Capsule shape is optimal for search bars (vs. rect)
-- See `docs/ui/iOS26_Liquid_Glass_Search_Bar.md` for implementation details and best practices
+ - See `docs/archive/reference/ui/iOS26_Liquid_Glass_Search_Bar.md` for implementation details and best practices
 
 **Floating AI Assistant (App/CardGenieApp.swift)**
 - iOS 26+ uses `.tabViewBottomAccessory` for bottom-right floating button
@@ -210,13 +210,13 @@ All models use `@Model` macro and persist automatically. The `ModelContainer` is
 - Menu shows "Ask Question" and "Record Lecture" options
 - Opens VoiceAssistantView or VoiceRecordView in sheet presentation
 - iOS 25 fallback maintains legacy 5-tab layout
-- See `docs/features/FLOATING_AI_ASSISTANT.md` for complete implementation details
+ - See `docs/archive/reference/features/FLOATING_AI_ASSISTANT.md` for complete implementation details
 
 ## Working with Apple Intelligence
 
 ### Foundation Models Integration
 
-**IMPORTANT:** The current `FMClient.swift` implementation is based on official Apple documentation from WWDC 2025. See `docs/api/Foundation_Models_API_Reference.md` for complete API documentation including:
+ **IMPORTANT:** The current `FMClient.swift` implementation is based on official Apple documentation from WWDC 2025. See `docs/archive/reference/api/Foundation_Models_API_Reference.md` for complete API documentation including:
 - `SystemLanguageModel` and availability checking
 - `LanguageModelSession` with trailing closure syntax
 - `@Generable` macro for structured output

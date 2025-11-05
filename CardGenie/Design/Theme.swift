@@ -344,6 +344,42 @@ extension Color {
             opacity: Double(a) / 255
         )
     }
+
+    /// Initialize a Color from a string color name (for ChatMode.color, GameMode.color, etc.)
+    init(_ colorName: String) {
+        switch colorName.lowercased() {
+        case "purple":
+            self = .purple
+        case "blue":
+            self = .blue
+        case "green":
+            self = .green
+        case "orange":
+            self = .orange
+        case "pink":
+            self = .pink
+        case "indigo":
+            self = .indigo
+        case "red":
+            self = .red
+        case "yellow":
+            self = .yellow
+        case "gold":
+            self = .yellow // Gold mapped to yellow
+        case "teal":
+            self = .teal
+        case "cyan":
+            self = .cyan
+        case "mint":
+            self = .mint
+        case "brown":
+            self = .brown
+        case "gray":
+            self = .gray
+        default:
+            self = .gray
+        }
+    }
 }
 
 // MARK: - Typography (Dynamic Type Support)

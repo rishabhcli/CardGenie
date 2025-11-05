@@ -51,7 +51,9 @@ struct CardGenieApp: App {
             schema: schema,
             isStoredInMemoryOnly: false,
             // Data is stored locally in app sandbox, not exposed to Files app
-            allowsSave: true
+            allowsSave: true,
+            // Share data with widgets via App Group
+            groupContainer: .identifier("group.com.cardgenie.shared")
         )
 
         do {
@@ -67,7 +69,8 @@ struct CardGenieApp: App {
 
             let memoryConfig = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: true
+                isStoredInMemoryOnly: true,
+                groupContainer: .identifier("group.com.cardgenie.shared")
             )
 
             do {
@@ -119,13 +122,70 @@ struct MainTabView: View {
     @State private var selectedTab: Int = 0
     @State private var showingSettings = false
 
+    // App Intent handling
+    @State private var shouldStartStudySession = false
+    @State private var aiChatQuestion: String?
+
     var body: some View {
         if #available(iOS 26.0, *) {
             // iOS 26+ with 5 tabs
             modernTabView
+                .onAppear {
+                    setupIntentObservers()
+                }
         } else {
             // Fallback for iOS 25 (5 tabs)
             legacyTabView
+                .onAppear {
+                    setupIntentObservers()
+                }
+        }
+    }
+
+    // MARK: - App Intent Handling
+
+    private func setupIntentObservers() {
+        // Start study session intent
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("StartStudySession"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            selectedTab = 1 // Switch to Flashcards tab
+            shouldStartStudySession = true
+        }
+
+        // Open AI chat intent
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("OpenAIChat"),
+            object: nil,
+            queue: .main
+        ) { _ in
+            selectedTab = 2 // Switch to AI Chat tab
+        }
+
+        // Open AI chat with question
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("OpenAIChatWithQuestion"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let question = notification.userInfo?["question"] as? String {
+                selectedTab = 2 // Switch to AI Chat tab
+                aiChatQuestion = question
+            }
+        }
+
+        // Generate flashcards from text
+        NotificationCenter.default.addObserver(
+            forName: NSNotification.Name("GenerateFlashcardsFromText"),
+            object: nil,
+            queue: .main
+        ) { notification in
+            if let text = notification.userInfo?["text"] as? String {
+                selectedTab = 0 // Switch to Study tab
+                // The text will be processed by the content generation flow
+            }
         }
     }
 

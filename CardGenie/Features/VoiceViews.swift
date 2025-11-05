@@ -1840,71 +1840,97 @@ struct AIChatView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                // Background - clean for iOS 26
-                Color(.systemGroupedBackground)
-                    .ignoresSafeArea()
+            VStack(spacing: 0) {
+                // Voice status indicator
+                if chatEngine.isListening || chatEngine.isSpeaking || chatEngine.isGenerating {
+                    voiceStatusBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
 
-                VStack(spacing: 0) {
-                    // Mode selector banner
-                    modeSelectorBanner
-
-                    // Messages list
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 12) {
-                                if chatEngine.messages.isEmpty {
-                                    emptyStateView
-                                        .padding(.top, 20)
-                                } else {
-                                    ForEach(chatEngine.messages) { message in
-                                        AIChatMessageBubble(message: message)
-                                            .id(message.id)
-                                            .transition(.scale.combined(with: .opacity))
-                                    }
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.top, 16)
-                            .padding(.bottom, 100)
-                        }
-                        .scrollDismissesKeyboard(.interactively)
-                        .onChange(of: chatEngine.messages.count) { _, _ in
-                            if let lastMessage = chatEngine.messages.last {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
-                                    proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                // Messages list
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            if chatEngine.messages.isEmpty {
+                                emptyStateView
+                                    .padding(.top, 40)
+                            } else {
+                                ForEach(chatEngine.messages) { message in
+                                    AIChatMessageBubble(message: message, chatEngine: chatEngine)
+                                        .id(message.id)
+                                        .transition(.scale.combined(with: .opacity))
                                 }
                             }
                         }
-                        .onChange(of: currentMode) { oldMode, newMode in
-                            // Update engine mode and context
-                            let context = PromptContext.from(flashcardSets: flashcardSets)
-                            chatEngine.setMode(newMode, context: context)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 100)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isInputFocused = false
                         }
                     }
-
-                    // Input bar at bottom
-                    VStack(spacing: 0) {
-                        Divider()
-                            .opacity(0.3)
-
-                        inputBar
+                    .scrollContentBackground(.hidden)
+                    .scrollDismissesKeyboard(.immediately)
+                    .onChange(of: chatEngine.messages.count) { _, _ in
+                        if let lastMessage = chatEngine.messages.last {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.8)) {
+                                proxy.scrollTo(lastMessage.id, anchor: .bottom)
+                            }
+                        }
                     }
-                    .background(.ultraThinMaterial)
+                    .onChange(of: currentMode) { oldMode, newMode in
+                        // Update engine mode and context
+                        let context = PromptContext.from(flashcardSets: flashcardSets)
+                        chatEngine.setMode(newMode, context: context)
+                    }
+                }
+
+                // Input bar at bottom
+                inputBar
+            }
+            .background(Color(.systemGroupedBackground))
+            .navigationTitle(currentMode.displayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarTitleMenu {
+                ForEach(ChatMode.allCases) { mode in
+                    Button {
+                        withAnimation(.spring(response: 0.3)) {
+                            currentMode = mode
+                        }
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(mode.displayName)
+                                    .font(.headline)
+                                Text(mode.description)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: mode.icon)
+                                .foregroundStyle(Color(mode.color))
+                        }
+                    }
                 }
             }
-            .navigationTitle("AI Chat")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         chatEngine.clearConversation()
                     } label: {
-                        Image(systemName: "trash")
-                            .foregroundStyle(Color.cosmicPurple)
+                        ZStack {
+                            Circle()
+                                .fill(Color.cosmicPurple.opacity(0.15))
+                                .frame(width: 36, height: 36)
+                                .glassEffect(.regular, in: .circle)
+
+                            Image(systemName: "square.and.pencil")
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(Color.cosmicPurple)
+                        }
                     }
-                    .buttonStyle(.glass)
-                    .disabled(chatEngine.messages.isEmpty)
+                    .buttonStyle(.plain)
                 }
             }
             .alert("AI Not Available", isPresented: $showPermissionAlert) {
@@ -1913,56 +1939,6 @@ struct AIChatView: View {
                 Text(chatEngine.availabilityMessage)
             }
         }
-    }
-
-    private var modeSelectorBanner: some View {
-        Menu {
-            Picker("AI Mode", selection: $currentMode) {
-                ForEach(ChatMode.allCases) { mode in
-                    Label {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(mode.displayName)
-                                .font(.subheadline.bold())
-                            Text(mode.description)
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                    } icon: {
-                        Image(systemName: mode.icon)
-                            .foregroundStyle(Color(mode.color))
-                    }
-                    .tag(mode)
-                }
-            }
-            .pickerStyle(.menu)
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: currentMode.icon)
-                    .font(.title3)
-                    .foregroundStyle(Color(currentMode.color))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(currentMode.displayName)
-                        .font(.subheadline.bold())
-                        .foregroundStyle(.primary)
-
-                    Text(currentMode.description)
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.down")
-                    .font(.caption.bold())
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
-            .background(.ultraThinMaterial)
-        }
-        .menuStyle(.button)
     }
 
     private var emptyStateView: some View {
@@ -2009,60 +1985,156 @@ struct AIChatView: View {
         .frame(maxWidth: .infinity)
     }
 
+    // MARK: - Voice Status Banner
+
+    private var voiceStatusBanner: some View {
+        HStack(spacing: 12) {
+            // Status icon with animation
+            Image(systemName: voiceStatusIcon)
+                .font(.title3)
+                .foregroundStyle(voiceStatusColor)
+                .symbolEffect(.pulse, isActive: true)
+
+            // Status text
+            Text(voiceStatusText)
+                .font(.subheadline.bold())
+                .foregroundStyle(voiceStatusColor)
+
+            Spacer()
+
+            // Real-time transcript preview (while listening)
+            if chatEngine.isListening && !chatEngine.currentTranscript.isEmpty {
+                Text(chatEngine.currentTranscript)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .frame(maxWidth: 200)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+        .animation(.easeInOut(duration: 0.2), value: chatEngine.isListening)
+        .animation(.easeInOut(duration: 0.2), value: chatEngine.isSpeaking)
+        .animation(.easeInOut(duration: 0.2), value: chatEngine.isGenerating)
+    }
+
+    private var voiceStatusIcon: String {
+        if chatEngine.isListening {
+            return "waveform"
+        } else if chatEngine.isSpeaking {
+            return "speaker.wave.3.fill"
+        } else if chatEngine.isGenerating {
+            return "brain"
+        } else {
+            return "checkmark.circle.fill"
+        }
+    }
+
+    private var voiceStatusText: String {
+        if chatEngine.isListening {
+            return "Listening..."
+        } else if chatEngine.isSpeaking {
+            return "Speaking..."
+        } else if chatEngine.isGenerating {
+            return "Thinking..."
+        } else {
+            return "Ready"
+        }
+    }
+
+    private var voiceStatusColor: Color {
+        if chatEngine.isListening {
+            return .blue
+        } else if chatEngine.isSpeaking {
+            return .green
+        } else if chatEngine.isGenerating {
+            return .orange
+        } else {
+            return .cosmicPurple
+        }
+    }
+
+    // MARK: - Input Bar
+
     private var inputBar: some View {
         HStack(spacing: 12) {
-            // Voice input button
+            // Enhanced voice input button with iOS 26 glass
             Button {
                 chatEngine.toggleVoiceInput()
             } label: {
-                Image(systemName: chatEngine.isListening ? "mic.fill" : "mic")
-                    .font(.system(size: 20, weight: .medium))
-                    .foregroundStyle(chatEngine.isListening ? Color.white : Color.cosmicPurple)
-                    .frame(width: 36, height: 36)
-                    .background(chatEngine.isListening ? Color.red : Color.clear)
-                    .clipShape(Circle())
-                    .symbolEffect(.bounce, value: chatEngine.isListening)
-            }
-            .buttonStyle(.glass)
-            .disabled(chatEngine.isGenerating)
+                ZStack {
+                    // Glass background circle with state-based color
+                    Circle()
+                        .fill(micButtonBackground)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular, in: .circle)
 
-            // Text input with iOS 26 styling
+                    // Icon with state-based appearance
+                    Image(systemName: micButtonIcon)
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(micButtonForeground)
+                        .symbolEffect(.pulse, isActive: chatEngine.isListening)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(chatEngine.isGenerating || chatEngine.isSpeaking)
+            .opacity(chatEngine.isGenerating || chatEngine.isSpeaking ? 0.5 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: chatEngine.isListening)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: chatEngine.isSpeaking)
+
+            // Text input with iOS 26 glass styling
             TextField("Message", text: $messageText, axis: .vertical)
                 .textFieldStyle(.plain)
                 .focused($isInputFocused)
                 .lineLimit(1...5)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(
-                    RoundedRectangle(cornerRadius: 20)
-                        .fill(Color(.tertiarySystemFill))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 20)
-                        .stroke(Color(.separator).opacity(0.3), lineWidth: 0.5)
-                )
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
+                .background {
+                    RoundedRectangle(cornerRadius: 20, style: .continuous)
+                        .fill(.regularMaterial)
+                }
+                .glassEffect(.regular, in: .rect(cornerRadius: 20))
                 .submitLabel(.send)
                 .onSubmit {
                     sendMessage()
                 }
+                .toolbar {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        Button("Done") {
+                            isInputFocused = false
+                        }
+                        .foregroundStyle(Color.cosmicPurple)
+                    }
+                }
 
-            // Send button with Glass style
+            // Send button with iOS 26 glass
             Button {
                 sendMessage()
             } label: {
-                Image(systemName: "arrow.up.circle.fill")
-                    .font(.system(size: 32, weight: .semibold))
-                    .foregroundStyle(messageText.isEmpty ? Color(.systemGray3) : Color.cosmicPurple)
-                    .symbolEffect(.bounce, value: chatEngine.messages.count)
+                ZStack {
+                    Circle()
+                        .fill(messageText.isEmpty ? Color(.systemGray6) : Color.cosmicPurple)
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular, in: .circle)
+
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .symbolEffect(.bounce, value: chatEngine.messages.count)
+                }
             }
             .buttonStyle(.plain)
             .disabled(messageText.isEmpty || chatEngine.isGenerating)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 28))
-        .padding(.horizontal, 8)
-        .padding(.bottom, 8)
+        .overlay(alignment: .top) {
+            Divider()
+                .opacity(0.3)
+        }
     }
 
     private func sendMessage() {
@@ -2079,6 +2151,48 @@ struct AIChatView: View {
             }
         }
     }
+
+    // MARK: - Microphone Button States
+
+    private var micButtonBackground: Color {
+        if chatEngine.isListening {
+            return .red.opacity(0.9)
+        } else if chatEngine.isSpeaking {
+            return .green.opacity(0.2)
+        } else {
+            return Color.cosmicPurple.opacity(0.15)
+        }
+    }
+
+    private var micButtonIcon: String {
+        if chatEngine.isListening {
+            return "stop.circle.fill"
+        } else if chatEngine.isSpeaking {
+            return "speaker.wave.2.fill"
+        } else {
+            return "mic.fill"
+        }
+    }
+
+    private var micButtonForeground: Color {
+        if chatEngine.isListening {
+            return .white
+        } else if chatEngine.isSpeaking {
+            return .green
+        } else {
+            return .cosmicPurple
+        }
+    }
+
+    private var micButtonShadowColor: Color {
+        if chatEngine.isListening {
+            return .red.opacity(0.5)
+        } else if chatEngine.isSpeaking {
+            return .green.opacity(0.3)
+        } else {
+            return .cosmicPurple.opacity(0.2)
+        }
+    }
 }
 
 // MARK: - AI Chat Message Bubble
@@ -2086,6 +2200,7 @@ struct AIChatView: View {
 @available(iOS 26.0, *)
 struct AIChatMessageBubble: View {
     let message: AIChatMessage
+    @ObservedObject var chatEngine: AIChatEngine
 
     var body: some View {
         HStack(alignment: .top, spacing: 0) {
@@ -2099,33 +2214,54 @@ struct AIChatMessageBubble: View {
                     .foregroundStyle(message.isUser ? .white : .primary)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 12)
-                    .background(
-                        Group {
-                            if message.isUser {
-                                // User messages with gradient and glass effect
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.cosmicPurple, .mysticBlue],
-                                            startPoint: .topLeading,
-                                            endPoint: .bottomTrailing
-                                        )
+                    .background {
+                        if message.isUser {
+                            // User messages with gradient and glass effect
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.cosmicPurple, .mysticBlue],
+                                        startPoint: .topLeading,
+                                        endPoint: .bottomTrailing
                                     )
-                            } else {
-                                // AI messages with Liquid Glass
-                                RoundedRectangle(cornerRadius: 20, style: .continuous)
-                                    .fill(Color(.secondarySystemBackground))
-                            }
+                                )
+                                .shadow(
+                                    color: Color.cosmicPurple.opacity(0.3),
+                                    radius: 8,
+                                    x: 0,
+                                    y: 2
+                                )
+                        } else {
+                            // AI messages with iOS 26 Liquid Glass
+                            RoundedRectangle(cornerRadius: 20, style: .continuous)
+                                .fill(.thinMaterial)
+                                .glassEffect(.regular, in: .rect(cornerRadius: 20))
                         }
-                    )
-                    .shadow(
-                        color: message.isUser
-                            ? Color.cosmicPurple.opacity(0.3)
-                            : Color.black.opacity(0.05),
-                        radius: message.isUser ? 8 : 4,
-                        x: 0,
-                        y: 2
-                    )
+                    }
+                    .overlay(alignment: .topTrailing) {
+                        // Speaking indicator for AI messages
+                        if !message.isUser && chatEngine.isSpeaking && message.id == chatEngine.messages.last?.id {
+                            HStack(spacing: 3) {
+                                ForEach(0..<3) { index in
+                                    Circle()
+                                        .fill(Color.green)
+                                        .frame(width: 4, height: 4)
+                                        .scaleEffect(chatEngine.isSpeaking ? 1.2 : 0.8)
+                                        .animation(
+                                            .easeInOut(duration: 0.4)
+                                                .repeatForever()
+                                                .delay(Double(index) * 0.15),
+                                            value: chatEngine.isSpeaking
+                                        )
+                                }
+                            }
+                            .padding(8)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                            .offset(x: -8, y: 8)
+                            .transition(.scale.combined(with: .opacity))
+                        }
+                    }
 
                 if !message.isUser && message.isStreaming {
                     HStack(spacing: 4) {
@@ -2224,16 +2360,26 @@ struct ModeSelectorSheet: View {
 
 @MainActor
 @available(iOS 26.0, *)
-class AIChatEngine: ObservableObject {
+class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published private(set) var messages: [AIChatMessage] = []
     @Published private(set) var isGenerating = false
     @Published private(set) var isListening = false
+    @Published private(set) var isSpeaking = false
     @Published private(set) var availabilityMessage = ""
+    @Published var currentTranscript = "" // Real-time transcript preview
+
+    // Voice is always enabled - just like ChatGPT
+    private let autoSpeakEnabled = true
 
     private let fmClient = FMClient()
     private let promptManager = PromptManager.shared
     private var currentMode: ChatMode = .general
     private var promptContext: PromptContext = PromptContext()
+
+    // TTS support
+    private let speechSynthesizer = AVSpeechSynthesizer()
+    private var speakingQueue: [String] = []
+    private var isSpeakingQueued = false
 
     #if canImport(Speech)
     private var speechRecognizer: SFSpeechRecognizer?
@@ -2242,11 +2388,18 @@ class AIChatEngine: ObservableObject {
     private let audioEngine = AVAudioEngine()
     #endif
 
-    init() {
+    override init() {
+        super.init()
+        speechSynthesizer.delegate = self
         checkAvailability()
         #if canImport(Speech)
         speechRecognizer = SFSpeechRecognizer(locale: Locale.current)
+        setupAudioInterruptionHandling()
         #endif
+    }
+
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
 
     func setMode(_ mode: ChatMode, context: PromptContext) {
@@ -2268,7 +2421,7 @@ class AIChatEngine: ObservableObject {
         messages.append(userMessage)
 
         // Create placeholder for assistant response
-        var assistantMessage = AIChatMessage(text: "", isUser: false, isStreaming: true)
+        let assistantMessage = AIChatMessage(text: "", isUser: false, isStreaming: true)
         messages.append(assistantMessage)
         let assistantIndex = messages.count - 1
 
@@ -2285,11 +2438,12 @@ class AIChatEngine: ObservableObject {
                 userMessage: text
             )
 
-            // Stream response
+            // Stream response with sentence-by-sentence TTS
             var fullResponse = ""
+            var lastSpokenPosition = 0 // Track what we've already spoken
 
             #if canImport(FoundationModels)
-            // Use actual Foundation Models streaming
+            // Use actual Foundation Models streaming with TTS
             for try await chunk in fmClient.streamChat(fullPrompt) {
                 fullResponse = chunk
                 messages[assistantIndex] = AIChatMessage(
@@ -2297,6 +2451,20 @@ class AIChatEngine: ObservableObject {
                     isUser: false,
                     isStreaming: true
                 )
+
+                // Speak complete sentences as they arrive (queued for sequential playback)
+                if autoSpeakEnabled {
+                    let newText = String(fullResponse.dropFirst(lastSpokenPosition))
+                    if let sentenceEnd = findCompleteSentenceEnd(in: newText) {
+                        let endIndex = fullResponse.index(fullResponse.startIndex, offsetBy: lastSpokenPosition + sentenceEnd)
+                        let sentenceToSpeak = String(fullResponse[fullResponse.index(fullResponse.startIndex, offsetBy: lastSpokenPosition)...endIndex])
+
+                        // Queue this sentence for speaking (will be spoken sequentially)
+                        enqueueSpeech(sentenceToSpeak)
+
+                        lastSpokenPosition = lastSpokenPosition + sentenceEnd + 1
+                    }
+                }
             }
             #else
             // Fallback: use complete method
@@ -2310,6 +2478,12 @@ class AIChatEngine: ObservableObject {
                 isStreaming: false
             )
 
+            // Queue any remaining text that wasn't spoken during streaming
+            if autoSpeakEnabled && lastSpokenPosition < fullResponse.count {
+                let remainingText = String(fullResponse.dropFirst(lastSpokenPosition))
+                enqueueSpeech(remainingText)
+            }
+
             return true
 
         } catch {
@@ -2319,10 +2493,16 @@ class AIChatEngine: ObservableObject {
             }
 
             // Add error message
+            let errorMessage = "Sorry, I encountered an error. Please try again."
             messages.append(AIChatMessage(
-                text: "Sorry, I encountered an error. Please try again.",
+                text: errorMessage,
                 isUser: false
             ))
+
+            // Speak error message if auto-speak is enabled
+            if autoSpeakEnabled {
+                await speak(errorMessage)
+            }
 
             return false
         }
@@ -2342,6 +2522,11 @@ class AIChatEngine: ObservableObject {
 
     #if canImport(Speech)
     private func startListening() async {
+        // Stop speaking if AI is currently talking (interruption handling)
+        if isSpeaking {
+            stopSpeaking()
+        }
+
         // Request permissions
         let status = await withCheckedContinuation { continuation in
             SFSpeechRecognizer.requestAuthorization { authStatus in
@@ -2374,6 +2559,13 @@ class AIChatEngine: ObservableObject {
             guard let recognitionRequest else { return }
 
             recognitionRequest.shouldReportPartialResults = true
+            recognitionRequest.requiresOnDeviceRecognition = true // ⚡ CRITICAL: Offline-only mode
+
+            // Verify on-device support is available
+            guard speechRecognizer?.supportsOnDeviceRecognition == true else {
+                availabilityMessage = "On-device speech recognition not available for your language"
+                return
+            }
 
             let inputNode = audioEngine.inputNode
             recognitionTask = speechRecognizer?.recognitionTask(with: recognitionRequest) { [weak self] result, error in
@@ -2381,17 +2573,24 @@ class AIChatEngine: ObservableObject {
 
                 if let result {
                     Task { @MainActor in
-                        // Auto-send when speech pauses
-                        let text = result.bestTranscription.formattedString
+                        // Update real-time transcript preview
+                        self.currentTranscript = result.bestTranscription.formattedString
+
+                        // Auto-send when speech is final
                         if result.isFinal {
-                            await self.sendMessage(text)
+                            let finalText = self.currentTranscript
+                            self.currentTranscript = "" // Clear preview
+                            _ = await self.sendMessage(finalText)
                             self.stopListening()
                         }
                     }
                 }
 
-                if error != nil {
-                    self.stopListening()
+                if let error = error {
+                    Task { @MainActor in
+                        self.availabilityMessage = "Speech recognition error: \(error.localizedDescription)"
+                        self.stopListening()
+                    }
                 }
             }
 
@@ -2417,12 +2616,171 @@ class AIChatEngine: ObservableObject {
         recognitionRequest = nil
         recognitionTask = nil
         isListening = false
+        currentTranscript = "" // Clear transcript preview when stopping
+    }
+
+    // MARK: - Audio Session Interruption Handling
+
+    private func setupAudioInterruptionHandling() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleAudioInterruption(_:)),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+    }
+
+    @objc private func handleAudioInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        Task { @MainActor in
+            switch type {
+            case .began:
+                // Interruption began (e.g., phone call, alarm)
+                // Stop listening and speaking
+                if isListening {
+                    stopListening()
+                }
+                if isSpeaking {
+                    stopSpeaking()
+                }
+
+            case .ended:
+                // Interruption ended
+                // Optionally resume listening if it was active
+                // For now, we'll let the user manually restart
+                guard let optionsValue = userInfo[AVAudioSessionInterruptionOptionKey] as? UInt else {
+                    return
+                }
+                let options = AVAudioSession.InterruptionOptions(rawValue: optionsValue)
+                if options.contains(.shouldResume) {
+                    // Could automatically resume listening here if desired
+                    // For now, we'll just clear the error message
+                    availabilityMessage = ""
+                }
+
+            @unknown default:
+                break
+            }
+        }
     }
     #endif
 
     func clearConversation() {
         messages.removeAll()
     }
+
+    // MARK: - Text-to-Speech
+
+    /// Speak text aloud using on-device TTS
+    /// - Parameter text: The text to speak
+    func speak(_ text: String) async {
+        guard !text.isEmpty else { return }
+
+        // Stop any current speech
+        if isSpeaking {
+            speechSynthesizer.stopSpeaking(at: .immediate)
+        }
+
+        let utterance = AVSpeechUtterance(string: text)
+
+        // Use high-quality on-device voice for English
+        if let voice = AVSpeechSynthesisVoice(language: "en-US") {
+            utterance.voice = voice
+        }
+
+        utterance.rate = 0.52 // Slightly faster for natural flow
+        utterance.pitchMultiplier = 1.0
+        utterance.volume = 1.0
+
+        isSpeaking = true
+        speechSynthesizer.speak(utterance)
+
+        // Wait for speech to finish
+        while isSpeaking {
+            try? await Task.sleep(nanoseconds: 100_000_000) // 0.1s polling
+        }
+    }
+
+    /// Stop speaking immediately
+    func stopSpeaking() {
+        if isSpeaking {
+            speechSynthesizer.stopSpeaking(at: .immediate)
+            isSpeaking = false
+        }
+        // Also clear the queue
+        speakingQueue.removeAll()
+        isSpeakingQueued = false
+    }
+
+    /// Add text to the speaking queue and process it
+    /// - Parameter text: The text to speak
+    private func enqueueSpeech(_ text: String) {
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+
+        speakingQueue.append(text)
+
+        // Start processing queue if not already doing so
+        if !isSpeakingQueued {
+            Task {
+                await processSpeakingQueue()
+            }
+        }
+    }
+
+    /// Process the speaking queue sequentially
+    private func processSpeakingQueue() async {
+        guard !isSpeakingQueued else { return }
+        isSpeakingQueued = true
+
+        while !speakingQueue.isEmpty {
+            let textToSpeak = speakingQueue.removeFirst()
+            await speak(textToSpeak)
+        }
+
+        isSpeakingQueued = false
+    }
+
+    /// Find the end position of the last complete sentence in text
+    /// - Parameter text: The text to search for sentence boundaries
+    /// - Returns: Index of the last sentence-ending character, or nil if no complete sentence found
+    private func findCompleteSentenceEnd(in text: String) -> Int? {
+        // Sentence endings: period, exclamation, question mark
+        let sentenceEndings: Set<Character> = [".", "!", "?"]
+
+        // Search backwards for the last sentence ending followed by space or end
+        for (index, char) in text.enumerated().reversed() {
+            if sentenceEndings.contains(char) {
+                // Check if this is followed by a space or it's at the end
+                let nextIndex = text.index(text.startIndex, offsetBy: index + 1)
+                if nextIndex == text.endIndex || (nextIndex < text.endIndex && text[nextIndex].isWhitespace) {
+                    return index
+                }
+            }
+        }
+
+        return nil
+    }
+
+    // MARK: - AVSpeechSynthesizerDelegate
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            isSpeaking = false
+        }
+    }
+
+    nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
+        Task { @MainActor in
+            isSpeaking = false
+        }
+    }
+
+    // MARK: - Private Helpers
 
     private func checkAvailability() {
         let status = fmClient.capability()
