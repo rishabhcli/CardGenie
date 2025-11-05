@@ -160,6 +160,7 @@ struct StudyStreakWidgetView: View {
         .containerBackground(for: .widget) {
             Color.clear
         }
+        .widgetURL(URL(string: "cardgenie://study/start"))
     }
 }
 

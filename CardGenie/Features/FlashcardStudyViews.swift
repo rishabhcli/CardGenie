@@ -36,9 +36,12 @@ struct FlashcardListView: View {
                         GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
                             .padding(.horizontal)
 
-                        FlashcardsEmptyState()
+                        flashcardsEmptyState
                     }
                     .padding(.top, Spacing.xl)
+                } else if totalDueCount == 0 && hasFlashcards {
+                    // All caught up state
+                    allCaughtUpState
                 } else {
                     mainContent
                 }
@@ -101,6 +104,81 @@ struct FlashcardListView: View {
         }
     }
 
+    // MARK: - Empty States
+
+    private var hasFlashcards: Bool {
+        flashcardSets.contains { $0.cardCount > 0 }
+    }
+
+    private var flashcardsEmptyState: some View {
+        EmptyStateView(
+            icon: "rectangle.stack.badge.plus",
+            title: "No Flashcards Yet",
+            description: "Create your first flashcards by generating them from your study materials or creating them manually.",
+            primaryAction: .init(
+                title: "Generate from Content",
+                icon: "sparkles",
+                action: {
+                    // Navigate to Study tab
+                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToStudyTab"), object: nil)
+                }
+            ),
+            secondaryAction: .init(
+                title: "Create Manually",
+                icon: "plus.circle",
+                action: {
+                    // Create a default set and open editor
+                    createDefaultSetAndCard()
+                }
+            )
+        )
+    }
+
+    private var allCaughtUpState: some View {
+        EmptyStateView(
+            icon: "checkmark.seal.fill",
+            title: "All Caught Up! 🎉",
+            description: "You've reviewed all your due cards. Great job keeping up with your studies! Your next review will be ready soon.",
+            primaryAction: .init(
+                title: "Review All Cards",
+                icon: "arrow.triangle.2.circlepath",
+                action: {
+                    studyAllDueCards()
+                }
+            ),
+            secondaryAction: .init(
+                title: "View Statistics",
+                icon: "chart.bar",
+                action: {
+                    showingStatistics = true
+                }
+            )
+        )
+    }
+
+    private func createDefaultSetAndCard() {
+        // Create a default flashcard set if needed
+        let defaultSet = FlashcardSet(topicLabel: "My Flashcards", tag: "default")
+        modelContext.insert(defaultSet)
+
+        // Create an empty flashcard
+        let newCard = Flashcard(
+            type: .qa,
+            question: "",
+            answer: "",
+            linkedEntryID: UUID(),
+            tags: []
+        )
+        modelContext.insert(newCard)
+        defaultSet.addCard(newCard)
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error creating default set: \(error)")
+        }
+    }
+
     // MARK: - Main Content
 
     @ViewBuilder
@@ -111,6 +189,11 @@ struct FlashcardListView: View {
                 GlassEffectContainer {
                     VStack(spacing: 24) {
                         GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
+
+                        // Study Suggestion Banner - shows when 5+ cards due
+                        if totalDueCount >= 5 {
+                            studySuggestionBanner
+                        }
 
                         // Quick Play Section - NEW!
                         if !flashcardSets.isEmpty {
@@ -138,6 +221,11 @@ struct FlashcardListView: View {
                 VStack(spacing: 24) {
                     GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
 
+                    // Study Suggestion Banner - shows when 5+ cards due
+                    if totalDueCount >= 5 {
+                        studySuggestionBanner
+                    }
+
                     // Quick Play Section - NEW!
                     if !flashcardSets.isEmpty {
                         quickPlaySection
@@ -158,6 +246,93 @@ struct FlashcardListView: View {
                 .padding(.vertical, Spacing.lg)
             }
         }
+    }
+
+    // MARK: - Study Suggestion Banner
+
+    private var studySuggestionBanner: some View {
+        HStack(spacing: 16) {
+            // Animated icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.2), Color.mysticBlue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "lightbulb.fill")
+                    .font(.title2)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.cosmicPurple, .mysticBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+
+            // Message
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Ready to study?")
+                    .font(.headline)
+                    .foregroundStyle(Color.primaryText)
+
+                Text("You have \(totalDueCount) cards due - Start studying to keep your knowledge fresh!")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            // Quick action button
+            Button {
+                studyAllDueCards()
+            } label: {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.cosmicPurple)
+            }
+        }
+        .padding()
+        .background {
+            if #available(iOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            } else {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.cosmicPurple.opacity(0.3), Color.mysticBlue.opacity(0.2)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
     }
 
     // MARK: - Daily Review Section
@@ -769,6 +944,10 @@ struct FlashcardStudyView: View {
 
     private var revealButton: some View {
         Button {
+            // Heavy haptic feedback for reveal action
+            let impact = UIImpactFeedbackGenerator(style: .heavy)
+            impact.impactOccurred()
+
             withAnimation(.spring(response: 0.3)) {
                 showAnswer = true
             }
@@ -781,8 +960,16 @@ struct FlashcardStudyView: View {
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding()
-            .background(Color.aiAccent)
-            .cornerRadius(12)
+            .background {
+                if #available(iOS 26.0, *) {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.aiAccent)
+                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                } else {
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(Color.aiAccent)
+                }
+            }
         }
         .accessibilityLabel("Reveal answer")
     }
@@ -1662,6 +1849,11 @@ struct StudyResultsView: View {
     let onRetry: (() -> Void)?
     let onDismiss: () -> Void
 
+    // Animation state
+    @State private var animatedProgress: Double = 0
+    @State private var animatedPercent: Int = 0
+    @State private var isAppearing = false
+
     // Computed properties
     private var accuracy: Double {
         guard total > 0 else { return 0 }
@@ -1688,11 +1880,16 @@ struct StudyResultsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                // Celebration Icon
-                celebrationIcon
+                // Celebration Icon with milestone celebrations
+                celebrationIconWithMilestones
 
                 // Performance Message
                 performanceMessage
+
+                // Milestone Achievements Banner
+                if hasMilestone {
+                    milestoneAchievementsBanner
+                }
 
                 // Statistics Cards
                 statisticsCards
@@ -1718,6 +1915,24 @@ struct StudyResultsView: View {
         .background(Color.clear.ignoresSafeArea())
     }
 
+    // MARK: - Milestone Detection
+
+    private var hasMilestone: Bool {
+        isPerfectSession || isLargeSession || isWeekStreak
+    }
+
+    private var isPerfectSession: Bool {
+        accuracyPercent == 100 && total >= 5
+    }
+
+    private var isLargeSession: Bool {
+        total >= 10
+    }
+
+    private var isWeekStreak: Bool {
+        streak >= 7
+    }
+
     // MARK: - Celebration Icon
 
     private var celebrationIcon: some View {
@@ -1725,6 +1940,87 @@ struct StudyResultsView: View {
             .font(.system(size: 80))
             .foregroundStyle(performanceLevel.color.gradient)
             .symbolEffect(.bounce)
+    }
+
+    private var celebrationIconWithMilestones: some View {
+        ZStack {
+            celebrationIcon
+        }
+        .modifier(MilestoneCelebrationModifier(showConfetti: hasMilestone))
+    }
+
+    // MARK: - Milestone Achievements Banner
+
+    private var milestoneAchievementsBanner: some View {
+        VStack(spacing: 12) {
+            // Banner header
+            HStack {
+                Image(systemName: "star.fill")
+                    .foregroundStyle(Color.magicGold)
+                Text("Milestone Achieved!")
+                    .font(.headline)
+                    .foregroundStyle(Color.primaryText)
+                Image(systemName: "star.fill")
+                    .foregroundStyle(Color.magicGold)
+            }
+
+            // Milestone badges
+            VStack(spacing: 8) {
+                if isPerfectSession {
+                    MilestoneBadge(
+                        icon: "checkmark.seal.fill",
+                        title: "Perfect Session",
+                        description: "100% accuracy!",
+                        color: .success
+                    )
+                }
+
+                if isLargeSession {
+                    MilestoneBadge(
+                        icon: "bolt.fill",
+                        title: "Study Champion",
+                        description: "Completed \(total) cards in one session!",
+                        color: .cosmicPurple
+                    )
+                }
+
+                if isWeekStreak {
+                    MilestoneBadge(
+                        icon: "flame.fill",
+                        title: "Week Warrior",
+                        description: "\(streak) day study streak!",
+                        color: .orange
+                    )
+                }
+            }
+        }
+        .padding()
+        .background {
+            if #available(iOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            } else {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.magicGold.opacity(0.3), lineWidth: 2)
+        )
     }
 
     // MARK: - Performance Message
@@ -1780,28 +2076,30 @@ struct StudyResultsView: View {
                     .stroke(Color.tertiaryText.opacity(0.2), lineWidth: 20)
                     .frame(width: 180, height: 180)
 
-                // Progress circle
+                // Progress circle with animated progress
                 Circle()
-                    .trim(from: 0, to: accuracy)
+                    .trim(from: 0, to: animatedProgress)
                     .stroke(
                         performanceLevel.color.gradient,
                         style: StrokeStyle(lineWidth: 20, lineCap: .round)
                     )
                     .frame(width: 180, height: 180)
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 1.5, dampingFraction: 0.8), value: accuracy)
 
-                // Percentage text
+                // Percentage text with count-up animation
                 VStack(spacing: 4) {
-                    Text("\(accuracyPercent)%")
+                    Text("\(animatedPercent)%")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primaryText)
+                        .contentTransition(.numericText())
 
                     Text("Accuracy")
                         .font(.caption)
                         .foregroundStyle(Color.secondaryText)
                 }
             }
+            .scaleEffect(isAppearing ? 1.0 : 0.8)
+            .opacity(isAppearing ? 1.0 : 0.0)
 
             Text(performanceLevel.accuracyFeedback)
                 .font(.subheadline)
@@ -1811,6 +2109,20 @@ struct StudyResultsView: View {
         .padding()
         .glassPanel()
         .cornerRadius(20)
+        .onAppear {
+            // Trigger animations on appearance
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.75)) {
+                isAppearing = true
+            }
+
+            withAnimation(.spring(response: 1.8, dampingFraction: 0.75).delay(0.3)) {
+                animatedProgress = accuracy
+            }
+
+            withAnimation(.spring(response: 1.5, dampingFraction: 0.8).delay(0.3)) {
+                animatedPercent = accuracyPercent
+            }
+        }
     }
 
     // MARK: - Streak Display
@@ -1908,16 +2220,33 @@ private struct StatisticCard: View {
     let value: String
     let color: Color
 
+    @State private var animatedValue: Int = 0
+    @State private var isAppearing = false
+
+    private var numericValue: Int? {
+        Int(value)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundStyle(color)
+                .scaleEffect(isAppearing ? 1.0 : 0.5)
+                .opacity(isAppearing ? 1.0 : 0.0)
 
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.primaryText)
+            if let targetValue = numericValue {
+                Text("\(animatedValue)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+                    .contentTransition(.numericText())
+            } else {
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+            }
 
             Text(label)
                 .font(.caption)
@@ -1927,6 +2256,19 @@ private struct StatisticCard: View {
         .padding()
         .glassPanel()
         .cornerRadius(12)
+        .scaleEffect(isAppearing ? 1.0 : 0.8)
+        .opacity(isAppearing ? 1.0 : 0.0)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                isAppearing = true
+            }
+
+            if let targetValue = numericValue {
+                withAnimation(.spring(response: 1.0, dampingFraction: 0.8).delay(0.2)) {
+                    animatedValue = targetValue
+                }
+            }
+        }
     }
 }
 
@@ -2242,6 +2584,68 @@ struct ModeRow: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Milestone Celebration Modifier
+
+struct MilestoneCelebrationModifier: ViewModifier {
+    let showConfetti: Bool
+
+    func body(content: Content) -> some View {
+        if showConfetti {
+            content
+                .confetti()
+        } else {
+            content
+        }
+    }
+}
+
+// MARK: - Milestone Badge
+
+struct MilestoneBadge: View {
+    let icon: String
+    let title: String
+    let description: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.2))
+                    .frame(width: 40, height: 40)
+
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(color)
+            }
+
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.primaryText)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondaryText)
+            }
+
+            Spacer()
+
+            // Checkmark
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(color)
+                .font(.title3)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.05))
+        .cornerRadius(12)
     }
 }
 

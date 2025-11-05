@@ -114,6 +114,7 @@ struct DueCardsWidgetView: View {
         .containerBackground(for: .widget) {
             Color.clear
         }
+        .widgetURL(URL(string: "cardgenie://flashcards/due"))
     }
 }
 
