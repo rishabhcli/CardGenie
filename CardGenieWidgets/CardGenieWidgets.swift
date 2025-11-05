@@ -101,8 +101,9 @@ actor WidgetDataProvider {
         let modelConfiguration = ModelConfiguration(
             schema: schema,
             isStoredInMemoryOnly: false,
-            allowsSave: true,
-            groupContainer: .identifier("group.com.cardgenie.shared")
+            allowsSave: true
+            // Note: groupContainer will be added when App Groups are configured in Xcode
+            // groupContainer: .identifier("group.com.cardgenie.shared")
         )
 
         return try ModelContainer(for: schema, configurations: [modelConfiguration])

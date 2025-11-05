@@ -51,9 +51,9 @@ struct CardGenieApp: App {
             schema: schema,
             isStoredInMemoryOnly: false,
             // Data is stored locally in app sandbox, not exposed to Files app
-            allowsSave: true,
-            // Share data with widgets via App Group
-            groupContainer: .identifier("group.com.cardgenie.shared")
+            allowsSave: true
+            // Note: groupContainer will be added when widgets are fully configured
+            // groupContainer: .identifier("group.com.cardgenie.shared")
         )
 
         do {
@@ -69,8 +69,7 @@ struct CardGenieApp: App {
 
             let memoryConfig = ModelConfiguration(
                 schema: schema,
-                isStoredInMemoryOnly: true,
-                groupContainer: .identifier("group.com.cardgenie.shared")
+                isStoredInMemoryOnly: true
             )
 
             do {
@@ -182,9 +181,9 @@ struct MainTabView: View {
             object: nil,
             queue: .main
         ) { notification in
-            if let text = notification.userInfo?["text"] as? String {
+            if let _ = notification.userInfo?["text"] as? String {
                 selectedTab = 0 // Switch to Study tab
-                // The text will be processed by the content generation flow
+                // TODO: Pass text to content generation flow
             }
         }
     }
