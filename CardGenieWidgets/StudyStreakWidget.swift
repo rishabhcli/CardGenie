@@ -7,6 +7,14 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
+
+// MARK: - Widget Configuration Intent
+
+struct StudyStreakConfiguration: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Study Streak Configuration"
+    static var description = IntentDescription("Configure your study streak widget")
+}
 
 // MARK: - Timeline Entry
 
@@ -16,28 +24,28 @@ struct StudyStreakEntry: TimelineEntry {
     let lastStudyDate: Date?
 }
 
-// MARK: - Timeline Provider
+// MARK: - App Intent Timeline Provider
 
-struct StudyStreakProvider: TimelineProvider {
+struct StudyStreakProvider: AppIntentTimelineProvider {
+    typealias Entry = StudyStreakEntry
+    typealias Intent = StudyStreakConfiguration
+
     func placeholder(in context: Context) -> StudyStreakEntry {
         StudyStreakEntry(date: Date(), currentStreak: 7, lastStudyDate: Date())
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (StudyStreakEntry) -> Void) {
-        let entry = StudyStreakEntry(date: Date(), currentStreak: 7, lastStudyDate: Date())
-        completion(entry)
+    func snapshot(for configuration: Intent, in context: Context) async -> StudyStreakEntry {
+        let (streak, lastDate) = await WidgetDataProvider.shared.getStudyStreak()
+        return StudyStreakEntry(date: Date(), currentStreak: streak, lastStudyDate: lastDate)
     }
 
-    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<StudyStreakEntry>) -> Void) {
-        Task { @Sendable in
-            let (streak, lastDate) = await WidgetDataProvider.shared.getStudyStreak()
-            let entry = StudyStreakEntry(date: Date(), currentStreak: streak, lastStudyDate: lastDate)
+    func timeline(for configuration: Intent, in context: Context) async -> Timeline<StudyStreakEntry> {
+        let (streak, lastDate) = await WidgetDataProvider.shared.getStudyStreak()
+        let entry = StudyStreakEntry(date: Date(), currentStreak: streak, lastStudyDate: lastDate)
 
-            // Refresh every 6 hours
-            let nextUpdate = Calendar.current.date(byAdding: .hour, value: 6, to: Date())!
-            let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-            completion(timeline)
-        }
+        // Refresh every 6 hours
+        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 6, to: Date())!
+        return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
 }
 
@@ -170,13 +178,17 @@ struct StudyStreakWidget: Widget {
     let kind: String = "StudyStreakWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: StudyStreakProvider()) { entry in
+        AppIntentConfiguration(
+            kind: kind,
+            intent: StudyStreakConfiguration.self,
+            provider: StudyStreakProvider()
+        ) { entry in
             StudyStreakWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Study Streak")
         .description("Track your daily study streak")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 

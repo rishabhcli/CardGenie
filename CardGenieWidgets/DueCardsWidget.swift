@@ -7,6 +7,14 @@
 
 import WidgetKit
 import SwiftUI
+import AppIntents
+
+// MARK: - Widget Configuration Intent
+
+struct DueCardsConfiguration: WidgetConfigurationIntent {
+    static var title: LocalizedStringResource = "Due Cards Configuration"
+    static var description = IntentDescription("Configure your due cards widget")
+}
 
 // MARK: - Timeline Entry
 
@@ -15,28 +23,28 @@ struct DueCardsEntry: TimelineEntry {
     let dueCount: Int
 }
 
-// MARK: - Timeline Provider
+// MARK: - App Intent Timeline Provider
 
-struct DueCardsProvider: TimelineProvider {
+struct DueCardsProvider: AppIntentTimelineProvider {
+    typealias Entry = DueCardsEntry
+    typealias Intent = DueCardsConfiguration
+
     func placeholder(in context: Context) -> DueCardsEntry {
         DueCardsEntry(date: Date(), dueCount: 12)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (DueCardsEntry) -> Void) {
-        let entry = DueCardsEntry(date: Date(), dueCount: 12)
-        completion(entry)
+    func snapshot(for configuration: Intent, in context: Context) async -> DueCardsEntry {
+        let dueCount = await WidgetDataProvider.shared.getDueCardsCount()
+        return DueCardsEntry(date: Date(), dueCount: dueCount)
     }
 
-    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<DueCardsEntry>) -> Void) {
-        Task { @Sendable in
-            let dueCount = await WidgetDataProvider.shared.getDueCardsCount()
-            let entry = DueCardsEntry(date: Date(), dueCount: dueCount)
+    func timeline(for configuration: Intent, in context: Context) async -> Timeline<DueCardsEntry> {
+        let dueCount = await WidgetDataProvider.shared.getDueCardsCount()
+        let entry = DueCardsEntry(date: Date(), dueCount: dueCount)
 
-            // Refresh every hour
-            let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
-            let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
-            completion(timeline)
-        }
+        // Refresh every hour
+        let nextUpdate = Calendar.current.date(byAdding: .hour, value: 1, to: Date())!
+        return Timeline(entries: [entry], policy: .after(nextUpdate))
     }
 }
 
@@ -124,13 +132,17 @@ struct DueCardsWidget: Widget {
     let kind: String = "DueCardsWidget"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: DueCardsProvider()) { entry in
+        AppIntentConfiguration(
+            kind: kind,
+            intent: DueCardsConfiguration.self,
+            provider: DueCardsProvider()
+        ) { entry in
             DueCardsWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
         .configurationDisplayName("Due Cards")
         .description("See how many flashcards are due for review")
-        .supportedFamilies([.systemSmall])
+        .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 
