@@ -1325,3 +1325,169 @@ struct TagFlowLayout: Layout {
         }
     }
 }
+
+// MARK: - Empty State Views
+
+/// Contextual empty state view with actions
+struct EmptyStateView: View {
+    let icon: String
+    let title: String
+    let description: String
+    let primaryAction: ActionButton?
+    let secondaryAction: ActionButton?
+    let tertiaryAction: ActionButton?
+
+    struct ActionButton {
+        let title: String
+        let icon: String
+        let action: () -> Void
+    }
+
+    init(
+        icon: String,
+        title: String,
+        description: String,
+        primaryAction: ActionButton? = nil,
+        secondaryAction: ActionButton? = nil,
+        tertiaryAction: ActionButton? = nil
+    ) {
+        self.icon = icon
+        self.title = title
+        self.description = description
+        self.primaryAction = primaryAction
+        self.secondaryAction = secondaryAction
+        self.tertiaryAction = tertiaryAction
+    }
+
+    var body: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            // Icon
+            Image(systemName: icon)
+                .font(.system(size: 80))
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [.cosmicPurple, .mysticBlue],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .symbolEffect(.pulse)
+
+            // Text content
+            VStack(spacing: 8) {
+                Text(title)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+                    .multilineTextAlignment(.center)
+
+                Text(description)
+                    .font(.body)
+                    .foregroundStyle(Color.secondaryText)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+            }
+
+            // Action buttons
+            VStack(spacing: 12) {
+                if let primary = primaryAction {
+                    Button {
+                        primary.action()
+                    } label: {
+                        HStack {
+                            Image(systemName: primary.icon)
+                            Text(primary.title)
+                        }
+                        .font(.headline)
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background {
+                            if #available(iOS 26.0, *) {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.cosmicPurple, .mysticBlue],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
+                            } else {
+                                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [.cosmicPurple, .mysticBlue],
+                                            startPoint: .leading,
+                                            endPoint: .trailing
+                                        )
+                                    )
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+
+                HStack(spacing: 12) {
+                    if let secondary = secondaryAction {
+                        Button {
+                            secondary.action()
+                        } label: {
+                            HStack {
+                                Image(systemName: secondary.icon)
+                                Text(secondary.title)
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.cosmicPurple)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background {
+                                if #available(iOS 26.0, *) {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.cosmicPurple.opacity(0.1))
+                                        .glassEffect(.thin, in: .rect(cornerRadius: 12))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.cosmicPurple.opacity(0.1))
+                                }
+                            }
+                        }
+                    }
+
+                    if let tertiary = tertiaryAction {
+                        Button {
+                            tertiary.action()
+                        } label: {
+                            HStack {
+                                Image(systemName: tertiary.icon)
+                                Text(tertiary.title)
+                            }
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(Color.cosmicPurple)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background {
+                                if #available(iOS 26.0, *) {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.cosmicPurple.opacity(0.1))
+                                        .glassEffect(.thin, in: .rect(cornerRadius: 12))
+                                } else {
+                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                        .fill(Color.cosmicPurple.opacity(0.1))
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.horizontal)
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}

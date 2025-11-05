@@ -69,11 +69,11 @@ struct ContentListView: View {
                 if filteredContent.isEmpty {
                     Section {
                         if searchText.isEmpty {
-                            EmptyStateView()
-                                .frame(maxWidth: .infinity, alignment: .center)
+                            contextualEmptyState
+                                .frame(maxWidth: .infinity, maxHeight: 400)
                                 .padding(.vertical, Spacing.xl)
                         } else {
-                            Text("No results for “\(searchText)”")
+                            Text("No results for "\(searchText)"")
                                 .font(.subheadline)
                                 .foregroundStyle(Color.secondaryText)
                                 .frame(maxWidth: .infinity, alignment: .center)
@@ -182,6 +182,39 @@ struct ContentListView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Empty State
+
+    private var contextualEmptyState: some View {
+        EmptyStateView(
+            icon: "wand.and.stars",
+            title: "Welcome to CardGenie! 🧞‍♂️",
+            description: "Let's get started with your first study material. Create content from text, scan documents, or record lectures.",
+            primaryAction: .init(
+                title: "Add Text",
+                icon: "text.badge.plus",
+                action: {
+                    createNewContent(source: .text)
+                }
+            ),
+            secondaryAction: .init(
+                title: "Scan",
+                icon: "doc.viewfinder",
+                action: {
+                    // User can navigate to scan tab manually
+                    // Or we could post a notification to switch tabs
+                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToScanTab"), object: nil)
+                }
+            ),
+            tertiaryAction: .init(
+                title: "Record",
+                icon: "mic.circle",
+                action: {
+                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToRecordTab"), object: nil)
+                }
+            )
+        )
     }
 
     // MARK: - Computed Properties

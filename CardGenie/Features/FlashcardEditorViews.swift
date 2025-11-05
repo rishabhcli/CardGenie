@@ -1205,16 +1205,38 @@ private struct MetricCard: View {
     let value: String
     let color: Color
 
+    @State private var animatedValue: Double = 0
+    @State private var isAppearing = false
+
+    // Extract numeric value if present
+    private var numericValue: Double? {
+        // Try to extract number from string (handles "123", "45%", etc.)
+        let numbers = value.components(separatedBy: CharacterSet.decimalDigits.inverted).joined()
+        return Double(numbers)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundStyle(color)
+                .scaleEffect(isAppearing ? 1.0 : 0.5)
+                .opacity(isAppearing ? 1.0 : 0.0)
 
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.primaryText)
+            if let targetValue = numericValue {
+                // Animated number with suffix
+                Text(formattedAnimatedValue(target: targetValue))
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+                    .contentTransition(.numericText())
+            } else {
+                // Non-numeric value (display as-is)
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+            }
 
             Text(label)
                 .font(.caption)
@@ -1225,6 +1247,28 @@ private struct MetricCard: View {
         .padding()
         .glassPanel()
         .cornerRadius(12)
+        .scaleEffect(isAppearing ? 1.0 : 0.8)
+        .opacity(isAppearing ? 1.0 : 0.0)
+        .onAppear {
+            // Animate appearance
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                isAppearing = true
+            }
+
+            // Animate count-up
+            if let targetValue = numericValue {
+                withAnimation(.spring(response: 1.2, dampingFraction: 0.8).delay(0.2)) {
+                    animatedValue = targetValue
+                }
+            }
+        }
+    }
+
+    private func formattedAnimatedValue(target: Double) -> String {
+        let currentValue = Int(animatedValue)
+        // Preserve suffix (%, etc.)
+        let suffix = value.components(separatedBy: CharacterSet.decimalDigits).last ?? ""
+        return "\(currentValue)\(suffix)"
     }
 }
 

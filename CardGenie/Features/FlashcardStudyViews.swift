@@ -36,9 +36,12 @@ struct FlashcardListView: View {
                         GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
                             .padding(.horizontal)
 
-                        FlashcardsEmptyState()
+                        flashcardsEmptyState
                     }
                     .padding(.top, Spacing.xl)
+                } else if totalDueCount == 0 && hasFlashcards {
+                    // All caught up state
+                    allCaughtUpState
                 } else {
                     mainContent
                 }
@@ -98,6 +101,81 @@ struct FlashcardListView: View {
             .sheet(isPresented: $showingStatistics) {
                 FlashcardStatisticsView()
             }
+        }
+    }
+
+    // MARK: - Empty States
+
+    private var hasFlashcards: Bool {
+        flashcardSets.contains { $0.cardCount > 0 }
+    }
+
+    private var flashcardsEmptyState: some View {
+        EmptyStateView(
+            icon: "rectangle.stack.badge.plus",
+            title: "No Flashcards Yet",
+            description: "Create your first flashcards by generating them from your study materials or creating them manually.",
+            primaryAction: .init(
+                title: "Generate from Content",
+                icon: "sparkles",
+                action: {
+                    // Navigate to Study tab
+                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToStudyTab"), object: nil)
+                }
+            ),
+            secondaryAction: .init(
+                title: "Create Manually",
+                icon: "plus.circle",
+                action: {
+                    // Create a default set and open editor
+                    createDefaultSetAndCard()
+                }
+            )
+        )
+    }
+
+    private var allCaughtUpState: some View {
+        EmptyStateView(
+            icon: "checkmark.seal.fill",
+            title: "All Caught Up! 🎉",
+            description: "You've reviewed all your due cards. Great job keeping up with your studies! Your next review will be ready soon.",
+            primaryAction: .init(
+                title: "Review All Cards",
+                icon: "arrow.triangle.2.circlepath",
+                action: {
+                    studyAllDueCards()
+                }
+            ),
+            secondaryAction: .init(
+                title: "View Statistics",
+                icon: "chart.bar",
+                action: {
+                    showingStatistics = true
+                }
+            )
+        )
+    }
+
+    private func createDefaultSetAndCard() {
+        // Create a default flashcard set if needed
+        let defaultSet = FlashcardSet(topicLabel: "My Flashcards", tag: "default")
+        modelContext.insert(defaultSet)
+
+        // Create an empty flashcard
+        let newCard = Flashcard(
+            type: .qa,
+            question: "",
+            answer: "",
+            linkedEntryID: UUID(),
+            tags: []
+        )
+        modelContext.insert(newCard)
+        defaultSet.addCard(newCard)
+
+        do {
+            try modelContext.save()
+        } catch {
+            print("Error creating default set: \(error)")
         }
     }
 
@@ -1771,6 +1849,11 @@ struct StudyResultsView: View {
     let onRetry: (() -> Void)?
     let onDismiss: () -> Void
 
+    // Animation state
+    @State private var animatedProgress: Double = 0
+    @State private var animatedPercent: Int = 0
+    @State private var isAppearing = false
+
     // Computed properties
     private var accuracy: Double {
         guard total > 0 else { return 0 }
@@ -1993,28 +2076,30 @@ struct StudyResultsView: View {
                     .stroke(Color.tertiaryText.opacity(0.2), lineWidth: 20)
                     .frame(width: 180, height: 180)
 
-                // Progress circle
+                // Progress circle with animated progress
                 Circle()
-                    .trim(from: 0, to: accuracy)
+                    .trim(from: 0, to: animatedProgress)
                     .stroke(
                         performanceLevel.color.gradient,
                         style: StrokeStyle(lineWidth: 20, lineCap: .round)
                     )
                     .frame(width: 180, height: 180)
                     .rotationEffect(.degrees(-90))
-                    .animation(.spring(response: 1.5, dampingFraction: 0.8), value: accuracy)
 
-                // Percentage text
+                // Percentage text with count-up animation
                 VStack(spacing: 4) {
-                    Text("\(accuracyPercent)%")
+                    Text("\(animatedPercent)%")
                         .font(.system(size: 48, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.primaryText)
+                        .contentTransition(.numericText())
 
                     Text("Accuracy")
                         .font(.caption)
                         .foregroundStyle(Color.secondaryText)
                 }
             }
+            .scaleEffect(isAppearing ? 1.0 : 0.8)
+            .opacity(isAppearing ? 1.0 : 0.0)
 
             Text(performanceLevel.accuracyFeedback)
                 .font(.subheadline)
@@ -2024,6 +2109,20 @@ struct StudyResultsView: View {
         .padding()
         .glassPanel()
         .cornerRadius(20)
+        .onAppear {
+            // Trigger animations on appearance
+            withAnimation(.spring(response: 0.8, dampingFraction: 0.75)) {
+                isAppearing = true
+            }
+
+            withAnimation(.spring(response: 1.8, dampingFraction: 0.75).delay(0.3)) {
+                animatedProgress = accuracy
+            }
+
+            withAnimation(.spring(response: 1.5, dampingFraction: 0.8).delay(0.3)) {
+                animatedPercent = accuracyPercent
+            }
+        }
     }
 
     // MARK: - Streak Display
@@ -2121,16 +2220,33 @@ private struct StatisticCard: View {
     let value: String
     let color: Color
 
+    @State private var animatedValue: Int = 0
+    @State private var isAppearing = false
+
+    private var numericValue: Int? {
+        Int(value)
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundStyle(color)
+                .scaleEffect(isAppearing ? 1.0 : 0.5)
+                .opacity(isAppearing ? 1.0 : 0.0)
 
-            Text(value)
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundStyle(Color.primaryText)
+            if let targetValue = numericValue {
+                Text("\(animatedValue)")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+                    .contentTransition(.numericText())
+            } else {
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundStyle(Color.primaryText)
+            }
 
             Text(label)
                 .font(.caption)
@@ -2140,6 +2256,19 @@ private struct StatisticCard: View {
         .padding()
         .glassPanel()
         .cornerRadius(12)
+        .scaleEffect(isAppearing ? 1.0 : 0.8)
+        .opacity(isAppearing ? 1.0 : 0.0)
+        .onAppear {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.7)) {
+                isAppearing = true
+            }
+
+            if let targetValue = numericValue {
+                withAnimation(.spring(response: 1.0, dampingFraction: 0.8).delay(0.2)) {
+                    animatedValue = targetValue
+                }
+            }
+        }
     }
 }
 
