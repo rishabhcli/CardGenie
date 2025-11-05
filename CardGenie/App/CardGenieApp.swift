@@ -99,6 +99,9 @@ struct CardGenieApp: App {
                             await NotificationManager.shared.setupNotificationsIfNeeded()
                         }
                     }
+                    .onOpenURL { url in
+                        handleDeepLink(url)
+                    }
 
                 // Onboarding overlay
                 if !onboardingCoordinator.isCompleted {
@@ -108,6 +111,27 @@ struct CardGenieApp: App {
             }
         }
         .modelContainer(modelContainer) // Inject SwiftData container
+    }
+
+    // MARK: - Deep Link Handling
+
+    private func handleDeepLink(_ url: URL) {
+        guard url.scheme == "cardgenie" else { return }
+
+        switch url.host {
+        case "flashcards":
+            if url.path == "/due" {
+                // Navigate to Flashcards tab and start study session with due cards
+                NotificationCenter.default.post(name: NSNotification.Name("StartStudySession"), object: nil)
+            }
+        case "study":
+            if url.path == "/start" {
+                // Navigate to Flashcards tab and start study session
+                NotificationCenter.default.post(name: NSNotification.Name("StartStudySession"), object: nil)
+            }
+        default:
+            break
+        }
     }
 }
 

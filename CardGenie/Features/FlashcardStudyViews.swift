@@ -112,6 +112,11 @@ struct FlashcardListView: View {
                     VStack(spacing: 24) {
                         GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
 
+                        // Study Suggestion Banner - shows when 5+ cards due
+                        if totalDueCount >= 5 {
+                            studySuggestionBanner
+                        }
+
                         // Quick Play Section - NEW!
                         if !flashcardSets.isEmpty {
                             quickPlaySection
@@ -138,6 +143,11 @@ struct FlashcardListView: View {
                 VStack(spacing: 24) {
                     GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
 
+                    // Study Suggestion Banner - shows when 5+ cards due
+                    if totalDueCount >= 5 {
+                        studySuggestionBanner
+                    }
+
                     // Quick Play Section - NEW!
                     if !flashcardSets.isEmpty {
                         quickPlaySection
@@ -158,6 +168,93 @@ struct FlashcardListView: View {
                 .padding(.vertical, Spacing.lg)
             }
         }
+    }
+
+    // MARK: - Study Suggestion Banner
+
+    private var studySuggestionBanner: some View {
+        HStack(spacing: 16) {
+            // Animated icon
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.2), Color.mysticBlue.opacity(0.2)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 48, height: 48)
+
+                Image(systemName: "lightbulb.fill")
+                    .font(.title2)
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.cosmicPurple, .mysticBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .symbolEffect(.pulse, options: .repeating)
+            }
+
+            // Message
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Ready to study?")
+                    .font(.headline)
+                    .foregroundStyle(Color.primaryText)
+
+                Text("You have \(totalDueCount) cards due - Start studying to keep your knowledge fresh!")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
+                    .lineLimit(2)
+            }
+
+            Spacer()
+
+            // Quick action button
+            Button {
+                studyAllDueCards()
+            } label: {
+                Image(systemName: "arrow.right.circle.fill")
+                    .font(.title2)
+                    .foregroundStyle(Color.cosmicPurple)
+            }
+        }
+        .padding()
+        .background {
+            if #available(iOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            } else {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.cosmicPurple.opacity(0.3), Color.mysticBlue.opacity(0.2)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
     }
 
     // MARK: - Daily Review Section
@@ -1700,11 +1797,16 @@ struct StudyResultsView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 32) {
-                // Celebration Icon
-                celebrationIcon
+                // Celebration Icon with milestone celebrations
+                celebrationIconWithMilestones
 
                 // Performance Message
                 performanceMessage
+
+                // Milestone Achievements Banner
+                if hasMilestone {
+                    milestoneAchievementsBanner
+                }
 
                 // Statistics Cards
                 statisticsCards
@@ -1730,6 +1832,24 @@ struct StudyResultsView: View {
         .background(Color.clear.ignoresSafeArea())
     }
 
+    // MARK: - Milestone Detection
+
+    private var hasMilestone: Bool {
+        isPerfectSession || isLargeSession || isWeekStreak
+    }
+
+    private var isPerfectSession: Bool {
+        accuracyPercent == 100 && total >= 5
+    }
+
+    private var isLargeSession: Bool {
+        total >= 10
+    }
+
+    private var isWeekStreak: Bool {
+        streak >= 7
+    }
+
     // MARK: - Celebration Icon
 
     private var celebrationIcon: some View {
@@ -1737,6 +1857,87 @@ struct StudyResultsView: View {
             .font(.system(size: 80))
             .foregroundStyle(performanceLevel.color.gradient)
             .symbolEffect(.bounce)
+    }
+
+    private var celebrationIconWithMilestones: some View {
+        ZStack {
+            celebrationIcon
+        }
+        .modifier(MilestoneCelebrationModifier(showConfetti: hasMilestone))
+    }
+
+    // MARK: - Milestone Achievements Banner
+
+    private var milestoneAchievementsBanner: some View {
+        VStack(spacing: 12) {
+            // Banner header
+            HStack {
+                Image(systemName: "star.fill")
+                    .foregroundStyle(Color.magicGold)
+                Text("Milestone Achieved!")
+                    .font(.headline)
+                    .foregroundStyle(Color.primaryText)
+                Image(systemName: "star.fill")
+                    .foregroundStyle(Color.magicGold)
+            }
+
+            // Milestone badges
+            VStack(spacing: 8) {
+                if isPerfectSession {
+                    MilestoneBadge(
+                        icon: "checkmark.seal.fill",
+                        title: "Perfect Session",
+                        description: "100% accuracy!",
+                        color: .success
+                    )
+                }
+
+                if isLargeSession {
+                    MilestoneBadge(
+                        icon: "bolt.fill",
+                        title: "Study Champion",
+                        description: "Completed \(total) cards in one session!",
+                        color: .cosmicPurple
+                    )
+                }
+
+                if isWeekStreak {
+                    MilestoneBadge(
+                        icon: "flame.fill",
+                        title: "Week Warrior",
+                        description: "\(streak) day study streak!",
+                        color: .orange
+                    )
+                }
+            }
+        }
+        .padding()
+        .background {
+            if #available(iOS 26.0, *) {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
+            } else {
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            }
+        }
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.magicGold.opacity(0.3), lineWidth: 2)
+        )
     }
 
     // MARK: - Performance Message
@@ -2254,6 +2455,68 @@ struct ModeRow: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(.vertical, 8)
+    }
+}
+
+// MARK: - Milestone Celebration Modifier
+
+struct MilestoneCelebrationModifier: ViewModifier {
+    let showConfetti: Bool
+
+    func body(content: Content) -> some View {
+        if showConfetti {
+            content
+                .confetti()
+        } else {
+            content
+        }
+    }
+}
+
+// MARK: - Milestone Badge
+
+struct MilestoneBadge: View {
+    let icon: String
+    let title: String
+    let description: String
+    let color: Color
+
+    var body: some View {
+        HStack(spacing: 12) {
+            // Icon
+            ZStack {
+                Circle()
+                    .fill(color.opacity(0.2))
+                    .frame(width: 40, height: 40)
+
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundStyle(color)
+            }
+
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.primaryText)
+
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Color.secondaryText)
+            }
+
+            Spacer()
+
+            // Checkmark
+            Image(systemName: "checkmark.circle.fill")
+                .foregroundStyle(color)
+                .font(.title3)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(color.opacity(0.05))
+        .cornerRadius(12)
     }
 }
 
