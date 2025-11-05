@@ -28,8 +28,8 @@ struct StudyStreakProvider: TimelineProvider {
         completion(entry)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<StudyStreakEntry>) -> Void) {
-        Task {
+    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<StudyStreakEntry>) -> Void) {
+        Task { @Sendable in
             let (streak, lastDate) = await WidgetDataProvider.shared.getStudyStreak()
             let entry = StudyStreakEntry(date: Date(), currentStreak: streak, lastStudyDate: lastDate)
 
@@ -46,15 +46,7 @@ struct StudyStreakProvider: TimelineProvider {
 struct StudyStreakWidgetView: View {
     var entry: StudyStreakEntry
 
-    private var streakMessage: String {
-        if entry.currentStreak == 0 {
-            return "Start your streak!"
-        } else if entry.currentStreak == 1 {
-            return "Keep it going!"
-        } else {
-            return "\(entry.currentStreak) day streak!"
-        }
-    }
+    @Environment(\.widgetFamily) var family
 
     private var isStreakActive: Bool {
         guard let lastDate = entry.lastStudyDate else { return false }
@@ -65,41 +57,108 @@ struct StudyStreakWidgetView: View {
         return daysDiff <= 1 // Today or yesterday
     }
 
-    var body: some View {
-        VStack(spacing: 8) {
-            // Flame icon
-            Image(systemName: isStreakActive ? "flame.fill" : "flame")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: isStreakActive ? [.orange, .red] : [.gray, .gray.opacity(0.5)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .symbolEffect(.pulse, isActive: isStreakActive)
-
-            // Streak count
-            Text("\(entry.currentStreak)")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: isStreakActive ? [.orange, .red] : [.gray],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-
-            // Message
-            Text(streakMessage)
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+    private var streakTitle: String {
+        if entry.currentStreak == 0 {
+            return "No Streak"
+        } else if entry.currentStreak == 1 {
+            return "Day One"
+        } else {
+            return "\(entry.currentStreak) Days"
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            ContainerRelativeShape()
-                .fill(.regularMaterial)
+    }
+
+    private var streakMessage: String {
+        if entry.currentStreak == 0 {
+            return "Study to start"
+        } else if entry.currentStreak < 3 {
+            return "Keep going!"
+        } else if entry.currentStreak < 7 {
+            return "On fire!"
+        } else if entry.currentStreak < 30 {
+            return "Incredible!"
+        } else {
+            return "Legendary!"
+        }
+    }
+
+    private var flameColors: [Color] {
+        if !isStreakActive || entry.currentStreak == 0 {
+            return [.gray.opacity(0.6), .gray.opacity(0.3)]
+        } else if entry.currentStreak < 3 {
+            return [.orange, .yellow]
+        } else if entry.currentStreak < 7 {
+            return [.orange, .red]
+        } else {
+            return [.red, .pink, .orange]
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: isStreakActive && entry.currentStreak > 0 ? [
+                    Color.orange.opacity(0.12),
+                    Color.red.opacity(0.06)
+                ] : [
+                    Color.gray.opacity(0.05),
+                    Color.gray.opacity(0.02)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 6) {
+                // Flame icon with glow
+                Image(systemName: isStreakActive && entry.currentStreak > 0 ? "flame.fill" : "flame")
+                    .font(.system(size: 32, weight: .bold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: flameColors,
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
+                    .shadow(
+                        color: isStreakActive && entry.currentStreak > 0 ? .orange.opacity(0.5) : .clear,
+                        radius: 12,
+                        x: 0,
+                        y: 2
+                    )
+                    .symbolEffect(.pulse, options: .repeating, isActive: isStreakActive && entry.currentStreak > 0)
+
+                Spacer().frame(height: 2)
+
+                // Streak count
+                Text(streakTitle)
+                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .foregroundStyle(
+                        isStreakActive && entry.currentStreak > 0 ?
+                        AnyShapeStyle(LinearGradient(
+                            colors: flameColors,
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )) : AnyShapeStyle(.secondary)
+                    )
+                    .contentTransition(.numericText())
+
+                // Label
+                Text("Study Streak")
+                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                // Motivational message
+                Text(streakMessage)
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(isStreakActive && entry.currentStreak > 0 ? Color.orange : Color.gray.opacity(0.6))
+            }
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 }

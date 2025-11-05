@@ -27,8 +27,8 @@ struct DueCardsProvider: TimelineProvider {
         completion(entry)
     }
 
-    func getTimeline(in context: Context, completion: @escaping (Timeline<DueCardsEntry>) -> Void) {
-        Task {
+    func getTimeline(in context: Context, completion: @escaping @Sendable (Timeline<DueCardsEntry>) -> Void) {
+        Task { @Sendable in
             let dueCount = await WidgetDataProvider.shared.getDueCardsCount()
             let entry = DueCardsEntry(date: Date(), dueCount: dueCount)
 
@@ -45,39 +45,74 @@ struct DueCardsProvider: TimelineProvider {
 struct DueCardsWidgetView: View {
     var entry: DueCardsEntry
 
-    var body: some View {
-        VStack(spacing: 8) {
-            // Icon
-            Image(systemName: "brain.fill")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.purple, .blue],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                )
+    @Environment(\.widgetFamily) var family
 
-            // Count
-            Text("\(entry.dueCount)")
-                .font(.system(size: 36, weight: .bold, design: .rounded))
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [.purple, .blue],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
+    private var countColor: Color {
+        entry.dueCount == 0 ? .green : entry.dueCount > 20 ? .red : .purple
+    }
 
-            // Label
-            Text("Cards Due")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
+    private var motivationalMessage: String {
+        if entry.dueCount == 0 {
+            return "All done!"
+        } else if entry.dueCount < 5 {
+            return "Almost there"
+        } else if entry.dueCount < 15 {
+            return "Keep going"
+        } else {
+            return "Time to study"
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            ContainerRelativeShape()
-                .fill(.regularMaterial)
+    }
+
+    var body: some View {
+        ZStack {
+            // Background gradient
+            LinearGradient(
+                colors: [
+                    Color.purple.opacity(0.1),
+                    Color.blue.opacity(0.05)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+
+            VStack(spacing: 6) {
+                // Icon with subtle glow
+                Image(systemName: "brain.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [.purple, .blue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .shadow(color: .purple.opacity(0.3), radius: 8, x: 0, y: 2)
+
+                Spacer().frame(height: 2)
+
+                // Count with dynamic color
+                Text("\(entry.dueCount)")
+                    .font(.system(size: 42, weight: .bold, design: .rounded))
+                    .foregroundStyle(countColor)
+                    .contentTransition(.numericText())
+
+                // Label
+                Text("Cards Due")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .textCase(.uppercase)
+                    .tracking(0.5)
+
+                // Motivational message
+                Text(motivationalMessage)
+                    .font(.system(size: 9, weight: .medium, design: .rounded))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.vertical, 12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .containerBackground(for: .widget) {
+            Color.clear
         }
     }
 }

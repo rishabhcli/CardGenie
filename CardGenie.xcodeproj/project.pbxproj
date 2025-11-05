@@ -6,6 +6,17 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		0FD7C9A5E69888402B2966A5 /* CardGenieWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5AB7F6CAE5A21EF09AF911 /* CardGenieWidgets.swift */; };
+		243B5B110776CAF9862B60B2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1366CFE859D971510BFAC01B /* Foundation.framework */; };
+		338A00E4950F35EB9C0FCF7C /* SwiftData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BAF9E6B7CEC563A4571C1651 /* SwiftData.framework */; };
+		9AE84A1FC40AE0CAC1B25140 /* DueCardsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436843B806B8927DBA64B62E /* DueCardsWidget.swift */; };
+		D4D6DBD567AC606A3E3385B6 /* StudyStreakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DF648323773E2232A019DA6 /* StudyStreakWidget.swift */; };
+		DD821A877FEF073422B76903 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1752DD8FEE8ABFE4FADBD051 /* SwiftUI.framework */; };
+		E6FC2F049787D5C7065542E3 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29C7F93CC78693411C89334B /* WidgetKit.framework */; };
+		EB5ED80682FD61457AC24560 /* CardGenieWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8E9077F3255B6E46E4489801 /* CardGenieWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		49CE9DA12EA9ACC200C5855A /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -21,33 +32,94 @@
 			remoteGlobalIDString = 49CE9D902EA9ACC100C5855A;
 			remoteInfo = CardGenie;
 		};
+		CB2ACD2092F113962DAF88A2 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 49CE9D892EA9ACC100C5855A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9785F725A72A5FC029215723;
+			remoteInfo = CardGenieWidgets;
+		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		D54429D97946BD33B69A0516 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				EB5ED80682FD61457AC24560 /* CardGenieWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		0DF648323773E2232A019DA6 /* StudyStreakWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = StudyStreakWidget.swift; path = CardGenieWidgets/StudyStreakWidget.swift; sourceTree = "<group>"; };
+		1366CFE859D971510BFAC01B /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/Foundation.framework; sourceTree = DEVELOPER_DIR; };
+		1752DD8FEE8ABFE4FADBD051 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
+		29C7F93CC78693411C89334B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/WidgetKit.framework; sourceTree = DEVELOPER_DIR; };
+		436843B806B8927DBA64B62E /* DueCardsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DueCardsWidget.swift; path = CardGenieWidgets/DueCardsWidget.swift; sourceTree = "<group>"; };
 		49CE9D912EA9ACC100C5855A /* CardGenie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CardGenie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		49CE9DA02EA9ACC200C5855A /* CardGenieTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardGenieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		49CE9DAA2EA9ACC200C5855A /* CardGenieUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardGenieUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		5F5AB7F6CAE5A21EF09AF911 /* CardGenieWidgets.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = CardGenieWidgets.swift; path = CardGenieWidgets/CardGenieWidgets.swift; sourceTree = "<group>"; };
+		8E9077F3255B6E46E4489801 /* CardGenieWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CardGenieWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		BAF9E6B7CEC563A4571C1651 /* SwiftData.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftData.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftData.framework; sourceTree = DEVELOPER_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		49353E0F2EBB144C006EE7E2 /* Exceptions for "CardGenie" folder in "CardGenieWidgets" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Data/ContentGenerationModels.swift,
+				Data/ConversationalModels.swift,
+				Data/FlashcardModels.swift,
+				Data/GameModeModels.swift,
+				Data/Models.swift,
+			);
+			target = 9785F725A72A5FC029215723 /* CardGenieWidgets */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		49CE9D932EA9ACC100C5855A /* CardGenie */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				49353E0F2EBB144C006EE7E2 /* Exceptions for "CardGenie" folder in "CardGenieWidgets" target */,
+			);
 			path = CardGenie;
 			sourceTree = "<group>";
 		};
 		49CE9DA32EA9ACC200C5855A /* CardGenieTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = CardGenieTests;
 			sourceTree = "<group>";
 		};
 		49CE9DAD2EA9ACC200C5855A /* CardGenieUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+			);
 			path = CardGenieUITests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		25EBDEDB0F4D95DB73580178 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				243B5B110776CAF9862B60B2 /* Foundation.framework in Frameworks */,
+				DD821A877FEF073422B76903 /* SwiftUI.framework in Frameworks */,
+				E6FC2F049787D5C7065542E3 /* WidgetKit.framework in Frameworks */,
+				338A00E4950F35EB9C0FCF7C /* SwiftData.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		49CE9D8E2EA9ACC100C5855A /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -79,6 +151,8 @@
 				49CE9DA32EA9ACC200C5855A /* CardGenieTests */,
 				49CE9DAD2EA9ACC200C5855A /* CardGenieUITests */,
 				49CE9D922EA9ACC100C5855A /* Products */,
+				E5960A2574ACFDEF1CEDA3CD /* Frameworks */,
+				B5AEB8C6584921F74B9350C6 /* CardGenieWidgets */,
 			);
 			sourceTree = "<group>";
 		};
@@ -88,8 +162,38 @@
 				49CE9D912EA9ACC100C5855A /* CardGenie.app */,
 				49CE9DA02EA9ACC200C5855A /* CardGenieTests.xctest */,
 				49CE9DAA2EA9ACC200C5855A /* CardGenieUITests.xctest */,
+				8E9077F3255B6E46E4489801 /* CardGenieWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		53883D549349739B6CE779B8 /* iOS */ = {
+			isa = PBXGroup;
+			children = (
+				1366CFE859D971510BFAC01B /* Foundation.framework */,
+				1752DD8FEE8ABFE4FADBD051 /* SwiftUI.framework */,
+				29C7F93CC78693411C89334B /* WidgetKit.framework */,
+				BAF9E6B7CEC563A4571C1651 /* SwiftData.framework */,
+			);
+			name = iOS;
+			sourceTree = "<group>";
+		};
+		B5AEB8C6584921F74B9350C6 /* CardGenieWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				5F5AB7F6CAE5A21EF09AF911 /* CardGenieWidgets.swift */,
+				436843B806B8927DBA64B62E /* DueCardsWidget.swift */,
+				0DF648323773E2232A019DA6 /* StudyStreakWidget.swift */,
+			);
+			name = CardGenieWidgets;
+			sourceTree = SOURCE_ROOT;
+		};
+		E5960A2574ACFDEF1CEDA3CD /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				53883D549349739B6CE779B8 /* iOS */,
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -102,17 +206,17 @@
 				49CE9D8D2EA9ACC100C5855A /* Sources */,
 				49CE9D8E2EA9ACC100C5855A /* Frameworks */,
 				49CE9D8F2EA9ACC100C5855A /* Resources */,
+				D54429D97946BD33B69A0516 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				A3F09CF5B4E7895C2856416E /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				49CE9D932EA9ACC100C5855A /* CardGenie */,
 			);
 			name = CardGenie;
-			packageProductDependencies = (
-			);
 			productName = CardGenie;
 			productReference = 49CE9D912EA9ACC100C5855A /* CardGenie.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +238,6 @@
 				49CE9DA32EA9ACC200C5855A /* CardGenieTests */,
 			);
 			name = CardGenieTests;
-			packageProductDependencies = (
-			);
 			productName = CardGenieTests;
 			productReference = 49CE9DA02EA9ACC200C5855A /* CardGenieTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,11 +259,26 @@
 				49CE9DAD2EA9ACC200C5855A /* CardGenieUITests */,
 			);
 			name = CardGenieUITests;
-			packageProductDependencies = (
-			);
 			productName = CardGenieUITests;
 			productReference = 49CE9DAA2EA9ACC200C5855A /* CardGenieUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		9785F725A72A5FC029215723 /* CardGenieWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D61A1583EDC67A8970821633 /* Build configuration list for PBXNativeTarget "CardGenieWidgets" */;
+			buildPhases = (
+				1E8E510CC59CFD81526E76BF /* Sources */,
+				25EBDEDB0F4D95DB73580178 /* Frameworks */,
+				11BA0E251FB2E34BDC0BE946 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CardGenieWidgets;
+			productName = CardGenieWidgets;
+			productReference = 8E9077F3255B6E46E4489801 /* CardGenieWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -203,11 +320,19 @@
 				49CE9D902EA9ACC100C5855A /* CardGenie */,
 				49CE9D9F2EA9ACC200C5855A /* CardGenieTests */,
 				49CE9DA92EA9ACC200C5855A /* CardGenieUITests */,
+				9785F725A72A5FC029215723 /* CardGenieWidgets */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		11BA0E251FB2E34BDC0BE946 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		49CE9D8F2EA9ACC100C5855A /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -232,6 +357,16 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		1E8E510CC59CFD81526E76BF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0FD7C9A5E69888402B2966A5 /* CardGenieWidgets.swift in Sources */,
+				9AE84A1FC40AE0CAC1B25140 /* DueCardsWidget.swift in Sources */,
+				D4D6DBD567AC606A3E3385B6 /* StudyStreakWidget.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		49CE9D8D2EA9ACC100C5855A /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -265,6 +400,12 @@
 			isa = PBXTargetDependency;
 			target = 49CE9D902EA9ACC100C5855A /* CardGenie */;
 			targetProxy = 49CE9DAB2EA9ACC200C5855A /* PBXContainerItemProxy */;
+		};
+		A3F09CF5B4E7895C2856416E /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = CardGenieWidgets;
+			target = 9785F725A72A5FC029215723 /* CardGenieWidgets */;
+			targetProxy = CB2ACD2092F113962DAF88A2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -546,6 +687,49 @@
 			};
 			name = Release;
 		};
+		8217F15B3F3D970AD881A74B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CardGenieWidgets/CardGenieWidgets.entitlements;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CardGenieWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rishabh.CardGenie.CardGenieWidgets;
+				PRODUCT_MODULE_NAME = CardGenieWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		CD61748B8E609771E214ECAA /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CLANG_ENABLE_OBJC_WEAK = NO;
+				CODE_SIGN_ENTITLEMENTS = CardGenieWidgets/CardGenieWidgets.entitlements;
+				DEAD_CODE_STRIPPING = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CardGenieWidgets/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.rishabh.CardGenie.CardGenieWidgets;
+				PRODUCT_MODULE_NAME = CardGenieWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -581,6 +765,15 @@
 			buildConfigurations = (
 				49CE9DBB2EA9ACC200C5855A /* Debug */,
 				49CE9DBC2EA9ACC200C5855A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D61A1583EDC67A8970821633 /* Build configuration list for PBXNativeTarget "CardGenieWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CD61748B8E609771E214ECAA /* Release */,
+				8217F15B3F3D970AD881A74B /* Debug */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

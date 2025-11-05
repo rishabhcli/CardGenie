@@ -33,9 +33,11 @@ actor WidgetDataProvider {
             let container = try await getModelContainer()
             let context = ModelContext(container)
 
+            let now = Date.now
+
             let descriptor = FetchDescriptor<Flashcard>(
                 predicate: #Predicate { flashcard in
-                    flashcard.nextReviewDate <= Date()
+                    flashcard.nextReviewDate <= now
                 }
             )
 
@@ -59,7 +61,7 @@ actor WidgetDataProvider {
 
             // Calculate streak from last review dates
             let sortedDates = flashcards
-                .compactMap { $0.lastReviewDate }
+                .compactMap { $0.lastReviewed }
                 .sorted(by: >)
 
             guard let mostRecent = sortedDates.first else {
