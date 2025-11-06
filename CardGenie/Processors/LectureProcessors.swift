@@ -71,20 +71,12 @@ final class LectureRecorder: NSObject {
         }
 
         // Request microphone
-        let audioSession = AVAudioSession.sharedInstance()
-        do {
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-
-            let micAuth = await withCheckedContinuation { continuation in
-                AVAudioApplication.requestRecordPermission { granted in
-                    continuation.resume(returning: granted)
-                }
+        let micAuth = await withCheckedContinuation { continuation in
+            AVAudioApplication.requestRecordPermission { granted in
+                continuation.resume(returning: granted)
             }
-            return micAuth
-        } catch {
-            return false
         }
+        return micAuth
     }
 
     // MARK: - Recording
@@ -106,7 +98,7 @@ final class LectureRecorder: NSObject {
         audioFileURL = documentsPath.appendingPathComponent("lecture_\(UUID().uuidString).m4a")
 
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement)
+        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
         do {
@@ -165,6 +157,15 @@ final class LectureRecorder: NSObject {
         summaryTimer = nil
 
         isRecording = false
+
+        // Deactivate audio session to restore other audio playback
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Log error but don't fail - this is cleanup code
+            print("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        }
 
         // Calculate duration
         if let start = recordingStartTime {

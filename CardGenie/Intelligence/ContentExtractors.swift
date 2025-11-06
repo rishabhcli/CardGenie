@@ -322,7 +322,7 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
 
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
         // Setup recording URL
@@ -428,6 +428,15 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
         // Stop timer
         recordingTimerTask?.cancel()
         recordingTimerTask = nil
+
+        // Deactivate audio session to restore other audio playback
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Log error but don't fail - this is cleanup code
+            logger.error("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        }
 
         // Update state
         isRecording = false

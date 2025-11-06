@@ -834,8 +834,8 @@ final class VoiceTutor: NSObject, AVSpeechSynthesizerDelegate {
         }
 
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .measurement)
-        try audioSession.setActive(true)
+        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+        try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
         recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
         guard let recognitionRequest = recognitionRequest else {
@@ -884,6 +884,15 @@ final class VoiceTutor: NSObject, AVSpeechSynthesizerDelegate {
 
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
+
+        // Deactivate audio session to restore other audio playback
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Log error but don't fail - this is cleanup code
+            print("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        }
 
         isListening = false
     }
