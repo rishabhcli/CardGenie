@@ -1,6 +1,19 @@
 {
   "fill" : {
-    "automatic-gradient" : "extended-srgb:0.00000,0.53333,1.00000,1.00000"
+    "linear-gradient" : [
+      "display-p3:0.17392,0.17637,0.17934,1.00000",
+      "display-p3:0.05023,0.11702,0.21926,1.00000"
+    ],
+    "orientation" : {
+      "start" : {
+        "x" : 0.5,
+        "y" : 0
+      },
+      "stop" : {
+        "x" : 0.5,
+        "y" : 0.7
+      }
+    }
   },
   "groups" : [
     {
@@ -36,7 +49,7 @@
           "fill" : {
             "linear-gradient" : [
               "display-p3:0.89465,0.28135,0.16952,1.00000",
-              "display-p3:0.96783,0.81842,0.63165,1.00000"
+              "display-p3:0.94877,0.80242,0.61503,1.00000"
             ],
             "orientation" : {
               "start" : {
