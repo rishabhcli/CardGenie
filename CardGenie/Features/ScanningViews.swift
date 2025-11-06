@@ -714,6 +714,7 @@ struct ScanReviewView: View {
     @State private var isGenerating = false
     @State private var errorMessage: String?
     @State private var showError = false
+    @State private var showVoiceAssistant = false
 
     @StateObject private var fmClient = FMClient()
 
@@ -744,6 +745,9 @@ struct ScanReviewView: View {
                     // Sections list
                     sectionsListView
 
+                    // Talk about this button
+                    talkAboutThisButton
+
                     // Generate button
                     generateButton
                 }
@@ -767,6 +771,15 @@ struct ScanReviewView: View {
                         }
                     }
                 ))
+            }
+            .sheet(isPresented: $showVoiceAssistant) {
+                // Create temporary StudyContent for context
+                let tempContent = StudyContent(source: .photo, rawContent: extractedText)
+                tempContent.topic = selectedTopic.isEmpty ? "Scanned Content" : selectedTopic
+                tempContent.extractedText = extractedText
+
+                let context = ConversationContext(studyContent: tempContent)
+                VoiceAssistantView(context: context)
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}
@@ -921,6 +934,23 @@ struct ScanReviewView: View {
                             .strokeBorder(Color.cosmicPurple, lineWidth: 1.5, antialiased: true)
                     )
             }
+        }
+    }
+
+    private var talkAboutThisButton: some View {
+        Button {
+            showVoiceAssistant = true
+        } label: {
+            HStack {
+                Image(systemName: "waveform.circle.fill")
+                Text("Talk About This")
+            }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue.gradient)
+            .foregroundStyle(.white)
+            .cornerRadius(CornerRadius.md)
+            .font(.system(.body, design: .rounded, weight: .semibold))
         }
     }
 

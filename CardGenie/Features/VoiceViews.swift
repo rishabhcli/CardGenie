@@ -21,10 +21,16 @@ import Combine
 // MARK: - Voice Assistant View
 
 struct VoiceAssistantView: View {
-    @StateObject private var assistant = VoiceAssistant()
+    @StateObject private var assistant: VoiceAssistant
     @State private var showPermissionAlert = false
     @State private var hasRequestedPermission = false
     @State private var scrollProxy: ScrollViewProxy? = nil
+
+    // MARK: - Initialization
+
+    init(context: ConversationContext = ConversationContext()) {
+        _assistant = StateObject(wrappedValue: VoiceAssistant(context: context))
+    }
 
     var body: some View {
         NavigationStack {
@@ -54,10 +60,17 @@ struct VoiceAssistantView: View {
                             emptyConversationView
                         }
 
+                        // Streaming response (shown in real-time)
+                        if !assistant.streamingResponse.isEmpty {
+                            streamingResponseView
+                                .padding(.horizontal)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+
                         Spacer()
 
-                        // Mic Button
-                        micButton
+                        // Control Buttons
+                        controlButtons
                             .padding(.bottom, 20)
                     }
                 }
@@ -295,42 +308,93 @@ struct VoiceAssistantView: View {
         }
     }
 
-    // MARK: - Mic Button
+    // MARK: - Streaming Response View
 
-    private var micButton: some View {
-        Button {
-            if assistant.isListening {
-                assistant.stopListening()
-            } else if !assistant.isProcessing && !assistant.isSpeaking {
-                do {
-                    try assistant.startListening()
-                } catch {
-                    print("Failed to start listening: \(error)")
+    private var streamingResponseView: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Image(systemName: "waveform")
+                    .foregroundStyle(.blue)
+                    .symbolEffect(.pulse)
+                Text("AI Tutor (streaming...)")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(assistant.streamingResponse)
+                .font(.body)
+                .padding(12)
+                .background(Color.gray.opacity(0.2))
+                .cornerRadius(16)
+        }
+    }
+
+    // MARK: - Control Buttons
+
+    private var controlButtons: some View {
+        HStack(spacing: 20) {
+            // Mic Button
+            Button {
+                if assistant.isListening {
+                    assistant.stopListening()
+                } else if !assistant.isProcessing && !assistant.isSpeaking {
+                    do {
+                        try assistant.startListening()
+                    } catch {
+                        print("Failed to start listening: \(error)")
+                    }
+                }
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: assistant.isListening ? [.red, .orange] : [.cosmicPurple, .mysticBlue],
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                        )
+                        .frame(width: 80, height: 80)
+                        .shadow(
+                            color: assistant.isListening ? .red.opacity(0.5) : .cosmicPurple.opacity(0.5),
+                            radius: 20
+                        )
+
+                    Image(systemName: assistant.isListening ? "stop.fill" : "mic.fill")
+                        .font(.system(size: 35))
+                        .foregroundStyle(.white)
                 }
             }
-        } label: {
-            ZStack {
-                Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: assistant.isListening ? [.red, .orange] : [.cosmicPurple, .mysticBlue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 80, height: 80)
-                    .shadow(
-                        color: assistant.isListening ? .red.opacity(0.5) : .cosmicPurple.opacity(0.5),
-                        radius: 20
-                    )
+            .disabled(assistant.isSpeaking || assistant.isProcessing)
+            .opacity(assistant.isSpeaking || assistant.isProcessing ? 0.5 : 1.0)
 
-                Image(systemName: assistant.isListening ? "stop.fill" : "mic.fill")
-                    .font(.system(size: 35))
-                    .foregroundStyle(.white)
+            // Interrupt Button (only visible when AI is speaking)
+            if assistant.isSpeaking || assistant.isProcessing {
+                Button {
+                    assistant.interrupt()
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.orange, .red],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .frame(width: 60, height: 60)
+                            .shadow(color: .orange.opacity(0.5), radius: 15)
+
+                        Image(systemName: "hand.raised.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .transition(.scale.combined(with: .opacity))
             }
         }
-        .disabled(assistant.isSpeaking || assistant.isProcessing)
-        .opacity(assistant.isSpeaking || assistant.isProcessing ? 0.5 : 1.0)
+        .animation(.spring(response: 0.3), value: assistant.isSpeaking)
+        .animation(.spring(response: 0.3), value: assistant.isProcessing)
     }
 
     // MARK: - Permissions
@@ -369,10 +433,12 @@ struct VoiceAssistantView: View {
     }
 }
 
-// MARK: - Voice Assistant Engine
+// MARK: - Voice Assistant Engine (Enhanced with Streaming)
 
 @MainActor
 class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
+    // MARK: - Published State
+
     @Published var isListening = false
     @Published var isSpeaking = false
     @Published var isProcessing = false
@@ -380,7 +446,12 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var conversation: [ConversationMessage] = []
     @Published var lastError: String?
 
-    private let llm: LLMEngine
+    /// Streaming response text (updates in real-time)
+    @Published var streamingResponse = ""
+
+    // MARK: - Private State
+
+    private let fmClient = FMClient()
     private let speechRecognizer: SFSpeechRecognizer
     private let audioEngine = AVAudioEngine()
     private let speechSynthesizer = AVSpeechSynthesizer()
@@ -389,28 +460,69 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
 
-    override init() {
-        self.llm = AIEngineFactory.createLLMEngine()
+    /// Current conversation session (if using SwiftData persistence)
+    private var currentSession: ConversationSession?
+
+    /// Conversation context (study content, flashcards, etc.)
+    private var context: ConversationContext
+
+    /// Streaming task for cancellation
+    private var streamingTask: Task<Void, Never>?
+
+    /// Sentence buffer for incremental TTS
+    private var lastSpokenText = ""
+
+    /// Silence detection timer
+    private var silenceTimer: Timer?
+    private var lastTranscriptUpdate = Date()
+
+    // MARK: - Initialization
+
+    init(context: ConversationContext = ConversationContext()) {
+        self.context = context
         // Initialize speech recognizer with fallback
         self.speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer()!
         super.init()
         speechSynthesizer.delegate = self
         log.info("🎙️ Voice Assistant initialized (OFFLINE MODE)")
         log.info("✅ On-device speech recognition: ENABLED")
-        log.info("✅ On-device AI processing: \(self.llm.isAvailable ? "AVAILABLE" : "UNAVAILABLE")")
+        log.info("✅ Apple Intelligence: \(fmClient.capability() == .available ? "AVAILABLE" : "UNAVAILABLE")")
     }
 
     func clearConversation() {
         conversation.removeAll()
         lastError = nil
+        streamingResponse = ""
         log.info("🗑️ Conversation cleared")
     }
 
-    // MARK: - Cancellation
+    // MARK: - Cancellation & Interruption
 
     func cancelListening() {
         log.info("🛑 Cancelling voice recognition")
         stopListening()
+    }
+
+    /// Interrupt AI response mid-speech
+    func interrupt() {
+        log.info("🛑 Interrupting AI response...")
+
+        // Cancel streaming task
+        streamingTask?.cancel()
+        streamingTask = nil
+
+        // Stop speech immediately
+        if speechSynthesizer.isSpeaking {
+            speechSynthesizer.stopSpeaking(at: .immediate)
+        }
+
+        // Reset state
+        isSpeaking = false
+        isProcessing = false
+        streamingResponse = ""
+        lastSpokenText = ""
+
+        log.info("✅ AI response interrupted")
     }
 
     // MARK: - Listening
@@ -507,7 +619,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         isListening = false
     }
 
-    // MARK: - Question Handling
+    // MARK: - Question Handling (with Streaming)
 
     private func handleQuestion(_ question: String) async {
         guard !question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -525,60 +637,162 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         // Start processing
         isProcessing = true
+        streamingResponse = ""
+        lastSpokenText = ""
 
-        // Get answer
-        do {
-            log.info("🧠 Generating answer (on-device AI)...")
-            let answer = try await generateAnswer(question: question)
-            log.info("✅ Answer generated: '\(answer.prefix(50))...'")
+        // Stream AI response
+        await streamAIResponse(to: question)
 
-            // Add assistant message
-            let assistantMessage = ConversationMessage(text: answer, isUser: false)
-            conversation.append(assistantMessage)
-
-            isProcessing = false
-
-            // Speak answer
-            await speak(answer)
-
-            // Auto-listen for follow-up (with small delay)
+        // Auto-listen for follow-up (with small delay)
+        if !streamingResponse.isEmpty {
             try? await Task.sleep(nanoseconds: 500_000_000) // 0.5s
-            try? startListening()
-
-        } catch {
-            log.error("❌ Failed to generate answer: \(error.localizedDescription)")
-            isProcessing = false
-            lastError = "AI processing failed"
-
-            let errorAnswer = "Sorry, I had trouble processing that. Could you rephrase your question?"
-            let errorMessage = ConversationMessage(text: errorAnswer, isUser: false)
-            conversation.append(errorMessage)
-
-            await speak(errorAnswer)
-
-            try? await Task.sleep(nanoseconds: 500_000_000)
             try? startListening()
         }
     }
 
-    private func generateAnswer(question: String) async throws -> String {
-        // Generate general knowledge answer using on-device LLM
-        let prompt = """
-        You are a helpful voice assistant. Answer this question clearly and concisely in 2-3 sentences maximum.
-        This answer will be spoken aloud, so keep it conversational and easy to understand.
+    /// Stream AI response using Foundation Models
+    private func streamAIResponse(to question: String) async {
+        #if canImport(FoundationModels)
+        guard #available(iOS 26.0, *) else {
+            await handleFallbackResponse(to: question)
+            return
+        }
 
-        QUESTION: \(question)
+        // Check AI availability
+        guard fmClient.capability() == .available else {
+            log.error("❌ Apple Intelligence not available")
+            lastError = "AI is not available right now"
+            await handleFallbackResponse(to: question)
+            return
+        }
 
-        Provide a clear, concise answer:
-        """
+        log.info("🧠 Starting streaming response...")
 
-        let answer = try await llm.complete(prompt)
-        return answer.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+        do {
+            // Create session with context-aware system prompt
+            let session = LanguageModelSession {
+                context.systemPrompt()
+            }
+
+            // Build prompt with conversation history
+            let conversationHistory = formatConversationHistory()
+            let prompt = """
+            Recent conversation:
+            \(conversationHistory)
+
+            Student's question: \(question)
+
+            Respond naturally and concisely (2-3 sentences). Ask follow-up questions to encourage deeper understanding.
+            """
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.7 // Conversational warmth
+            )
+
+            // Stream the response
+            let stream = session.streamResponse(to: prompt, options: options)
+
+            // Start speaking as soon as we have content
+            isSpeaking = true
+
+            var fullResponse = ""
+
+            for try await partial in stream {
+                // Update UI immediately
+                streamingResponse = partial.content
+                fullResponse = partial.content
+
+                // Speak new sentences as they arrive
+                let newText = extractNewText(from: partial.content, after: lastSpokenText)
+                if !newText.isEmpty {
+                    speakTextIncremental(newText)
+                    lastSpokenText = partial.content
+                }
+            }
+
+            // Finalize message
+            let assistantMessage = ConversationMessage(text: fullResponse, isUser: false)
+            conversation.append(assistantMessage)
+
+            log.info("✅ Streaming response complete: \(fullResponse.count) chars")
+
+            isProcessing = false
+
+            // Wait for speech to finish
+            while isSpeaking {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
+
+        } catch LanguageModelSession.GenerationError.guardrailViolation {
+            log.error("❌ Guardrail violation")
+            lastError = "I can't help with that. Let's focus on your studies!"
+            await handleErrorResponse()
+        } catch LanguageModelSession.GenerationError.refusal {
+            log.error("❌ Model refused request")
+            lastError = "I'm not able to answer that question."
+            await handleErrorResponse()
+        } catch {
+            log.error("❌ Streaming failed: \(error.localizedDescription)")
+            lastError = "Something went wrong. Try asking again."
+            await handleErrorResponse()
+        }
+
+        #else
+        await handleFallbackResponse(to: question)
+        #endif
+    }
+
+    /// Extract only new text from current response
+    private func extractNewText(from current: String, after previous: String) -> String {
+        guard current.count > previous.count else { return "" }
+        let startIndex = current.index(current.startIndex, offsetBy: previous.count)
+        return String(current[startIndex...])
+    }
+
+    /// Format conversation history for context
+    private func formatConversationHistory() -> String {
+        let recentMessages = conversation.suffix(5) // Last 5 messages
+        if recentMessages.isEmpty {
+            return "This is the start of the conversation."
+        }
+        return recentMessages.map { message in
+            let role = message.isUser ? "Student" : "Tutor"
+            return "\(role): \(message.text)"
+        }.joined(separator: "\n")
+    }
+
+    /// Fallback response when Apple Intelligence unavailable
+    private func handleFallbackResponse(to question: String) async {
+        let fallbackResponse = "I'm currently unavailable. Apple Intelligence must be enabled for voice conversations. You can enable it in Settings > Apple Intelligence."
+        streamingResponse = fallbackResponse
+
+        let message = ConversationMessage(text: fallbackResponse, isUser: false)
+        conversation.append(message)
+
+        isProcessing = false
+
+        await speak(fallbackResponse)
+    }
+
+    /// Handle error response
+    private func handleErrorResponse() async {
+        let errorResponse = lastError ?? "Sorry, I had trouble with that. Could you rephrase?"
+        streamingResponse = errorResponse
+
+        let message = ConversationMessage(text: errorResponse, isUser: false)
+        conversation.append(message)
+
+        isProcessing = false
+
+        await speak(errorResponse)
     }
 
     // MARK: - Speaking
 
     private func speak(_ text: String) async {
+        guard !text.isEmpty else { return }
+
         let utterance = AVSpeechUtterance(string: text)
 
         if let voice = AVSpeechSynthesisVoice(language: "en-US") {
@@ -592,10 +806,64 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         isSpeaking = true
         speechSynthesizer.speak(utterance)
 
+        log.info("🔊 Speaking: \(text.prefix(50))...")
+
         // Wait for speech to finish
         while isSpeaking {
             try? await Task.sleep(nanoseconds: 100_000_000)
         }
+    }
+
+    /// Speak text incrementally as it streams in (sentence-by-sentence)
+    private func speakTextIncremental(_ text: String) {
+        guard !text.isEmpty else { return }
+
+        // Extract complete sentences from the new text
+        let sentences = extractCompleteSentences(from: text)
+
+        for sentence in sentences {
+            let utterance = AVSpeechUtterance(string: sentence)
+
+            if let voice = AVSpeechSynthesisVoice(language: "en-US") {
+                utterance.voice = voice
+            }
+
+            utterance.rate = 0.52
+            utterance.pitchMultiplier = 1.0
+            utterance.volume = 1.0
+
+            speechSynthesizer.speak(utterance)
+            log.info("🔊 Speaking sentence: \(sentence.prefix(30))...")
+        }
+    }
+
+    /// Extract complete sentences from text
+    private func extractCompleteSentences(from text: String) -> [String] {
+        let sentenceEndings: Set<Character> = [".", "!", "?"]
+        var sentences: [String] = []
+        var currentSentence = ""
+
+        for char in text {
+            currentSentence.append(char)
+
+            if sentenceEndings.contains(char) {
+                let trimmed = currentSentence.trimmingCharacters(in: .whitespaces)
+                if !trimmed.isEmpty {
+                    sentences.append(trimmed)
+                }
+                currentSentence = ""
+            }
+        }
+
+        // Add remaining text if it looks complete (ends with space or newline)
+        if !currentSentence.isEmpty {
+            let trimmed = currentSentence.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty && (text.last?.isWhitespace == true || text.last?.isNewline == true) {
+                sentences.append(trimmed)
+            }
+        }
+
+        return sentences
     }
 
     // MARK: - AVSpeechSynthesizerDelegate
