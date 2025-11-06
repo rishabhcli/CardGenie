@@ -35,11 +35,11 @@ struct PracticeProblem: Equatable {
     let steps: [String]
 
     @Guide(description: "Difficulty compared to original: easier, same, or harder")
-    let difficulty: DifficultyLevel
+    let difficulty: RelativeDifficulty
 }
 
 @Generable
-enum DifficultyLevel: String {
+enum RelativeDifficulty: String {
     case easier
     case same
     case harder
@@ -53,10 +53,10 @@ struct PracticeProblem: Equatable, Codable {
     let problem: String
     let solution: String
     let steps: [String]
-    let difficulty: DifficultyLevel
+    let difficulty: RelativeDifficulty
 }
 
-enum DifficultyLevel: String, Equatable, Codable {
+enum RelativeDifficulty: String, Equatable, Codable {
     case easier
     case same
     case harder
@@ -194,7 +194,7 @@ final class GeneratedConnectionSet {
 
 // MARK: - Display Helpers
 
-extension DifficultyLevel {
+extension RelativeDifficulty {
     var displayName: String {
         switch self {
         case .easier: return "Easier"

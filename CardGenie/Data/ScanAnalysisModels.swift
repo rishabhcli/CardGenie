@@ -11,6 +11,31 @@ import Foundation
 #if canImport(FoundationModels)
 import FoundationModels
 
+// MARK: - Academic Subject Category
+
+@Generable
+enum AcademicSubject: String {
+    case math = "Math"
+    case science = "Science"
+    case history = "History"
+    case language = "Language"
+    case literature = "Literature"
+    case computerScience = "Computer Science"
+    case business = "Business"
+    case medicine = "Medicine"
+    case engineering = "Engineering"
+    case other = "Other"
+}
+
+// MARK: - Material Difficulty Level
+
+@Generable
+enum MaterialDifficulty: String {
+    case elementary = "Elementary"
+    case intermediate = "Intermediate"
+    case advanced = "Advanced"
+}
+
 // MARK: - Scan Analysis
 
 /// AI analysis result for scanned study material
@@ -22,8 +47,8 @@ struct ScanAnalysis {
     @Guide(description: "Main topics or subjects detected (1-5 topics)", .count(1...5))
     var topics: [String]
 
-    @Guide(description: "Academic subject category from the list", .options(["Math", "Science", "History", "Language", "Literature", "Computer Science", "Business", "Medicine", "Engineering", "Other"]))
-    var subject: String
+    @Guide(description: "Academic subject category - choose the most relevant")
+    var subject: AcademicSubject
 
     @Guide(description: "Suggested number of flashcards to generate based on content density (0-20)", .range(0...20))
     var suggestedFlashcardCount: Int
@@ -31,8 +56,8 @@ struct ScanAnalysis {
     @Guide(description: "Key concepts or terms that should be studied (0-10 terms)", .count(0...10))
     var keyTerms: [String]
 
-    @Guide(description: "Difficulty level of the material", .options(["Elementary", "Intermediate", "Advanced"]))
-    var difficultyLevel: String
+    @Guide(description: "Difficulty level of the material based on complexity and prerequisites")
+    var difficultyLevel: MaterialDifficulty
 
     @Guide(description: "Suggested next actions for the student (1-3 actions)", .count(1...3))
     var suggestedActions: [String]
@@ -50,11 +75,24 @@ struct ChatResponseWithActions {
     var suggestedActions: [ActionSuggestion]
 }
 
+// MARK: - Action Type Enum
+
+@Generable
+enum ActionType: String {
+    case generateFlashcards = "generate_flashcards"
+    case summarize = "summarize"
+    case explainConcept = "explain_concept"
+    case quizMe = "quiz_me"
+    case createNotes = "create_notes"
+    case compareScans = "compare_scans"
+    case extractKeyPoints = "extract_key_points"
+}
+
 /// A single action suggestion
 @Generable
 struct ActionSuggestion {
-    @Guide(description: "Type of action", .options(["generate_flashcards", "summarize", "explain_concept", "quiz_me", "create_notes", "compare_scans", "extract_key_points"]))
-    var type: String
+    @Guide(description: "Type of action to perform")
+    var type: ActionType
 
     @Guide(description: "Short title for the action button (max 3 words)")
     var title: String
@@ -71,10 +109,10 @@ struct ActionSuggestion {
 struct FallbackScanAnalysis {
     var summary: String
     var topics: [String]
-    var subject: String
+    var subject: AcademicSubject
     var suggestedFlashcardCount: Int
     var keyTerms: [String]
-    var difficultyLevel: String
+    var difficultyLevel: MaterialDifficulty
     var suggestedActions: [String]
 
     /// Create a basic analysis without AI
@@ -89,10 +127,10 @@ struct FallbackScanAnalysis {
         return FallbackScanAnalysis(
             summary: "Scanned content extracted successfully. (\(wordCount) words)",
             topics: ["General"],
-            subject: "Other",
+            subject: .other,
             suggestedFlashcardCount: suggestedCount,
             keyTerms: [],
-            difficultyLevel: "Intermediate",
+            difficultyLevel: .intermediate,
             suggestedActions: ["Generate flashcards", "Summarize content", "Quiz yourself"]
         )
     }

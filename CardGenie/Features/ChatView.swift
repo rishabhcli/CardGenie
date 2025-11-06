@@ -99,7 +99,7 @@ struct ChatView: View {
                         // Streaming response
                         if engine.isProcessing && !engine.streamingResponse.isEmpty {
                             MessageBubbleView(
-                                message: ChatMessage(role: .assistant, content: engine.streamingResponse)
+                                message: ChatMessageModel(role: .assistant, content: engine.streamingResponse)
                             )
                             .id("streaming")
                         }
@@ -244,7 +244,7 @@ struct ChatView: View {
 // MARK: - Message Bubble View
 
 struct MessageBubbleView: View {
-    let message: ChatMessage
+    let message: ChatMessageModel
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -312,5 +312,5 @@ struct QuickStartButton: View {
 
 #Preview {
     ChatView()
-        .modelContainer(for: [ChatSession.self, ChatMessage.self])
+        .modelContainer(for: [ChatSession.self, ChatMessageModel.self])
 }

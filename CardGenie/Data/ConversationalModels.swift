@@ -146,7 +146,7 @@ final class ConversationalSession {
     var turnCount: Int
     
     @Relationship(deleteRule: .cascade)
-    var messages: [ChatMessage] = []
+    var messages: [ConversationalMessage] = []
 
     init(flashcardID: UUID, mode: ConversationalMode) {
         self.id = UUID()
@@ -164,7 +164,7 @@ final class ConversationalSession {
     }
 
     func addMessage(role: MessageRole, content: String) {
-        let message = ChatMessage(role: role, content: content)
+        let message = ConversationalMessage(role: role, content: content)
         messages.append(message)
         turnCount += 1
     }
@@ -176,8 +176,10 @@ enum ConversationalMode: String, Codable {
     case debate = "debate"
 }
 
+/// Message in a conversational tutoring session (Socratic, Debate, etc.)
+/// Renamed to avoid collision with ChatMessageModel in ChatModels.swift
 @Model
-final class ChatMessage {
+final class ConversationalMessage {
     @Attribute(.unique) var id: UUID
     var role: MessageRole
     var content: String
