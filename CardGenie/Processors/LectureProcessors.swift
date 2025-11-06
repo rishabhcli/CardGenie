@@ -24,7 +24,7 @@ protocol LectureRecorderDelegate: AnyObject {
     func recorder(_ recorder: LectureRecorder, didEncounter error: Error)
 }
 
-@Observable
+@MainActor
 final class LectureRecorder: NSObject {
     private let audioEngine = AVAudioEngine()
     private let transcriber = OnDeviceTranscriber()
@@ -33,8 +33,8 @@ final class LectureRecorder: NSObject {
     private var audioFile: AVAudioFile?
     private var audioFileURL: URL?
 
-    private let llm: LLMEngine
-    private let embedding: EmbeddingEngine
+    private lazy var llm: LLMEngine = AIEngineFactory.createLLMEngine()
+    private lazy var embedding: EmbeddingEngine = AIEngineFactory.createEmbeddingEngine()
 
     // State
     private(set) var isRecording = false
@@ -58,10 +58,7 @@ final class LectureRecorder: NSObject {
         return duration
     }
 
-    init(llm: LLMEngine = AIEngineFactory.createLLMEngine(),
-         embedding: EmbeddingEngine = AIEngineFactory.createEmbeddingEngine()) {
-        self.llm = llm
-        self.embedding = embedding
+    override init() {
         super.init()
         transcriber.delegate = self
     }
@@ -193,16 +190,16 @@ final class LectureRecorder: NSObject {
 
     private func handleRecognitionResult(_ result: SFSpeechRecognitionResult, isFinal: Bool) {
         let transcription = result.bestTranscription.formattedString
-        transcript = transcription
-        delegate?.recorder(self, didUpdateTranscript: transcription)
+        Task { @MainActor in
+            transcript = transcription
+            delegate?.recorder(self, didUpdateTranscript: transcription)
 
-        // Update rolling buffer
-        if isFinal {
-            rollingBuffer += transcription + " "
+            // Update rolling buffer
+            if isFinal {
+                rollingBuffer += transcription + " "
 
-            // Check if we should chunk (based on silence or length)
-            if rollingBuffer.split(separator: " ").count > 100 {
-                Task {
+                // Check if we should chunk (based on silence or length)
+                if rollingBuffer.split(separator: " ").count > 100 {
                     await createChunkFromBuffer(session: nil)
                 }
             }

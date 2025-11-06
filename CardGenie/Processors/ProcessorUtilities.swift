@@ -13,11 +13,7 @@ import SwiftData
 // MARK: - CSV Importer
 
 final class CSVImporter {
-    private let llm: LLMEngine
-
-    init(llm: LLMEngine = AIEngineFactory.createLLMEngine()) {
-        self.llm = llm
-    }
+    private lazy var llm: LLMEngine = AIEngineFactory.createLLMEngine()
 
     // MARK: - Import CSV
 
@@ -242,11 +238,10 @@ enum CSVError: LocalizedError {
 // MARK: - Smart Scheduler
 
 final class SmartScheduler {
-    private let llm: LLMEngine
+    private lazy var llm: LLMEngine = AIEngineFactory.createLLMEngine()
     private let modelContext: ModelContext
 
-    init(llm: LLMEngine = AIEngineFactory.createLLMEngine(), modelContext: ModelContext) {
-        self.llm = llm
+    init(modelContext: ModelContext) {
         self.modelContext = modelContext
     }
 

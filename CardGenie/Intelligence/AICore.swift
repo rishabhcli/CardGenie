@@ -41,7 +41,7 @@ final class FMClient: ObservableObject {
 
     /// Check if Apple Intelligence is available on this device
     /// - Returns: Current capability state
-    func capability() -> FMCapabilityState {
+    nonisolated func capability() -> FMCapabilityState {
         #if canImport(FoundationModels)
         if #available(iOS 26.0, *) {
             let model = SystemLanguageModel.default
@@ -847,20 +847,13 @@ final class AppleEmbedding: EmbeddingEngine {
 
 /// Factory for creating appropriate AI engines
 struct AIEngineFactory {
-    static func createLLMEngine() -> LLMEngine {
-        // Try Apple's on-device first
-        let apple = AppleOnDeviceLLM()
-        if apple.isAvailable {
-            return apple
-        }
-
-        // Fallback to CoreML (to be implemented)
-        // return CoreMLLLM()
-
-        return apple // Return anyway, will fail gracefully
+    nonisolated static func createLLMEngine() -> LLMEngine {
+        // Return the Apple on-device implementation
+        // It will check availability at runtime
+        return AppleOnDeviceLLM()
     }
 
-    static func createEmbeddingEngine() -> EmbeddingEngine {
+    nonisolated static func createEmbeddingEngine() -> EmbeddingEngine {
         return AppleEmbedding()
     }
 }
