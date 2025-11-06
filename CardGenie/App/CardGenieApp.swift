@@ -16,13 +16,16 @@ struct CardGenieApp: App {
     /// with no iCloud sync or external file access.
     /// Falls back to in-memory storage if persistent storage fails.
     var modelContainer: ModelContainer = {
-        // Create schema with all models including conversation history
+        // Create schema with all models including conversation history and chat
         let schema = Schema([
             StudyContent.self,
             Flashcard.self,
             FlashcardSet.self,
-            ConversationSession.self,
-            ConversationMessage.self
+            ConversationSession.self,  // Voice assistant
+            ConversationMessage.self,  // Voice assistant
+            ChatSession.self,          // AI Chat
+            ChatMessage.self,          // AI Chat
+            ScanAttachment.self        // AI Chat scans
         ])
 
         let modelConfiguration = ModelConfiguration(
@@ -231,12 +234,8 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("AI", systemImage: "sparkles", value: 2) {
-                NavigationStack {
-                    AIChatView()
-                        .navigationTitle("AI Assistant")
-                        .navigationBarTitleDisplayMode(.large)
-                }
+            Tab("Chat", systemImage: "message.fill", value: 2) {
+                ChatView()
             }
 
             Tab("Record", systemImage: "mic.circle.fill", value: 3) {
@@ -277,9 +276,9 @@ struct MainTabView: View {
 
             flashcardsTabLegacy
 
-            AIChatView()
+            ChatView()
                 .tabItem {
-                    Label("AI Chat", systemImage: "bubble.left.and.bubble.right.fill")
+                    Label("Chat", systemImage: "message.fill")
                 }
                 .tag(2)
 
