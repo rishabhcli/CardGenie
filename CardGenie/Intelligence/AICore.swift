@@ -33,7 +33,6 @@ enum FMCapabilityState {
 
 /// Client for interacting with Apple's on-device Foundation Models.
 /// All AI operations run locally on the Neural Engine, preserving privacy.
-@MainActor
 final class FMClient: ObservableObject {
     private let log = Logger(subsystem: "com.smartjournal.app", category: "FMClient")
 

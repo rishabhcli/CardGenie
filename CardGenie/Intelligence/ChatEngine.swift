@@ -137,7 +137,7 @@ final class ChatEngine: ObservableObject {
         // Check context budget and prune if needed
         pruneContextIfNeeded()
 
-        var prompt = """
+        let prompt = """
         Previous conversation:
         \(context.formatMessageHistory(messages, limit: 8))
 
