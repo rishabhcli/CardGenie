@@ -14,6 +14,7 @@ import Speech
 import OSLog
 import GroupActivities
 import Combine
+import PhotosUI
 #if canImport(FoundationModels)
 import FoundationModels
 #endif
@@ -2127,12 +2128,28 @@ struct AIChatView: View {
     @State private var currentMode: ChatMode = .general
     @FocusState private var isInputFocused: Bool
 
+    // Photo scanning state
+    @State private var showCamera = false
+    @State private var showPhotoPicker = false
+    @State private var showImageSourceMenu = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var scannedImages: [UIImage] = []
+    @State private var isExtractingText = false
+    @State private var extractedTexts: [String] = []
+    @StateObject private var textExtractor = VisionTextExtractor()
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // Voice status indicator
                 if chatEngine.isListening || chatEngine.isSpeaking || chatEngine.isGenerating {
                     voiceStatusBanner
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+
+                // Scanned images preview (if any)
+                if !scannedImages.isEmpty {
+                    scannedImagesPreview
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
 
@@ -2227,6 +2244,31 @@ struct AIChatView: View {
             } message: {
                 Text(chatEngine.availabilityMessage)
             }
+            .sheet(isPresented: $showCamera) {
+                CameraView(image: Binding(
+                    get: { scannedImages.first },
+                    set: { if let image = $0 { handleCapturedImage(image) } }
+                ))
+            }
+            .photosPicker(
+                isPresented: $showPhotoPicker,
+                selection: $selectedPhoto,
+                matching: .images
+            )
+            .confirmationDialog("Add Photo", isPresented: $showImageSourceMenu) {
+                Button("Take Photo") {
+                    showCamera = true
+                }
+                Button("Choose from Library") {
+                    showPhotoPicker = true
+                }
+                Button("Cancel", role: .cancel) {}
+            }
+            .onChange(of: selectedPhoto) { _, newValue in
+                if let newValue {
+                    Task { await loadSelectedPhoto(newValue) }
+                }
+            }
         }
     }
 
@@ -2264,9 +2306,13 @@ struct AIChatView: View {
                     .font(.title2.bold())
                     .foregroundStyle(.primary)
 
+                Text("Type, speak, or scan photos")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+
                 Text("100% on-device, private, and secure")
                     .font(.footnote)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.tertiary)
             }
 
             Spacer()
@@ -2349,6 +2395,25 @@ struct AIChatView: View {
 
     private var inputBar: some View {
         HStack(spacing: 12) {
+            // Photo/Camera button with iOS 26 glass
+            Button {
+                showImageSourceMenu = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(scannedImages.isEmpty ? Color.cosmicPurple.opacity(0.15) : Color.blue.opacity(0.2))
+                        .frame(width: 44, height: 44)
+                        .glassEffect(.regular, in: .circle)
+
+                    Image(systemName: scannedImages.isEmpty ? "camera.fill" : "checkmark.circle.fill")
+                        .font(.system(size: 20, weight: .medium))
+                        .foregroundStyle(scannedImages.isEmpty ? Color.cosmicPurple : Color.blue)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(chatEngine.isGenerating || isExtractingText)
+            .opacity(chatEngine.isGenerating || isExtractingText ? 0.5 : 1.0)
+
             // Enhanced voice input button with iOS 26 glass
             Button {
                 chatEngine.toggleVoiceInput()
@@ -2401,7 +2466,7 @@ struct AIChatView: View {
             } label: {
                 ZStack {
                     Circle()
-                        .fill(messageText.isEmpty ? Color(.systemGray6) : Color.cosmicPurple)
+                        .fill(canSendMessage ? Color.cosmicPurple : Color(.systemGray6))
                         .frame(width: 44, height: 44)
                         .glassEffect(.regular, in: .circle)
 
@@ -2412,7 +2477,7 @@ struct AIChatView: View {
                 }
             }
             .buttonStyle(.plain)
-            .disabled(messageText.isEmpty || chatEngine.isGenerating)
+            .disabled(!canSendMessage || chatEngine.isGenerating)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -2422,18 +2487,163 @@ struct AIChatView: View {
         }
     }
 
+    private var canSendMessage: Bool {
+        !messageText.isEmpty || !scannedImages.isEmpty
+    }
+
     private func sendMessage() {
         let text = messageText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty || !scannedImages.isEmpty else { return }
 
+        // Build message with text and images
+        var fullMessage = text
+
+        // Add extracted text from scanned images
+        if !extractedTexts.isEmpty {
+            let scannedText = extractedTexts.joined(separator: "\n\n")
+            if fullMessage.isEmpty {
+                fullMessage = "I scanned this text:\n\n\(scannedText)"
+            } else {
+                fullMessage = "\(fullMessage)\n\n[Scanned text]:\n\(scannedText)"
+            }
+        }
+
+        // Clear inputs
         messageText = ""
+        let imagesToSend = scannedImages
+        let textsToSend = extractedTexts
+        scannedImages = []
+        extractedTexts = []
         isInputFocused = false
 
         Task {
-            let success = await chatEngine.sendMessage(text)
-            if !success {
-                showPermissionAlert = true
+            // Create scan attachments if we have images
+            var attachments: [ScanAttachment] = []
+            if !imagesToSend.isEmpty {
+                for (index, image) in imagesToSend.enumerated() {
+                    if let imageData = image.jpegData(compressionQuality: 0.8) {
+                        let extractedText = index < textsToSend.count ? textsToSend[index] : ""
+                        let attachment = ScanAttachment(imageData: imageData, extractedText: extractedText)
+                        attachments.append(attachment)
+                        modelContext.insert(attachment)
+                    }
+                }
             }
+
+            let success = await chatEngine.sendMessage(fullMessage, attachments: attachments)
+            if !success {
+                await MainActor.run {
+                    showPermissionAlert = true
+                }
+            }
+        }
+    }
+
+    // MARK: - Scanned Images Preview
+
+    private var scannedImagesPreview: some View {
+        VStack(spacing: 12) {
+            HStack {
+                Text("Scanned Images")
+                    .font(.caption.bold())
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    scannedImages = []
+                    extractedTexts = []
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(Array(scannedImages.enumerated()), id: \.offset) { index, image in
+                        VStack(spacing: 4) {
+                            Image(uiImage: image)
+                                .resizable()
+                                .scaledToFit()
+                                .frame(height: 120)
+                                .cornerRadius(12)
+                                .glassEffect(.regular, in: .rect(cornerRadius: 12))
+
+                            if isExtractingText {
+                                ProgressView()
+                                    .scaleEffect(0.8)
+                            } else if index < extractedTexts.count {
+                                Text("\(extractedTexts[index].count) chars")
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .overlay(alignment: .topTrailing) {
+                            Button {
+                                scannedImages.remove(at: index)
+                                if index < extractedTexts.count {
+                                    extractedTexts.remove(at: index)
+                                }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.title3)
+                                    .foregroundStyle(.white)
+                                    .background(Circle().fill(Color.black.opacity(0.5)))
+                            }
+                            .offset(x: 8, y: -8)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .glassPanel()
+    }
+
+    // MARK: - Photo Handling
+
+    private func handleCapturedImage(_ image: UIImage) {
+        scannedImages.append(image)
+        Task {
+            await extractTextFromImage(image)
+        }
+    }
+
+    private func loadSelectedPhoto(_ item: PhotosPickerItem) async {
+        do {
+            if let data = try await item.loadTransferable(type: Data.self),
+               let image = UIImage(data: data) {
+                await MainActor.run {
+                    scannedImages.append(image)
+                }
+                await extractTextFromImage(image)
+            }
+        } catch {
+            print("Failed to load photo: \(error)")
+        }
+    }
+
+    private func extractTextFromImage(_ image: UIImage) async {
+        await MainActor.run {
+            isExtractingText = true
+        }
+
+        do {
+            let result = try await textExtractor.extractTextWithMetadata(from: image)
+            await MainActor.run {
+                extractedTexts.append(result.text)
+                isExtractingText = false
+                HapticFeedback.success()
+            }
+        } catch {
+            await MainActor.run {
+                extractedTexts.append("")
+                isExtractingText = false
+                HapticFeedback.error()
+            }
+            print("Text extraction failed: \(error)")
         }
     }
 
@@ -2494,6 +2704,26 @@ struct AIChatMessageBubble: View {
             }
 
             VStack(alignment: message.isUser ? .trailing : .leading, spacing: 6) {
+                // Show scanned images if present
+                if message.isUser && !message.scanAttachments.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(message.scanAttachments, id: \.id) { attachment in
+                                if let imageData = attachment.imageData,
+                                   let uiImage = UIImage(data: imageData) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .scaledToFit()
+                                        .frame(height: 120)
+                                        .cornerRadius(12)
+                                        .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
+                                }
+                            }
+                        }
+                    }
+                    .frame(maxWidth: 250)
+                }
+
                 Text(message.text)
                     .font(.body)
                     .foregroundStyle(message.isUser ? .white : .primary)
@@ -2692,15 +2922,15 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         messages.removeAll()
     }
 
-    func sendMessage(_ text: String) async -> Bool {
+    func sendMessage(_ text: String, attachments: [ScanAttachment] = []) async -> Bool {
         // Check availability
         guard fmClient.capability() == .available else {
             checkAvailability()
             return false
         }
 
-        // Add user message
-        let userMessage = AIChatMessage(text: text, isUser: true)
+        // Add user message with attachments
+        let userMessage = AIChatMessage(text: text, isUser: true, scanAttachments: attachments)
         messages.append(userMessage)
 
         // Create placeholder for assistant response
