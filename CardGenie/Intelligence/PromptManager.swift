@@ -319,11 +319,13 @@ struct AIChatMessage: Identifiable {
     let text: String
     let isUser: Bool
     var isStreaming: Bool
+    var scanAttachments: [ScanAttachment]
 
-    init(text: String, isUser: Bool, isStreaming: Bool = false) {
+    init(text: String, isUser: Bool, isStreaming: Bool = false, scanAttachments: [ScanAttachment] = []) {
         self.id = UUID()
         self.text = text
         self.isUser = isUser
         self.isStreaming = isStreaming
+        self.scanAttachments = scanAttachments
     }
 }
