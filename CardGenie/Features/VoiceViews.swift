@@ -443,7 +443,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     @Published var isSpeaking = false
     @Published var isProcessing = false
     @Published var currentTranscript = ""
-    @Published var conversation: [ConversationMessage] = []
+    @Published var conversation: [VoiceMessage] = []
     @Published var lastError: String?
 
     /// Streaming response text (updates in real-time)
@@ -631,7 +631,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         stopListening()
 
         // Add user message
-        let userMessage = ConversationMessage(text: question, isUser: true)
+        let userMessage = VoiceMessage(text: question, isUser: true)
         conversation.append(userMessage)
         currentTranscript = ""
 
@@ -712,7 +712,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             }
 
             // Finalize message
-            let assistantMessage = ConversationMessage(text: fullResponse, isUser: false)
+            let assistantMessage = VoiceMessage(text: fullResponse, isUser: false)
             conversation.append(assistantMessage)
 
             log.info("✅ Streaming response complete: \(fullResponse.count) chars")
@@ -767,7 +767,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         let fallbackResponse = "I'm currently unavailable. Apple Intelligence must be enabled for voice conversations. You can enable it in Settings > Apple Intelligence."
         streamingResponse = fallbackResponse
 
-        let message = ConversationMessage(text: fallbackResponse, isUser: false)
+        let message = VoiceMessage(text: fallbackResponse, isUser: false)
         conversation.append(message)
 
         isProcessing = false
@@ -780,7 +780,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         let errorResponse = lastError ?? "Sorry, I had trouble with that. Could you rephrase?"
         streamingResponse = errorResponse
 
-        let message = ConversationMessage(text: errorResponse, isUser: false)
+        let message = VoiceMessage(text: errorResponse, isUser: false)
         conversation.append(message)
 
         isProcessing = false
@@ -881,9 +881,9 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     }
 }
 
-// MARK: - Conversation Message
+// MARK: - Voice Message (Simple in-memory message for UI)
 
-struct ConversationMessage: Identifiable {
+struct VoiceMessage: Identifiable {
     let id = UUID()
     let text: String
     let isUser: Bool
