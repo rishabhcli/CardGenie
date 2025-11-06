@@ -14,6 +14,9 @@ import Speech
 import OSLog
 import GroupActivities
 import Combine
+#if canImport(FoundationModels)
+import FoundationModels
+#endif
 
 // MARK: - VoiceAssistantView
 
@@ -486,7 +489,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         speechSynthesizer.delegate = self
         log.info("🎙️ Voice Assistant initialized (OFFLINE MODE)")
         log.info("✅ On-device speech recognition: ENABLED")
-        log.info("✅ Apple Intelligence: \(fmClient.capability() == .available ? "AVAILABLE" : "UNAVAILABLE")")
+        log.info("✅ Apple Intelligence: \(self.fmClient.capability() == .available ? "AVAILABLE" : "UNAVAILABLE")")
     }
 
     func clearConversation() {
@@ -669,72 +672,92 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         log.info("🧠 Starting streaming response...")
 
         do {
-            // Create session with context-aware system prompt
-            let session = LanguageModelSession {
-                context.systemPrompt()
+            #if canImport(FoundationModels)
+            if #available(iOS 26.0, *) {
+                // Create session with context-aware system prompt
+                let session = LanguageModelSession {
+                    context.systemPrompt()
+                }
+
+                // Build prompt with conversation history
+                let conversationHistory = formatConversationHistory()
+                let prompt = """
+                Recent conversation:
+                \(conversationHistory)
+
+                Student's question: \(question)
+
+                Respond naturally and concisely (2-3 sentences). Ask follow-up questions to encourage deeper understanding.
+                """
+
+                let options = GenerationOptions(
+                    sampling: .greedy,
+                    temperature: 0.7 // Conversational warmth
+                )
+
+                // Stream the response
+                let stream = session.streamResponse(to: prompt, options: options)
+
+                // Start speaking as soon as we have content
+                isSpeaking = true
+
+                var fullResponse = ""
+
+                for try await partial in stream {
+                    // Update UI immediately
+                    streamingResponse = partial.content
+                    fullResponse = partial.content
+
+                    // Speak new sentences as they arrive
+                    let newText = extractNewText(from: partial.content, after: lastSpokenText)
+                    if !newText.isEmpty {
+                        speakTextIncremental(newText)
+                        lastSpokenText = partial.content
+                    }
+                }
+
+                // Finalize message
+                let assistantMessage = VoiceMessage(text: fullResponse, isUser: false)
+                conversation.append(assistantMessage)
+
+                log.info("✅ Streaming response complete: \(fullResponse.count) chars")
+
+                isProcessing = false
+
+                // Wait for speech to finish
+                while isSpeaking {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                }
+            } else {
+                // Fallback for older iOS versions
+                await handleFallbackResponse(to: question)
             }
+            #else
+            // FoundationModels not available
+            await handleFallbackResponse(to: question)
+            #endif
 
-            // Build prompt with conversation history
-            let conversationHistory = formatConversationHistory()
-            let prompt = """
-            Recent conversation:
-            \(conversationHistory)
-
-            Student's question: \(question)
-
-            Respond naturally and concisely (2-3 sentences). Ask follow-up questions to encourage deeper understanding.
-            """
-
-            let options = GenerationOptions(
-                sampling: .greedy,
-                temperature: 0.7 // Conversational warmth
-            )
-
-            // Stream the response
-            let stream = session.streamResponse(to: prompt, options: options)
-
-            // Start speaking as soon as we have content
-            isSpeaking = true
-
-            var fullResponse = ""
-
-            for try await partial in stream {
-                // Update UI immediately
-                streamingResponse = partial.content
-                fullResponse = partial.content
-
-                // Speak new sentences as they arrive
-                let newText = extractNewText(from: partial.content, after: lastSpokenText)
-                if !newText.isEmpty {
-                    speakTextIncremental(newText)
-                    lastSpokenText = partial.content
+        } catch {
+            #if canImport(FoundationModels)
+            if #available(iOS 26.0, *) {
+                if let genError = error as? LanguageModelSession.GenerationError {
+                    switch genError {
+                    case .guardrailViolation:
+                        log.error("❌ Guardrail violation")
+                        lastError = "I can't help with that. Let's focus on your studies!"
+                    case .refusal:
+                        log.error("❌ Model refused request")
+                        lastError = "I'm not able to answer that question."
+                    default:
+                        log.error("❌ Streaming failed: \(error.localizedDescription)")
+                        lastError = "Something went wrong. Try asking again."
+                    }
+                } else {
+                    log.error("❌ Streaming failed: \(error.localizedDescription)")
+                    lastError = "Something went wrong. Try asking again."
                 }
             }
-
-            // Finalize message
-            let assistantMessage = VoiceMessage(text: fullResponse, isUser: false)
-            conversation.append(assistantMessage)
-
-            log.info("✅ Streaming response complete: \(fullResponse.count) chars")
-
-            isProcessing = false
-
-            // Wait for speech to finish
-            while isSpeaking {
-                try? await Task.sleep(nanoseconds: 100_000_000)
-            }
-
-        } catch LanguageModelSession.GenerationError.guardrailViolation {
-            log.error("❌ Guardrail violation")
-            lastError = "I can't help with that. Let's focus on your studies!"
-            await handleErrorResponse()
-        } catch LanguageModelSession.GenerationError.refusal {
-            log.error("❌ Model refused request")
-            lastError = "I'm not able to answer that question."
-            await handleErrorResponse()
-        } catch {
-            log.error("❌ Streaming failed: \(error.localizedDescription)")
-            lastError = "Something went wrong. Try asking again."
+            #endif
             await handleErrorResponse()
         }
 

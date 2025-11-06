@@ -779,7 +779,7 @@ struct ScanReviewView: View {
                 tempContent.extractedText = extractedText
 
                 let context = ConversationContext(studyContent: tempContent)
-                VoiceAssistantView(context: context)
+                return VoiceAssistantView(context: context)
             }
             .alert("Error", isPresented: $showError) {
                 Button("OK", role: .cancel) {}

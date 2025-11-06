@@ -22,7 +22,7 @@ struct CardGenieApp: App {
             Flashcard.self,
             FlashcardSet.self,
             ConversationSession.self,
-            ConversationMessage.self
+            VoiceConversationMessage.self
         ])
 
         let modelConfiguration = ModelConfiguration(

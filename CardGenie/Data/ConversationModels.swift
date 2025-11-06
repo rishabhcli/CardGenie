@@ -26,8 +26,8 @@ final class ConversationSession {
     var updatedAt: Date
 
     /// All messages in this conversation
-    @Relationship(deleteRule: .cascade, inverse: \ConversationMessage.session)
-    var messages: [ConversationMessage]
+    @Relationship(deleteRule: .cascade, inverse: \VoiceConversationMessage.session)
+    var messages: [VoiceConversationMessage]
 
     // MARK: - Context Linking
 
@@ -75,16 +75,25 @@ final class ConversationSession {
     }
 }
 
-// MARK: - Conversation Message
+// MARK: - Message Role (Voice Assistant)
 
-/// A single message in a conversation (user, assistant, or system)
+/// Role of a voice assistant conversation message
+enum VoiceMessageRole: String, Codable {
+    case user        // User's spoken or typed input
+    case assistant   // AI assistant's response
+    case system      // System-injected context
+}
+
+// MARK: - Voice Conversation Message
+
+/// A single message in a voice conversation (user, assistant, or system)
 @Model
-final class ConversationMessage {
+final class VoiceConversationMessage {
     /// Unique identifier
     @Attribute(.unique) var id: UUID
 
     /// Message role (user, assistant, system)
-    var role: MessageRole
+    var role: VoiceMessageRole
 
     /// Message content text
     var content: String
@@ -115,7 +124,7 @@ final class ConversationMessage {
 
     // MARK: - Initialization
 
-    init(role: MessageRole, content: String) {
+    init(role: VoiceMessageRole, content: String) {
         self.id = UUID()
         self.role = role
         self.content = content
@@ -125,15 +134,6 @@ final class ConversationMessage {
         self.isStreaming = false
         self.streamingChunks = []
     }
-}
-
-// MARK: - Message Role
-
-/// Role of a conversation message
-enum MessageRole: String, Codable {
-    case user        // User's spoken or typed input
-    case assistant   // AI assistant's response
-    case system      // System-injected context
 }
 
 // MARK: - Conversation Context
@@ -223,7 +223,7 @@ struct ConversationContext {
     }
 
     /// Format recent messages for context window (limits token usage)
-    func formatRecentMessages(_ messages: [ConversationMessage], limit: Int = 5) -> String {
+    func formatRecentMessages(_ messages: [VoiceConversationMessage], limit: Int = 5) -> String {
         messages
             .suffix(limit)
             .map { "\($0.role.rawValue.capitalized): \($0.content)" }
