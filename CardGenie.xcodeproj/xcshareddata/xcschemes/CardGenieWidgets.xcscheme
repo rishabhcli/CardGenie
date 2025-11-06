@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1610"
-   version = "1.7">
+   LastUpgradeVersion = "2610"
+   wasCreatedForAppExtension = "YES"
+   version = "2.0">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
@@ -15,7 +16,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CardGenieWidgets"
+               BlueprintIdentifier = "9785F725A72A5FC029215723"
                BuildableName = "CardGenieWidgets.appex"
                BlueprintName = "CardGenieWidgets"
                ReferencedContainer = "container:CardGenie.xcodeproj">
@@ -29,7 +30,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CardGenie"
+               BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
                BuildableName = "CardGenie.app"
                BlueprintName = "CardGenie"
                ReferencedContainer = "container:CardGenie.xcodeproj">
@@ -56,16 +57,42 @@
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES"
       launchAutomaticallySubstyle = "2">
-      <MacroExpansion>
+      <RemoteRunnable
+         runnableDebuggingMode = "2"
+         BundleIdentifier = "com.apple.springboard">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "CardGenieWidgets"
+            BlueprintIdentifier = "9785F725A72A5FC029215723"
             BuildableName = "CardGenieWidgets.appex"
             BlueprintName = "CardGenieWidgets"
             ReferencedContainer = "container:CardGenie.xcodeproj">
          </BuildableReference>
+      </RemoteRunnable>
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
+            BuildableName = "CardGenie.app"
+            BlueprintName = "CardGenie"
+            ReferencedContainer = "container:CardGenie.xcodeproj">
+         </BuildableReference>
       </MacroExpansion>
       <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "_XCWidgetKind"
+            value = ""
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "_XCWidgetDefaultView"
+            value = "timeline"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "_XCWidgetFamily"
+            value = "systemMedium"
+            isEnabled = "YES">
+         </EnvironmentVariable>
          <EnvironmentVariable
             key = "_XCWidgetKind"
             value = "DueCardsWidget"
@@ -85,7 +112,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "CardGenie"
+            BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
             BuildableName = "CardGenie.app"
             BlueprintName = "CardGenie"
             ReferencedContainer = "container:CardGenie.xcodeproj">

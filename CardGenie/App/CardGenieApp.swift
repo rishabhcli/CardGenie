@@ -62,8 +62,6 @@ struct CardGenieApp: App {
         }
     }()
 
-    @StateObject private var onboardingCoordinator = OnboardingCoordinator()
-
     var body: some Scene {
         WindowGroup {
             ZStack {
@@ -79,12 +77,6 @@ struct CardGenieApp: App {
                     .onOpenURL { url in
                         handleDeepLink(url)
                     }
-
-                // Onboarding overlay
-                if !onboardingCoordinator.isCompleted {
-                    OnboardingView(coordinator: onboardingCoordinator)
-                        .transition(.opacity)
-                }
             }
         }
         .modelContainer(modelContainer) // Inject SwiftData container

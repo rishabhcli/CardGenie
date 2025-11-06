@@ -10,6 +10,7 @@
 		0FD7C9A5E69888402B2966A5 /* CardGenieWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5F5AB7F6CAE5A21EF09AF911 /* CardGenieWidgets.swift */; };
 		243B5B110776CAF9862B60B2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1366CFE859D971510BFAC01B /* Foundation.framework */; };
 		338A00E4950F35EB9C0FCF7C /* SwiftData.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BAF9E6B7CEC563A4571C1651 /* SwiftData.framework */; };
+		490C60CC2EBC677700D3A224 /* CardGenie Icon.icon in Resources */ = {isa = PBXBuildFile; fileRef = 490C60CB2EBC677700D3A224 /* CardGenie Icon.icon */; };
 		9AE84A1FC40AE0CAC1B25140 /* DueCardsWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 436843B806B8927DBA64B62E /* DueCardsWidget.swift */; };
 		D4D6DBD567AC606A3E3385B6 /* StudyStreakWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0DF648323773E2232A019DA6 /* StudyStreakWidget.swift */; };
 		DD821A877FEF073422B76903 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1752DD8FEE8ABFE4FADBD051 /* SwiftUI.framework */; };
@@ -61,6 +62,7 @@
 		1752DD8FEE8ABFE4FADBD051 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/SwiftUI.framework; sourceTree = DEVELOPER_DIR; };
 		29C7F93CC78693411C89334B /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS18.0.sdk/System/Library/Frameworks/WidgetKit.framework; sourceTree = DEVELOPER_DIR; };
 		436843B806B8927DBA64B62E /* DueCardsWidget.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = DueCardsWidget.swift; path = CardGenieWidgets/DueCardsWidget.swift; sourceTree = "<group>"; };
+		490C60CB2EBC677700D3A224 /* CardGenie Icon.icon */ = {isa = PBXFileReference; lastKnownFileType = folder.iconcomposer.icon; path = "CardGenie Icon.icon"; sourceTree = "<group>"; };
 		49CE9D912EA9ACC100C5855A /* CardGenie.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = CardGenie.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		49CE9DA02EA9ACC200C5855A /* CardGenieTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardGenieTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		49CE9DAA2EA9ACC200C5855A /* CardGenieUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CardGenieUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,15 +96,11 @@
 		};
 		49CE9DA32EA9ACC200C5855A /* CardGenieTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CardGenieTests;
 			sourceTree = "<group>";
 		};
 		49CE9DAD2EA9ACC200C5855A /* CardGenieUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-			);
 			path = CardGenieUITests;
 			sourceTree = "<group>";
 		};
@@ -147,6 +145,7 @@
 		49CE9D882EA9ACC100C5855A = {
 			isa = PBXGroup;
 			children = (
+				490C60CB2EBC677700D3A224 /* CardGenie Icon.icon */,
 				49CE9D932EA9ACC100C5855A /* CardGenie */,
 				49CE9DA32EA9ACC200C5855A /* CardGenieTests */,
 				49CE9DAD2EA9ACC200C5855A /* CardGenieUITests */,
@@ -337,6 +336,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				490C60CC2EBC677700D3A224 /* CardGenie Icon.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

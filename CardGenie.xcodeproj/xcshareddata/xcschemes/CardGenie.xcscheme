@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "1610"
+   LastUpgradeVersion = "2610"
    version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CardGenie"
+               BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
                BuildableName = "CardGenie.app"
                BlueprintName = "CardGenie"
                ReferencedContainer = "container:CardGenie.xcodeproj">
@@ -29,28 +29,6 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
       shouldAutocreateTestPlan = "YES">
-      <Testables>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CardGenieTests"
-               BuildableName = "CardGenieTests.xctest"
-               BlueprintName = "CardGenieTests"
-               ReferencedContainer = "container:CardGenie.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-         <TestableReference
-            skipped = "NO">
-            <BuildableReference
-               BuildableIdentifier = "primary"
-               BlueprintIdentifier = "CardGenieUITests"
-               BuildableName = "CardGenieUITests.xctest"
-               BlueprintName = "CardGenieUITests"
-               ReferencedContainer = "container:CardGenie.xcodeproj">
-            </BuildableReference>
-         </TestableReference>
-      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -66,7 +44,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "CardGenie"
+            BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
             BuildableName = "CardGenie.app"
             BlueprintName = "CardGenie"
             ReferencedContainer = "container:CardGenie.xcodeproj">
@@ -83,7 +61,7 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "CardGenie"
+            BlueprintIdentifier = "49CE9D902EA9ACC100C5855A"
             BuildableName = "CardGenie.app"
             BlueprintName = "CardGenie"
             ReferencedContainer = "container:CardGenie.xcodeproj">
