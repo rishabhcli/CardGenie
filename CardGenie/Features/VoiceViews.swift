@@ -547,8 +547,8 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.record, mode: .measurement)
-            try audioSession.setActive(true)
+            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             log.error("❌ Failed to configure audio session: \(error.localizedDescription)")
             lastError = "Microphone access failed"
@@ -618,6 +618,15 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         audioEngine.inputNode.removeTap(onBus: 0)
         recognitionRequest?.endAudio()
         recognitionTask?.cancel()
+
+        // Deactivate audio session to restore other audio playback
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+            log.info("✅ Audio session deactivated")
+        } catch {
+            log.error("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        }
 
         isListening = false
     }
@@ -2835,7 +2844,7 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
+            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
@@ -2900,6 +2909,15 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         recognitionTask = nil
         isListening = false
         currentTranscript = "" // Clear transcript preview when stopping
+
+        // Deactivate audio session to restore other audio playback
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            try audioSession.setActive(false, options: .notifyOthersOnDeactivation)
+        } catch {
+            // Log error but don't fail - this is cleanup code
+            print("⚠️ Failed to deactivate audio session: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Audio Session Interruption Handling
