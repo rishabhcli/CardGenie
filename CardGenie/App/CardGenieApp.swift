@@ -16,11 +16,13 @@ struct CardGenieApp: App {
     /// with no iCloud sync or external file access.
     /// Falls back to in-memory storage if persistent storage fails.
     var modelContainer: ModelContainer = {
-        // Create schema with only core models first to diagnose the issue
+        // Create schema with all models including conversation history
         let schema = Schema([
             StudyContent.self,
             Flashcard.self,
-            FlashcardSet.self
+            FlashcardSet.self,
+            ConversationSession.self,
+            VoiceConversationMessage.self
         ])
 
         let modelConfiguration = ModelConfiguration(

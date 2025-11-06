@@ -2423,6 +2423,21 @@ struct FlashcardSetDetailView: View {
                         ConversationalLearningView(flashcardSet: flashcardSet)
                     }
 
+                    // Voice Tutor Card
+                    FeatureCard(
+                        title: "🎙️ Voice Tutor",
+                        subtitle: "Streaming Voice Chat",
+                        description: "Real-time conversations with AI tutor",
+                        icon: "waveform.circle.fill",
+                        gradient: [Color.green, Color.cyan]
+                    ) {
+                        let context = ConversationContext(
+                            flashcardSet: flashcardSet,
+                            recentFlashcards: Array(flashcardSet.cards.prefix(10))
+                        )
+                        VoiceAssistantView(context: context)
+                    }
+
                     // Practice Generator Card
                     FeatureCard(
                         title: "⚡ Practice Generator",

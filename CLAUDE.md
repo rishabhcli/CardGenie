@@ -266,6 +266,176 @@ All AI functions have local fallbacks that work without Apple Intelligence:
 
 This ensures the app is **fully functional on all iOS 26+ devices**, even those without Neural Engine.
 
+## Conversational Voice Assistant
+
+### Overview
+
+CardGenie includes a **fully offline, streaming conversational voice assistant** that transforms the app into an interactive AI tutor. The assistant leverages iOS 26's Foundation Models streaming API, Speech framework, and AVFoundation for a natural, real-time conversational experience.
+
+**Key Features:**
+- **Streaming AI responses**: Text appears word-by-word, no loading spinners
+- **Incremental text-to-speech**: AI speaks sentences as they're generated
+- **Multi-turn conversations**: Maintains context across the entire session
+- **Natural interruptions**: Stop AI mid-response with interrupt button
+- **Context awareness**: Integrates with study content and flashcard sets
+- **100% offline**: All speech recognition, AI, and TTS happen on-device
+
+### Architecture
+
+**Core Components:**
+
+1. **VoiceAssistant** (`Features/VoiceViews.swift:375-850`)
+   - Enhanced with Foundation Models streaming support
+   - Manages conversation state, speech recognition, and TTS
+   - Implements interruption handling
+   - Supports conversation context injection
+
+2. **ConversationModels** (`Data/ConversationModels.swift`)
+   - `ConversationSession`: SwiftData model for persistent chat history
+   - `ConversationMessage`: Individual messages with role (user/assistant/system)
+   - `ConversationContext`: Runtime context with study content/flashcard references
+
+3. **VoiceAssistantView** (`Features/VoiceViews.swift:23-405`)
+   - Real-time streaming response display
+   - Interrupt button (appears when AI is speaking)
+   - Context-aware initialization
+
+### Key Implementation Details
+
+**Streaming AI Responses** (`VoiceViews.swift:590-680`)
+
+```swift
+private func streamAIResponse(to question: String) async {
+    let session = LanguageModelSession {
+        context.systemPrompt() // Context-aware system prompt
+    }
+
+    let stream = session.streamResponse(to: prompt, options: options)
+
+    for try await partial in stream {
+        streamingResponse = partial.content // Updates UI immediately
+
+        // Speak new sentences as they arrive
+        let newText = extractNewText(from: partial.content, after: lastSpokenText)
+        if !newText.isEmpty {
+            speakTextIncremental(newText)
+            lastSpokenText = partial.content
+        }
+    }
+}
+```
+
+**Incremental Text-to-Speech** (`VoiceViews.swift:754-803`)
+
+Sentences are extracted and spoken as they complete during streaming, creating a natural conversational flow without waiting for the full response.
+
+**Interruption Handling** (`VoiceViews.swift:443-462`)
+
+```swift
+func interrupt() {
+    streamingTask?.cancel() // Cancel AI streaming
+    speechSynthesizer.stopSpeaking(at: .immediate) // Stop TTS immediately
+    isSpeaking = false
+    isProcessing = false
+    streamingResponse = ""
+}
+```
+
+**Context Injection**
+
+The assistant can be launched with context from:
+- Scanned content (`ScanningViews.swift:775-783`)
+- Flashcard sets (`FlashcardStudyViews.swift:2426-2439`)
+
+Example:
+```swift
+let context = ConversationContext(
+    studyContent: scannedContent,
+    flashcardSet: currentSet,
+    recentFlashcards: Array(currentSet.cards.prefix(10))
+)
+VoiceAssistantView(context: context)
+```
+
+The context injects study material into the system prompt, allowing the AI to reference specific content during conversations.
+
+### Usage
+
+**Basic Conversation:**
+1. Launch VoiceAssistantView
+2. Tap mic button to start listening
+3. Speak your question
+4. AI responds with streaming text and speech
+5. Continue the conversation naturally
+
+**Context-Aware Conversations:**
+
+**From Scanned Content:**
+1. Scan notes via PhotoScanView
+2. Tap "Talk About This" in ScanReviewView
+3. AI has full context of scanned material
+
+**From Flashcard Sets:**
+1. Open any FlashcardSet detail view
+2. Tap "Voice Tutor" feature card
+3. AI references your flashcards in responses
+
+**Interruption:**
+1. While AI is speaking, tap the orange interrupt button
+2. AI stops immediately
+3. Start a new question or clarification
+
+### Technical Notes
+
+**Speech Recognition:**
+- Uses `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true`
+- Continuous recognition with partial results
+- Automatic silence detection (2 seconds of silence triggers message send)
+
+**Foundation Models Integration:**
+- Streaming with `session.streamResponse(to:options:)`
+- Temperature: 0.7 for conversational warmth
+- Error handling for `guardrailViolation` and `refusal`
+- Fallback to local heuristics when AI unavailable
+
+**Text-to-Speech:**
+- `AVSpeechSynthesizer` with sentence-by-sentence queuing
+- Rate: 0.52 (slightly faster than default for natural flow)
+- Incremental speaking during streaming (no wait for full response)
+
+**Conversation History:**
+- SwiftData persistence via ConversationSession
+- Last 5 messages included in context window (token optimization)
+- Registered in ModelContainer (`CardGenieApp.swift:24-25`)
+
+### Testing
+
+**Manual Testing Checklist:**
+- [ ] Start conversation and ask question via voice
+- [ ] Verify streaming response updates in real-time
+- [ ] Verify TTS starts before full response completes
+- [ ] Test interruption mid-response
+- [ ] Ask follow-up question, verify context is maintained
+- [ ] Launch from scan review with content context
+- [ ] Launch from flashcard set, verify AI references cards
+- [ ] Test in Airplane Mode (must work 100% offline)
+
+**Unit Tests:**
+See `CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift` (TODO: create)
+
+**Performance Targets:**
+- First response: < 2 seconds
+- Streaming latency: < 500ms per token
+- TTS start: < 1 second from first sentence
+- Memory usage: < 100MB
+
+### Future Enhancements
+
+- Conversation export (share transcripts as study notes)
+- Multi-language support (when Apple Intelligence expands)
+- Voice profile customization (select different AI voices)
+- Conversation templates (Socratic method, Feynman technique)
+
 ## Common Development Workflows
 
 ### Adding a New Content Source
