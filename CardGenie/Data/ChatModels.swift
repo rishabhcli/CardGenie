@@ -27,8 +27,8 @@ final class ChatSession {
     var updatedAt: Date
 
     /// All messages in this session
-    @Relationship(deleteRule: .cascade, inverse: \ChatMessage.session)
-    var messages: [ChatMessage]
+    @Relationship(deleteRule: .cascade, inverse: \ChatMessageModel.session)
+    var messages: [ChatMessageModel]
 
     /// Scanned attachments linked to this session
     @Relationship(deleteRule: .cascade, inverse: \ScanAttachment.chatSession)
@@ -91,11 +91,11 @@ final class ChatSession {
     }
 }
 
-// MARK: - Chat Message
+// MARK: - Chat Message Model
 
-/// A single message in a chat conversation
+/// A single message in a chat conversation (persisted with SwiftData)
 @Model
-final class ChatMessage {
+final class ChatMessageModel {
     /// Unique identifier
     @Attribute(.unique) var id: UUID
 
@@ -217,7 +217,7 @@ final class ScanAttachment {
     // MARK: - Relationships
 
     /// Message this scan is attached to
-    var message: ChatMessage?
+    var message: ChatMessageModel?
 
     /// Chat session this scan belongs to
     var chatSession: ChatSession?
@@ -366,7 +366,7 @@ struct ChatContext {
     // MARK: - Message History Formatting
 
     /// Format conversation history for context window
-    func formatMessageHistory(_ messages: [ChatMessage], limit: Int = 10) -> String {
+    func formatMessageHistory(_ messages: [ChatMessageModel], limit: Int = 10) -> String {
         let recentMessages = messages.suffix(limit)
 
         return recentMessages.map { message in

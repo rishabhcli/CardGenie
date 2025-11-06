@@ -227,7 +227,7 @@ struct SocraticTutorView: View {
 }
 
 struct MessageBubble: View {
-    let message: ChatMessage
+    let message: ConversationalMessage
 
     var body: some View {
         HStack {

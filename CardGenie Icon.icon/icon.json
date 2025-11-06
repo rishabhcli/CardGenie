@@ -6,28 +6,56 @@
     {
       "layers" : [
         {
-          "fill-specializations" : [
-            {
-              "appearance" : "dark",
-              "value" : {
-                "solid" : "display-p3:1.00000,0.93911,0.96619,1.00000"
-              }
-            },
-            {
-              "appearance" : "tinted",
-              "value" : {
-                "solid" : "display-p3:0.03217,0.96783,0.40603,1.00000"
+          "image-name" : "Pasted Graphic 4.heic",
+          "name" : "Pasted Graphic 4",
+          "position" : {
+            "scale" : 0.25,
+            "translation-in-points" : [
+              -239.6171875,
+              82.25
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "solid" : "display-p3:0.10255,0.53203,0.00000,1.00000"
+          },
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "Pasted Graphic 3.heic",
+          "name" : "Pasted Graphic 3",
+          "position" : {
+            "scale" : 0.25,
+            "translation-in-points" : [
+              250.3828125,
+              59.4296875
+            ]
+          }
+        },
+        {
+          "fill" : {
+            "linear-gradient" : [
+              "display-p3:0.89465,0.28135,0.16952,1.00000",
+              "display-p3:0.96783,0.81842,0.63165,1.00000"
+            ],
+            "orientation" : {
+              "start" : {
+                "x" : 0.5,
+                "y" : 1
+              },
+              "stop" : {
+                "x" : 0.5,
+                "y" : 0.3
               }
             }
-          ],
-          "glass" : true,
-          "image-name" : "Pasted Graphic.heic",
-          "name" : "Pasted Graphic",
+          },
+          "image-name" : "Pasted Graphic 2.heic",
+          "name" : "Pasted Graphic 2",
           "position" : {
-            "scale" : 0.6,
+            "scale" : 0.7,
             "translation-in-points" : [
-              -23.8828125,
-              0.599999999999909
+              0,
+              28.34375
             ]
           }
         }

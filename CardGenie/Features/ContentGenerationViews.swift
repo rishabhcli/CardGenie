@@ -230,7 +230,7 @@ struct PracticeProblemsView: View {
 }
 
 struct DifficultyBadge: View {
-    let difficulty: DifficultyLevel
+    let difficulty: RelativeDifficulty
 
     var body: some View {
         Label(difficulty.displayName, systemImage: difficulty.icon)

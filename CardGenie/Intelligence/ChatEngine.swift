@@ -19,7 +19,7 @@ final class ChatEngine: ObservableObject {
     // MARK: - Published State
 
     /// All messages in current session
-    @Published var messages: [ChatMessage] = []
+    @Published var messages: [ChatMessageModel] = []
 
     /// Streaming response text (updates in real-time)
     @Published var streamingResponse: String = ""
@@ -109,7 +109,7 @@ final class ChatEngine: ObservableObject {
         log.info("📤 User message: \(text.prefix(50))...")
 
         // Add user message
-        let userMessage = ChatMessage(role: .user, content: text)
+        let userMessage = ChatMessageModel(role: .user, content: text)
         messages.append(userMessage)
         session.messages.append(userMessage)
         session.messageCount += 1
@@ -181,7 +181,7 @@ final class ChatEngine: ObservableObject {
             let stream = session.streamResponse(to: prompt, options: options)
 
             // Create assistant message for streaming
-            let assistantMessage = ChatMessage(role: .assistant, content: "")
+            let assistantMessage = ChatMessageModel(role: .assistant, content: "")
             assistantMessage.isStreaming = true
             messages.append(assistantMessage)
             currentSession?.messages.append(assistantMessage)
@@ -226,7 +226,7 @@ final class ChatEngine: ObservableObject {
         let fallback = "I'm currently unavailable. Apple Intelligence must be enabled for chat features."
         streamingResponse = fallback
 
-        let message = ChatMessage(role: .assistant, content: fallback)
+        let message = ChatMessageModel(role: .assistant, content: fallback)
         messages.append(message)
         currentSession?.messages.append(message)
 
@@ -237,7 +237,7 @@ final class ChatEngine: ObservableObject {
         let error = "I can't help with that. Let's focus on your studies!"
         streamingResponse = error
 
-        let message = ChatMessage(role: .assistant, content: error)
+        let message = ChatMessageModel(role: .assistant, content: error)
         messages.append(message)
         currentSession?.messages.append(message)
 
@@ -248,7 +248,7 @@ final class ChatEngine: ObservableObject {
         let error = "I'm not able to answer that question. Try asking something else about your study materials."
         streamingResponse = error
 
-        let message = ChatMessage(role: .assistant, content: error)
+        let message = ChatMessageModel(role: .assistant, content: error)
         messages.append(message)
         currentSession?.messages.append(message)
 
@@ -260,12 +260,12 @@ final class ChatEngine: ObservableObject {
     private func pruneContextIfNeeded() {
         let currentTokens = context.estimateTokens() + estimateMessageHistoryTokens()
 
-        guard currentTokens > maxContextTokens else {
-            log.info("Context budget OK: \(currentTokens)/\(maxContextTokens) tokens")
+        guard currentTokens > self.maxContextTokens else {
+            log.info("Context budget OK: \(currentTokens)/\(self.maxContextTokens) tokens")
             return
         }
 
-        log.warning("⚠️ Context budget exceeded: \(currentTokens)/\(maxContextTokens) tokens. Pruning...")
+        log.warning("⚠️ Context budget exceeded: \(currentTokens)/\(self.maxContextTokens) tokens. Pruning...")
 
         // Strategy: Remove oldest messages first, but keep system context
         let messagesToKeep = 10
