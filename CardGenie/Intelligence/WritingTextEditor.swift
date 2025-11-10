@@ -101,17 +101,18 @@ struct WritingTextEditor: UIViewRepresentable {
 
         /// Called when Writing Tools makes changes
         /// (This delegate method is available on iOS 26+)
-        // TODO: Uncomment when building with iOS 26 SDK
-        // @available(iOS 26.0, *)
-        // func textView(_ textView: UITextView, writingToolsDidFinish result: UITextView.WritingToolsResult) {
-        //     // Writing Tools completed an operation (e.g., rewrite, proofread)
-        //     // The text has already been updated, so we just sync it
-        //     parent.text = textView.text
-        //     parent.onTextChange?(textView.text)
-        //
-        //     // Optional: Track analytics or show a toast
-        //     print("Writing Tools completed: \(result.action)")
-        // }
+        @available(iOS 26.0, *)
+        func textView(_ textView: UITextView, writingToolsDidFinish result: Any) {
+            // Writing Tools completed an operation (e.g., rewrite, proofread)
+            // The text has already been updated, so we just sync it
+            parent.text = textView.text
+            parent.onTextChange?(textView.text)
+
+            // Extract action from result using KVC for SDK compatibility
+            if let action = (result as? NSObject)?.value(forKey: "action") {
+                print("Writing Tools completed: \(action)")
+            }
+        }
     }
 }
 

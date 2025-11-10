@@ -769,8 +769,81 @@ final class ImagePreprocessor {
     }
 
     private func estimateContrast(_ image: CIImage) -> CGFloat {
-        // Simple contrast estimation using standard deviation of brightness
-        // A more accurate implementation would analyze the histogram
-        return 0.5 // Placeholder - would need full histogram analysis
+        // Full histogram-based contrast estimation using standard deviation
+        // This provides accurate contrast measurement for better preprocessing decisions
+
+        // Create a histogram of brightness values
+        let extentVector = CIVector(
+            x: image.extent.origin.x,
+            y: image.extent.origin.y,
+            z: image.extent.size.width,
+            w: image.extent.size.height
+        )
+
+        // Use CIAreaHistogram to get luminance distribution
+        guard let histogramFilter = CIFilter(
+            name: "CIAreaHistogram",
+            parameters: [
+                kCIInputImageKey: image,
+                kCIInputExtentKey: extentVector,
+                "inputCount": 256,
+                "inputScale": 1.0
+            ]
+        ),
+        let histogramImage = histogramFilter.outputImage else {
+            logger.warning("Failed to generate histogram, using fallback contrast")
+            return 0.5
+        }
+
+        // Extract histogram data (256 bins, RGBA format)
+        var histogram = [UInt8](repeating: 0, count: 256 * 4)
+        context.render(
+            histogramImage,
+            toBitmap: &histogram,
+            rowBytes: 256 * 4,
+            bounds: CGRect(x: 0, y: 0, width: 256, height: 1),
+            format: .RGBA8,
+            colorSpace: nil
+        )
+
+        // Calculate statistics from luminance histogram (red channel)
+        var pixelCounts = [CGFloat]()
+        var totalPixels: CGFloat = 0
+
+        for i in 0..<256 {
+            let count = CGFloat(histogram[i * 4]) // Red channel contains luminance
+            pixelCounts.append(count)
+            totalPixels += count
+        }
+
+        guard totalPixels > 0 else {
+            return 0.5
+        }
+
+        // Calculate mean brightness
+        var mean: CGFloat = 0
+        for (bin, count) in pixelCounts.enumerated() {
+            let brightness = CGFloat(bin) / 255.0
+            mean += brightness * (count / totalPixels)
+        }
+
+        // Calculate standard deviation (measure of contrast)
+        var variance: CGFloat = 0
+        for (bin, count) in pixelCounts.enumerated() {
+            let brightness = CGFloat(bin) / 255.0
+            let diff = brightness - mean
+            variance += diff * diff * (count / totalPixels)
+        }
+
+        let standardDeviation = sqrt(variance)
+
+        // Normalize standard deviation to 0-1 range
+        // High contrast images have std dev around 0.3-0.4
+        // Low contrast images have std dev < 0.15
+        let normalizedContrast = min(standardDeviation / 0.4, 1.0)
+
+        logger.debug("Histogram analysis - mean: \(String(format: "%.2f", mean)), std dev: \(String(format: "%.2f", standardDeviation)), contrast: \(String(format: "%.2f", normalizedContrast))")
+
+        return normalizedContrast
     }
 }
