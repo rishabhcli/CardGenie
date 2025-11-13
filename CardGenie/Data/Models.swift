@@ -301,6 +301,10 @@ struct TimestampRange: Codable, Sendable {
     let start: Double
     let end: Double
 
+    var duration: Double {
+        return end - start
+    }
+
     var formatted: String {
         let startMin = Int(start) / 60
         let startSec = Int(start) % 60
