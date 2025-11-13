@@ -421,7 +421,14 @@ The context injects study material into the system prompt, allowing the AI to re
 - [ ] Test in Airplane Mode (must work 100% offline)
 
 **Unit Tests:**
-See `CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift` (TODO: create)
+See `CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift` - Comprehensive test suite with 60+ tests covering:
+- Text extraction and sentence parsing
+- Conversation history management
+- ConversationContext system prompt generation
+- ConversationSession and VoiceConversationMessage models
+- Error handling and state management
+- Message timestamp ordering and unique IDs
+- Performance and concurrency scenarios
 
 **Performance Targets:**
 - First response: < 2 seconds
