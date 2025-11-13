@@ -283,21 +283,29 @@ if error != nil:
 - [ ] Test on iPhone 15 Pro (Neural Engine)
 - [ ] Test on older device (fallback behavior)
 
-### Unit Tests (TODO)
+### Unit Tests ✅
 
-Create `CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift`:
-- Conversation state management
-- Message formatting
-- Context prompt generation
-- Sentence extraction logic
-- Error handling
+`CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift` - **COMPLETE** (905 lines, 60+ tests):
+- ✅ Conversation state management
+- ✅ Message formatting
+- ✅ Context prompt generation
+- ✅ Sentence extraction logic
+- ✅ Error handling
+- ✅ VoiceMessage and VoiceConversationMessage models
+- ✅ ConversationSession and ConversationContext
+- ✅ Timestamp ordering and unique IDs
+- ✅ Performance and concurrency scenarios
 
 ### Integration Tests (TODO)
 
-- End-to-end conversation flow
-- Context injection accuracy
-- Interruption handling
-- Offline mode verification
+**Remaining integration test coverage needed:**
+- [ ] End-to-end conversation flow with real Foundation Models
+- [ ] Context injection accuracy with study content
+- [ ] Interruption handling during active speech
+- [ ] Offline mode verification (Airplane Mode test)
+- [ ] Speech recognition integration with audio engine
+- [ ] Text-to-speech streaming verification
+- [ ] Multi-turn conversation context preservation
 
 ## Future Enhancements
 
