@@ -11,7 +11,7 @@
 - **Location:** `docs/architecture/decisions/`
 - **Impact:** 5 comprehensive ADRs + README index (6 files total)
 - **Coverage:** MVVM, SwiftData, SM-2, Offline-First, iOS 26+
-- **Commit:** TBD
+- **Commit:** `b3a6312`
 - **Date:** 2025-11-14
 
 ### Success Metrics Checklist Update (COMPLETED)
