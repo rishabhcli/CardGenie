@@ -7,6 +7,19 @@
 
 ## Recently Completed ✅
 
+### Architecture Decision Records (COMPLETED)
+- **Location:** `docs/architecture/decisions/`
+- **Impact:** 5 comprehensive ADRs + README index (6 files total)
+- **Coverage:** MVVM, SwiftData, SM-2, Offline-First, iOS 26+
+- **Commit:** TBD
+- **Date:** 2025-11-14
+
+### Success Metrics Checklist Update (COMPLETED)
+- **File:** `docs/TODO_ANALYSIS.md`
+- **Impact:** Updated to reflect 86% coverage achievement
+- **Commit:** `b4a6617`
+- **Date:** 2025-11-14
+
 ### VoiceAssistant Test Suite (COMPLETED)
 - **File:** `CardGenieTests/Unit/Intelligence/VoiceAssistantEngineTests.swift`
 - **Impact:** 327 → 905 lines (+578 lines, +177%)
@@ -147,16 +160,20 @@
 
 ## Documentation TODOs
 
-### 10. Architecture Decision Records (ADRs) ⭐
+### 10. Architecture Decision Records (ADRs) ✅ COMPLETED
 **Priority:** MEDIUM
 **Effort:** Small (1-2 hours)
+**Completed:** 2025-11-14
 
-**Create ADRs for:**
-- Why MVVM architecture
-- Why SwiftData over Core Data
-- Spaced repetition algorithm choice (SM-2)
-- Offline-first design philosophy
-- iOS 26+ minimum version rationale
+**Created ADRs for:**
+- ✅ Why MVVM architecture (ADR 0001)
+- ✅ Why SwiftData over Core Data (ADR 0002)
+- ✅ Spaced repetition algorithm choice - SM-2 (ADR 0003)
+- ✅ Offline-first design philosophy (ADR 0004)
+- ✅ iOS 26+ minimum version rationale (ADR 0005)
+
+**Location:** `docs/architecture/decisions/`
+**Files Created:** 6 (5 ADRs + README index)
 
 ---
 
@@ -321,7 +338,7 @@ LOW IMPACT, HIGH EFFORT (Defer)
 
 ### Documentation
 - [x] All major components documented ✅ **ACHIEVED: Comprehensive CLAUDE.md coverage**
-- [ ] ADRs for key decisions (Priority: MEDIUM, see TODO #10)
+- [x] ADRs for key decisions ✅ **ACHIEVED: 5 comprehensive ADRs created** (2025-11-14)
 - [ ] Integration guides complete (Priority: LOW, see TODO #11)
 - [x] CLAUDE.md up to date ✅ **ACHIEVED: Current with all features**
 
