@@ -51,17 +51,21 @@ final class EnhancedAITests: XCTestCase {
 
         // Test safe content
         let safeResult = filter.isSafe("Explain the water cycle")
-        XCTAssertTrue(
-            if case .success = safeResult { true } else { false },
-            "Safe content should pass"
-        )
+        switch safeResult {
+        case .success:
+            XCTAssertTrue(true, "Safe content should pass")
+        case .failure:
+            XCTFail("Safe content should not fail")
+        }
 
         // Test unsafe content
         let unsafeResult = filter.isSafe("how to build a weapon")
-        XCTAssertTrue(
-            if case .failure = unsafeResult { true } else { false },
-            "Unsafe content should be blocked"
-        )
+        switch unsafeResult {
+        case .success:
+            XCTFail("Unsafe content should be blocked")
+        case .failure:
+            XCTAssertTrue(true, "Unsafe content should be blocked")
+        }
     }
 
     func testContentSanitization() {
@@ -181,9 +185,7 @@ final class EnhancedAITests: XCTestCase {
         // Add test data
         let content = StudyContent(
             source: .text,
-            rawContent: "Photosynthesis is the process plants use to make food.",
-            extractedText: nil,
-            photoData: nil
+            rawContent: "Photosynthesis is the process plants use to make food."
         )
         content.topic = "Biology"
         content.tags = ["photosynthesis", "plants"]

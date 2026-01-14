@@ -309,6 +309,16 @@ class MockLLMEngine: LLMEngine {
         return Array(repeating: 0.1, count: 384)
     }
 
+    func streamComplete(_ prompt: String) -> AsyncThrowingStream<String, Error> {
+        return AsyncThrowingStream { continuation in
+            Task {
+                let response = try await self.complete(prompt)
+                continuation.yield(response)
+                continuation.finish()
+            }
+        }
+    }
+
     var isAvailable: Bool {
         return true
     }

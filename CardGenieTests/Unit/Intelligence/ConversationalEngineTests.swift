@@ -285,7 +285,7 @@ final class SocraticQuestionTests: XCTestCase {
 
     func testSocraticQuestionCategories() {
         // Given: All question categories
-        let categories: [SocraticQuestionCategory] = [
+        let categories: [QuestionCategory] = [
             .clarification,
             .assumption,
             .evidence,
@@ -425,32 +425,32 @@ final class ConversationalSessionTests: XCTestCase {
     }
 }
 
-// MARK: - SocraticQuestionCategory Tests
+// MARK: - QuestionCategory Tests
 
-final class SocraticQuestionCategoryTests: XCTestCase {
+final class QuestionCategoryTests: XCTestCase {
 
     func testClarificationCategory() {
-        let category = SocraticQuestionCategory.clarification
+        let category = QuestionCategory.clarification
         XCTAssertEqual(category.rawValue, "clarification")
     }
 
     func testAssumptionCategory() {
-        let category = SocraticQuestionCategory.assumption
+        let category = QuestionCategory.assumption
         XCTAssertEqual(category.rawValue, "assumption")
     }
 
     func testEvidenceCategory() {
-        let category = SocraticQuestionCategory.evidence
+        let category = QuestionCategory.evidence
         XCTAssertEqual(category.rawValue, "evidence")
     }
 
     func testPerspectiveCategory() {
-        let category = SocraticQuestionCategory.perspective
+        let category = QuestionCategory.perspective
         XCTAssertEqual(category.rawValue, "perspective")
     }
 
     func testImplicationCategory() {
-        let category = SocraticQuestionCategory.implication
+        let category = QuestionCategory.implication
         XCTAssertEqual(category.rawValue, "implication")
     }
 }

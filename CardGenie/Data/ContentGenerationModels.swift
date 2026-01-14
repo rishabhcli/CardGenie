@@ -16,14 +16,14 @@ import FoundationModels
 
 #if canImport(FoundationModels)
 @Generable
-struct PracticeProblemBatch: Equatable {
+struct PracticeProblemBatch: Equatable, Codable {
     @Guide(description: "3-5 practice problems based on the original concept with variations")
     @Guide(.count(3...5))
     let problems: [PracticeProblem]
 }
 
 @Generable
-struct PracticeProblem: Equatable {
+struct PracticeProblem: Equatable, Codable {
     @Guide(description: "The problem statement with different numbers, context, or scenario")
     let problem: String
 
@@ -39,7 +39,7 @@ struct PracticeProblem: Equatable {
 }
 
 @Generable
-enum RelativeDifficulty: String {
+enum RelativeDifficulty: String, Codable {
     case easier
     case same
     case harder
@@ -67,7 +67,7 @@ enum RelativeDifficulty: String, Equatable, Codable {
 
 #if canImport(FoundationModels)
 @Generable
-struct ScenarioQuestion: Equatable {
+struct ScenarioQuestion: Equatable, Codable {
     @Guide(description: "Real-world scenario that applies the concept")
     let scenario: String
 
@@ -82,7 +82,7 @@ struct ScenarioQuestion: Equatable {
 }
 
 @Generable
-struct ScenarioBatch: Equatable {
+struct ScenarioBatch: Equatable, Codable {
     @Guide(description: "2-4 scenario-based application questions")
     @Guide(.count(2...4))
     let scenarios: [ScenarioQuestion]
@@ -104,7 +104,7 @@ struct ScenarioBatch: Equatable, Codable {
 
 #if canImport(FoundationModels)
 @Generable
-struct ConnectionChallenge: Equatable {
+struct ConnectionChallenge: Equatable, Codable {
     @Guide(description: "Name or topic of the related flashcard deck")
     let relatedDeck: String
 
@@ -119,7 +119,7 @@ struct ConnectionChallenge: Equatable {
 }
 
 @Generable
-struct ConnectionBatch: Equatable {
+struct ConnectionBatch: Equatable, Codable {
     @Guide(description: "2-3 connection challenges between different decks")
     @Guide(.count(2...3))
     let challenges: [ConnectionChallenge]

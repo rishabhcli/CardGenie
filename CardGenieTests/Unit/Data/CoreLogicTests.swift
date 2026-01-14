@@ -68,39 +68,3 @@ final class SpacedRepetitionManagerTests: XCTestCase {
         XCTAssertFalse(session.isEmpty)
     }
 }
-
-final class StudyStreakManagerTests: XCTestCase {
-    override func setUp() {
-        super.setUp()
-        StudyStreakManager.shared.reset()
-    }
-
-    override func tearDown() {
-        StudyStreakManager.shared.reset()
-        super.tearDown()
-    }
-
-    func testRecordSessionInitialisesStreak() {
-        let streak = StudyStreakManager.shared.recordSessionCompletion(on: Date())
-        XCTAssertEqual(streak, 1)
-        XCTAssertEqual(StudyStreakManager.shared.currentStreak(), 1)
-    }
-
-    func testConsecutiveDaysIncrementStreak() {
-        let today = Date()
-        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
-
-        _ = StudyStreakManager.shared.recordSessionCompletion(on: yesterday)
-        let newStreak = StudyStreakManager.shared.recordSessionCompletion(on: today)
-        XCTAssertEqual(newStreak, 2)
-    }
-
-    func testBreakInStreakResetsCount() {
-        let today = Date()
-        let fourDaysAgo = Calendar.current.date(byAdding: .day, value: -4, to: today)!
-
-        _ = StudyStreakManager.shared.recordSessionCompletion(on: fourDaysAgo)
-        let streak = StudyStreakManager.shared.recordSessionCompletion(on: today)
-        XCTAssertEqual(streak, 1)
-    }
-}

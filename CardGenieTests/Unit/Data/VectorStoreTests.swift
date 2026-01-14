@@ -139,7 +139,7 @@ final class VectorStoreTests: XCTestCase {
     // MARK: - Search In Source Tests
 
     @MainActor
-    func testSearchInSource_FiltersBy SourceID() async throws {
+    func testSearchInSource_FiltersBySourceID() async throws {
         // Given: Two source documents with chunks
         let source1 = SourceDocument(fileName: "Source 1", sourceType: .pdf)
         let source2 = SourceDocument(fileName: "Source 2", sourceType: .pdf)
@@ -206,7 +206,7 @@ final class VectorStoreTests: XCTestCase {
         modelContext.insert(chunk)
         try modelContext.save()
 
-        let mockLLM = MockLLMEngine()
+        let mockLLM = VectorStoreMockLLMEngine()
         mockLLM.nextResponse = "DNA is the genetic material [1]"
 
         let chatManager = await RAGChatManager(
@@ -228,7 +228,7 @@ final class VectorStoreTests: XCTestCase {
     @MainActor
     func testRAGChat_ReturnsNoInfoMessage_WhenNoChunks() async throws {
         // Given: Empty vector store
-        let mockLLM = MockLLMEngine()
+        let mockLLM = VectorStoreMockLLMEngine()
         let chatManager = await RAGChatManager(
             vectorStore: vectorStore,
             llm: mockLLM,
@@ -252,7 +252,7 @@ final class VectorStoreTests: XCTestCase {
         modelContext.insert(chunk)
         try modelContext.save()
 
-        let mockLLM = MockLLMEngine()
+        let mockLLM = VectorStoreMockLLMEngine()
         mockLLM.nextResponse = "Answer [1]"
 
         let chatManager = await RAGChatManager(
@@ -289,7 +289,7 @@ final class VectorStoreTests: XCTestCase {
         modelContext.insert(chunk2)
         try modelContext.save()
 
-        let mockLLM = MockLLMEngine()
+        let mockLLM = VectorStoreMockLLMEngine()
         mockLLM.nextResponse = "Answer from doc 1 [1]"
 
         let chatManager = await RAGChatManager(
@@ -426,7 +426,7 @@ final class VectorStoreTests: XCTestCase {
         modelContext.insert(chunk)
         try modelContext.save()
 
-        let mockLLM = MockLLMEngine()
+        let mockLLM = VectorStoreMockLLMEngine()
         mockLLM.nextResponse = "Answer [1]"
 
         let chatManager = await RAGChatManager(
@@ -570,6 +570,8 @@ final class CosineSimilarityTests: XCTestCase {
 @MainActor
 final class MockEmbeddingEngine: EmbeddingEngine {
     var nextEmbeddings: [[Float]] = []
+    var dimension: Int = 384
+    var isAvailable: Bool = true
 
     func embed(_ texts: [String]) async throws -> [[Float]] {
         return nextEmbeddings
@@ -577,10 +579,18 @@ final class MockEmbeddingEngine: EmbeddingEngine {
 }
 
 @MainActor
-final class MockLLMEngine: LLMEngine {
+final class VectorStoreMockLLMEngine: LLMEngine {
     var nextResponse: String = ""
+    var isAvailable: Bool = true
 
     func complete(_ prompt: String) async throws -> String {
         return nextResponse
+    }
+
+    func streamComplete(_ prompt: String) -> AsyncThrowingStream<String, Error> {
+        return AsyncThrowingStream { continuation in
+            continuation.yield(nextResponse)
+            continuation.finish()
+        }
     }
 }

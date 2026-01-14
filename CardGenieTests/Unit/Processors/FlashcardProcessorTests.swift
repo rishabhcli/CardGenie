@@ -580,24 +580,4 @@ extension NoteChunk {
     }
 }
 
-// MARK: - TranscriptChunk for Tests
-
-/// Represents a chunk of transcript with timestamp (matches LectureProcessors.swift)
-struct TranscriptChunk {
-    let text: String
-    let timestampRange: TimestampRange
-}
-
-/// Timestamp range for lecture content
-struct TimestampRange {
-    let start: Double
-    let end: Double
-
-    var formatted: String {
-        let startMinutes = Int(start) / 60
-        let startSeconds = Int(start) % 60
-        let endMinutes = Int(end) / 60
-        let endSeconds = Int(end) % 60
-        return String(format: "%02d:%02d - %02d:%02d", startMinutes, startSeconds, endMinutes, endSeconds)
-    }
-}
+// Note: TranscriptChunk and TimestampRange are imported from CardGenie module

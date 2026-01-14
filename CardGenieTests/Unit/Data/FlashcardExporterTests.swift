@@ -34,12 +34,26 @@ final class FlashcardExporterTests: XCTestCase {
         modelContainer = nil
     }
 
+    // MARK: - Helper Functions
+
+    private func makeFlashcardSet(name: String) -> FlashcardSet {
+        return FlashcardSet(topicLabel: name, tag: name.lowercased().replacingOccurrences(of: " ", with: "-"))
+    }
+
+    private func makeFlashcard(question: String, answer: String, tags: [String] = []) -> Flashcard {
+        return Flashcard(type: .qa, question: question, answer: answer, linkedEntryID: UUID(), tags: tags)
+    }
+
+    private func makeFlashcard(type: FlashcardType, question: String, answer: String) -> Flashcard {
+        return Flashcard(type: type, question: question, answer: answer, linkedEntryID: UUID())
+    }
+
     // MARK: - JSON Export Tests
 
     func testJSONExport_SingleSet_SingleCard() throws {
         // Given: A flashcard set with one card
-        let set = FlashcardSet(name: "Biology")
-        let card = Flashcard(question: "What is DNA?", answer: "Genetic material")
+        let set = makeFlashcardSet(name: "Biology")
+        let card = makeFlashcard(question: "What is DNA?", answer: "Genetic material")
         set.addCard(card)
 
         // When: Exporting to JSON
@@ -59,14 +73,14 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONExport_MultipleSetsWith_MultipleCards() throws {
         // Given: Multiple flashcard sets
-        let bioSet = FlashcardSet(name: "Biology")
-        bioSet.addCard(Flashcard(question: "Q1", answer: "A1"))
-        bioSet.addCard(Flashcard(question: "Q2", answer: "A2"))
+        let bioSet = makeFlashcardSet(name: "Biology")
+        bioSet.addCard(makeFlashcard(question: "Q1", answer: "A1"))
+        bioSet.addCard(makeFlashcard(question: "Q2", answer: "A2"))
 
-        let chemSet = FlashcardSet(name: "Chemistry")
-        chemSet.addCard(Flashcard(question: "Q3", answer: "A3"))
-        chemSet.addCard(Flashcard(question: "Q4", answer: "A4"))
-        chemSet.addCard(Flashcard(question: "Q5", answer: "A5"))
+        let chemSet = makeFlashcardSet(name: "Chemistry")
+        chemSet.addCard(makeFlashcard(question: "Q3", answer: "A3"))
+        chemSet.addCard(makeFlashcard(question: "Q4", answer: "A4"))
+        chemSet.addCard(makeFlashcard(question: "Q5", answer: "A5"))
 
         // When: Exporting
         let jsonData = try FlashcardExporter.exportToJSON(sets: [bioSet, chemSet])
@@ -80,8 +94,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONExport_PreservesSpacedRepetitionData() throws {
         // Given: Card with spaced repetition progress
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(question: "Q", answer: "A")
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(question: "Q", answer: "A")
         card.reviewCount = 10
         card.easeFactor = 2.5
         card.interval = 7
@@ -99,25 +113,25 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONExport_PreservesCardTypes() throws {
         // Given: Cards with different types
-        let set = FlashcardSet(name: "Mixed")
-        set.addCard(Flashcard(type: .basic, question: "Q1", answer: "A1"))
-        set.addCard(Flashcard(type: .cloze, question: "Q2", answer: "A2"))
-        set.addCard(Flashcard(type: .multipleChoice, question: "Q3", answer: "A3"))
+        let set = makeFlashcardSet(name: "Mixed")
+        set.addCard(makeFlashcard(type: .qa, question: "Q1", answer: "A1"))
+        set.addCard(makeFlashcard(type: .cloze, question: "Q2", answer: "A2"))
+        set.addCard(makeFlashcard(type: .definition, question: "Q3", answer: "A3"))
 
         // When: Exporting
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set])
 
         // Then: Should preserve types
         let decoded = try JSONDecoder().decode([FlashcardSetExport].self, from: jsonData)
-        XCTAssertEqual(decoded[0].cards[0].type, "basic")
+        XCTAssertEqual(decoded[0].cards[0].type, "qa")
         XCTAssertEqual(decoded[0].cards[1].type, "cloze")
-        XCTAssertEqual(decoded[0].cards[2].type, "multipleChoice")
+        XCTAssertEqual(decoded[0].cards[2].type, "definition")
     }
 
     func testJSONExport_PreservesTags() throws {
         // Given: Cards with tags
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(question: "Q", answer: "A", tags: ["biology", "cells", "advanced"])
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(question: "Q", answer: "A", tags: ["biology", "cells", "advanced"])
         set.addCard(card)
 
         // When: Exporting
@@ -150,8 +164,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_SingleCard_ProducesValidCSV() throws {
         // Given: A single flashcard
-        let set = FlashcardSet(name: "Biology")
-        let card = Flashcard(question: "What is DNA?", answer: "Genetic material")
+        let set = makeFlashcardSet(name: "Biology")
+        let card = makeFlashcard(question: "What is DNA?", answer: "Genetic material")
         card.reviewCount = 5
         card.easeFactor = 2.5
         card.interval = 3
@@ -178,10 +192,10 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_MultipleCards_CreatesMultipleRows() throws {
         // Given: Multiple cards
-        let set = FlashcardSet(name: "Test")
-        set.addCard(Flashcard(question: "Q1", answer: "A1"))
-        set.addCard(Flashcard(question: "Q2", answer: "A2"))
-        set.addCard(Flashcard(question: "Q3", answer: "A3"))
+        let set = makeFlashcardSet(name: "Test")
+        set.addCard(makeFlashcard(question: "Q1", answer: "A1"))
+        set.addCard(makeFlashcard(question: "Q2", answer: "A2"))
+        set.addCard(makeFlashcard(question: "Q3", answer: "A3"))
 
         // When: Exporting
         let csv = try FlashcardExporter.exportToCSV(sets: [set])
@@ -193,8 +207,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_EscapesCommas() throws {
         // Given: Card with commas in text
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(
             question: "What are DNA, RNA, and proteins?",
             answer: "Nucleic acids, and building blocks"
         )
@@ -210,8 +224,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_EscapesQuotes() throws {
         // Given: Card with quotes in text
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(
             question: "What is \"DNA\"?",
             answer: "The \"blueprint\" of life"
         )
@@ -226,8 +240,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_EscapesNewlines() throws {
         // Given: Card with newlines
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(
             question: "What is DNA?\nProvide details.",
             answer: "Genetic material\nFound in cells"
         )
@@ -243,8 +257,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testCSVExport_IncludesMasteryLevel() throws {
         // Given: Card with mastery level
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(question: "Q", answer: "A")
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(question: "Q", answer: "A")
         // Mastery level is computed from reviewCount/easeFactor/interval
         set.addCard(card)
 
@@ -278,9 +292,9 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONImport_ValidData_CreatesFlashcards() throws {
         // Given: Valid JSON export data
-        let set = FlashcardSet(name: "Biology")
-        set.addCard(Flashcard(question: "Q1", answer: "A1"))
-        set.addCard(Flashcard(question: "Q2", answer: "A2"))
+        let set = makeFlashcardSet(name: "Biology")
+        set.addCard(makeFlashcard(question: "Q1", answer: "A1"))
+        set.addCard(makeFlashcard(question: "Q2", answer: "A2"))
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set])
 
         // When: Importing
@@ -297,8 +311,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONImport_RestoresSpacedRepetitionData() throws {
         // Given: Export with SR data
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(question: "Q", answer: "A")
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(question: "Q", answer: "A")
         card.reviewCount = 15
         card.easeFactor = 2.8
         card.interval = 10
@@ -319,10 +333,10 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testJSONImport_CreatesFlashcardSets() throws {
         // Given: JSON with flashcard sets
-        let set1 = FlashcardSet(name: "Biology")
-        set1.addCard(Flashcard(question: "Q1", answer: "A1"))
-        let set2 = FlashcardSet(name: "Chemistry")
-        set2.addCard(Flashcard(question: "Q2", answer: "A2"))
+        let set1 = makeFlashcardSet(name: "Biology")
+        set1.addCard(makeFlashcard(question: "Q1", answer: "A1"))
+        let set2 = makeFlashcardSet(name: "Chemistry")
+        set2.addCard(makeFlashcard(question: "Q2", answer: "A2"))
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set1, set2])
 
         // When: Importing
@@ -367,12 +381,12 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testRoundTrip_ExportImport_PreservesData() throws {
         // Given: Original flashcards
-        let set = FlashcardSet(name: "Biology")
-        let card1 = Flashcard(question: "What is DNA?", answer: "Genetic material")
+        let set = makeFlashcardSet(name: "Biology")
+        let card1 = makeFlashcard(question: "What is DNA?", answer: "Genetic material")
         card1.reviewCount = 5
         card1.easeFactor = 2.5
         card1.interval = 3
-        let card2 = Flashcard(question: "What is RNA?", answer: "Messenger molecule")
+        let card2 = makeFlashcard(question: "What is RNA?", answer: "Messenger molecule")
         card2.reviewCount = 10
         set.addCard(card1)
         set.addCard(card2)
@@ -399,12 +413,12 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testRoundTrip_MultipleSets_PreservesAllData() throws {
         // Given: Multiple sets with multiple cards
-        let bio = FlashcardSet(name: "Biology")
-        bio.addCard(Flashcard(question: "Q1", answer: "A1"))
-        bio.addCard(Flashcard(question: "Q2", answer: "A2"))
+        let bio = makeFlashcardSet(name: "Biology")
+        bio.addCard(makeFlashcard(question: "Q1", answer: "A1"))
+        bio.addCard(makeFlashcard(question: "Q2", answer: "A2"))
 
-        let chem = FlashcardSet(name: "Chemistry")
-        chem.addCard(Flashcard(question: "Q3", answer: "A3"))
+        let chem = makeFlashcardSet(name: "Chemistry")
+        chem.addCard(makeFlashcard(question: "Q3", answer: "A3"))
 
         // When: Round-trip
         let jsonData = try FlashcardExporter.exportToJSON(sets: [bio, chem])
@@ -491,10 +505,10 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testExport_UnicodeCharacters_PreservesCorrectly() throws {
         // Given: Cards with Unicode characters
-        let set = FlashcardSet(name: "Languages")
-        set.addCard(Flashcard(question: "こんにちは", answer: "Hello (Japanese)"))
-        set.addCard(Flashcard(question: "¿Cómo estás?", answer: "How are you? (Spanish)"))
-        set.addCard(Flashcard(question: "😀 Emoji test", answer: "✅ Works"))
+        let set = makeFlashcardSet(name: "Languages")
+        set.addCard(makeFlashcard(question: "こんにちは", answer: "Hello (Japanese)"))
+        set.addCard(makeFlashcard(question: "¿Cómo estás?", answer: "How are you? (Spanish)"))
+        set.addCard(makeFlashcard(question: "😀 Emoji test", answer: "✅ Works"))
 
         // When: Round-trip
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set])
@@ -515,9 +529,9 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testExport_LargeDataset_HandlesEfficiently() throws {
         // Given: Large number of cards
-        let set = FlashcardSet(name: "Large Set")
+        let set = makeFlashcardSet(name: "Large Set")
         for i in 1...100 {
-            let card = Flashcard(question: "Question \(i)", answer: "Answer \(i)")
+            let card = makeFlashcard(question: "Question \(i)", answer: "Answer \(i)")
             set.addCard(card)
         }
 
@@ -536,8 +550,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testExport_SpecialCharacters_InTopicName() throws {
         // Given: Set with special characters in name
-        let set = FlashcardSet(name: "Biology & Chemistry: 101!")
-        set.addCard(Flashcard(question: "Q", answer: "A"))
+        let set = FlashcardSet(topicLabel: "Biology & Chemistry: 101!", tag: "biology-chemistry-101")
+        set.addCard(makeFlashcard(question: "Q", answer: "A"))
 
         // When: Round-trip
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set])
@@ -553,8 +567,8 @@ final class FlashcardExporterTests: XCTestCase {
 
     func testExport_EmptyStrings_HandlesCorrectly() throws {
         // Given: Card with empty answer (edge case)
-        let set = FlashcardSet(name: "Test")
-        let card = Flashcard(question: "Question with no answer", answer: "")
+        let set = makeFlashcardSet(name: "Test")
+        let card = makeFlashcard(question: "Question with no answer", answer: "")
         set.addCard(card)
 
         // When: Round-trip
@@ -571,8 +585,8 @@ final class FlashcardExporterTests: XCTestCase {
     func testExport_VeryLongText_HandlesCorrectly() throws {
         // Given: Card with very long text
         let longText = String(repeating: "This is a very long answer. ", count: 100)
-        let set = FlashcardSet(name: "Test")
-        set.addCard(Flashcard(question: "Long answer test", answer: longText))
+        let set = makeFlashcardSet(name: "Test")
+        set.addCard(makeFlashcard(question: "Long answer test", answer: longText))
 
         // When: Round-trip
         let jsonData = try FlashcardExporter.exportToJSON(sets: [set])
