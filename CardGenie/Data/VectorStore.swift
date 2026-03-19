@@ -156,17 +156,18 @@ final class VectorStore {
             return (chunk, overlap, freshnessBoost)
         }
 
-        let filtered = ranked
-            .sorted {
-                if $0.1 == $1.1 {
-                    return $0.2 > $1.2
-                }
-                return $0.1 > $1.1
+        let sorted = ranked.sorted {
+            if $0.1 == $1.1 {
+                return $0.2 > $1.2
             }
-            .prefix(limit)
-            .map(\.0)
+            return $0.1 > $1.1
+        }
 
-        return Array(filtered)
+        guard sorted.contains(where: { $0.1 > 0 }) else {
+            return chunks
+        }
+
+        return Array(sorted.prefix(limit).map(\.0))
     }
 }
 
