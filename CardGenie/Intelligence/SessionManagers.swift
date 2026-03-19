@@ -791,7 +791,7 @@ final class ScanQueue: ObservableObject {
         let fingerprint = PendingScanJob.makeFingerprint(text: scan.text, topic: scan.topic, deck: scan.deck)
         let descriptor = FetchDescriptor<PendingScanJob>(
             predicate: #Predicate { job in
-                job.textFingerprint == fingerprint && job.statusRawValue != "completed"
+                job.textFingerprint == fingerprint && job.statusRawValue != PendingScanJobStatus.completed.rawValue
             }
         )
 
