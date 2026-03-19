@@ -323,8 +323,17 @@ enum ChatEngineError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .aiNotAvailable:
-            return "Chat is unavailable because the required on-device AI model is not ready on this device."
+        case .aiNotAvailable(let state):
+            switch state {
+            case .notEnabled:
+                return "Apple Intelligence is not enabled. Enable it in Settings."
+            case .notSupported:
+                return "This device or language configuration doesn't support the on-device model required for chat."
+            case .modelNotReady:
+                return "The required on-device AI model is still preparing. Try again in a few minutes."
+            default:
+                return "Chat is currently unavailable."
+            }
         case .noActiveSession:
             return "No active chat session. Please start a new chat."
         }
