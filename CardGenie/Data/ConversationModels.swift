@@ -263,7 +263,7 @@ struct ConversationContext {
         }
 
         for (index, card) in recentFlashcards.prefix(3).enumerated() {
-            references.append("[Card \(index + 1)] Q: \(card.question) A: \(card.answer)")
+            references.append("[Card \(index + 1)] Q: \(card.question.prefix(120)) A: \(card.answer.prefix(160))")
         }
 
         return references
