@@ -3346,7 +3346,7 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             }
         )
 
-        let indexedChunkCount = try modelContext.fetch(descriptor).count
+        let indexedChunkCount = try modelContext.fetchCount(descriptor)
         guard indexedChunkCount > 0 else {
             return nil
         }
