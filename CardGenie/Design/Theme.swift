@@ -66,21 +66,25 @@ struct GlassOverlay: ViewModifier {
 
 extension View {
     /// Apply Liquid Glass panel material
+    @available(iOS 26.0, *)
     func glassPanel() -> some View {
         modifier(GlassPanel())
     }
 
     /// Apply Liquid Glass content background
+    @available(iOS 26.0, *)
     func glassContentBackground() -> some View {
         modifier(GlassContentBackground())
     }
 
     /// Apply Liquid Glass overlay with rounded corners
+    @available(iOS 26.0, *)
     func glassOverlay(cornerRadius: CGFloat = 12) -> some View {
         modifier(GlassOverlay(cornerRadius: cornerRadius))
     }
 
     /// Apply a floating card style with Liquid Glass
+    @available(iOS 26.0, *)
     func glassCard(cornerRadius: CGFloat = 16) -> some View {
         self
             .padding()
