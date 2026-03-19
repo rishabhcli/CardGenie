@@ -22,26 +22,37 @@ final class VectorStore {
     // MARK: - Search
 
     /// Find top-k most similar chunks to query
-    func search(query: String, topK: Int = 6, embeddingEngine: EmbeddingEngine) async throws -> [NoteChunk] {
+    func search(
+        query: String,
+        topK: Int = 6,
+        candidateLimit: Int = 48,
+        embeddingEngine: EmbeddingEngine
+    ) async throws -> [NoteChunk] {
         // Get query embedding
         let queryEmbeddings = try await embeddingEngine.embed([query])
         guard let queryVector = queryEmbeddings.first else {
             return []
         }
 
-        // Fetch all chunks with embeddings
+        // Fetch indexed chunks and rank only a bounded candidate set.
         let descriptor = FetchDescriptor<NoteChunk>(
             predicate: #Predicate { chunk in
                 chunk.embedding != nil
-            }
+            },
+            sortBy: [SortDescriptor(\.embeddingUpdatedAt, order: .reverse)]
         )
 
         let allChunks = try modelContext.fetch(descriptor)
+        let candidates = filterCandidates(
+            from: allChunks,
+            query: query,
+            limit: max(candidateLimit, topK * 4)
+        )
 
         // Calculate cosine similarities
         var scored: [(chunk: NoteChunk, score: Float)] = []
 
-        for chunk in allChunks {
+        for chunk in candidates {
             guard let chunkVector = chunk.getEmbedding() else { continue }
 
             let similarity = cosineSimilarity(queryVector, chunkVector)
@@ -62,14 +73,41 @@ final class VectorStore {
         query: String,
         sourceID: UUID,
         topK: Int = 6,
+        candidateLimit: Int = 48,
         embeddingEngine: EmbeddingEngine
     ) async throws -> [NoteChunk] {
-        let allResults = try await search(query: query, topK: topK * 2, embeddingEngine: embeddingEngine)
+        let descriptor = FetchDescriptor<NoteChunk>(
+            predicate: #Predicate { chunk in
+                chunk.embedding != nil && chunk.sourceDocument?.id == sourceID
+            },
+            sortBy: [SortDescriptor(\.embeddingUpdatedAt, order: .reverse)]
+        )
 
-        return allResults
-            .filter { $0.sourceDocument?.id == sourceID }
+        let scopedChunks = try modelContext.fetch(descriptor)
+        let filtered = filterCandidates(
+            from: scopedChunks,
+            query: query,
+            limit: max(candidateLimit, topK * 4)
+        )
+
+        guard !filtered.isEmpty else {
+            return []
+        }
+
+        let queryEmbeddings = try await embeddingEngine.embed([query])
+        guard let queryVector = queryEmbeddings.first else {
+            return []
+        }
+
+        let ranked = filtered.compactMap { chunk -> (NoteChunk, Float)? in
+            guard let chunkVector = chunk.getEmbedding() else { return nil }
+            return (chunk, cosineSimilarity(queryVector, chunkVector))
+        }
+
+        return ranked
+            .sorted { $0.1 > $1.1 }
             .prefix(topK)
-            .map { $0 }
+            .map(\.0)
     }
 
     // MARK: - Cosine Similarity
@@ -89,6 +127,46 @@ final class VectorStore {
 
         let denominator = sqrt(normA) * sqrt(normB)
         return denominator > 0 ? dotProduct / denominator : 0
+    }
+
+    private func filterCandidates(
+        from chunks: [NoteChunk],
+        query: String,
+        limit: Int
+    ) -> [NoteChunk] {
+        let queryTerms = Set(
+            query
+                .lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { $0.count > 2 }
+        )
+
+        guard !queryTerms.isEmpty else {
+            return Array(chunks.prefix(limit))
+        }
+
+        let ranked = chunks.map { chunk in
+            let sourceText = (chunk.embeddingSourceSignature ?? chunk.text.lowercased())
+            let overlap = queryTerms.reduce(into: 0) { score, term in
+                if sourceText.contains(term) {
+                    score += 1
+                }
+            }
+            let freshnessBoost = chunk.embeddingUpdatedAt?.timeIntervalSince1970 ?? 0
+            return (chunk, overlap, freshnessBoost)
+        }
+
+        let filtered = ranked
+            .sorted {
+                if $0.1 == $1.1 {
+                    return $0.2 > $1.2
+                }
+                return $0.1 > $1.1
+            }
+            .prefix(limit)
+            .map(\.0)
+
+        return Array(filtered)
     }
 }
 

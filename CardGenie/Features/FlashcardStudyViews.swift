@@ -13,6 +13,7 @@ import SwiftData
 
 struct FlashcardListView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \FlashcardSet.createdDate, order: .reverse) private var flashcardSets: [FlashcardSet]
 
     @State private var activeSession: FlashcardStudySession?
@@ -21,6 +22,7 @@ struct FlashcardListView: View {
     @State private var showingStatistics = false
     @State private var cachedDueCount: Int = 0
     @State private var lastCacheUpdate = Date.distantPast
+    @State private var savedStudySession: SavedFlashcardStudySession?
 
     private let spacedRepetitionManager = SpacedRepetitionManager()
     private let cache = CacheManager.shared
@@ -39,7 +41,7 @@ struct FlashcardListView: View {
                         flashcardsEmptyState
                     }
                     .padding(.top, Spacing.xl)
-                } else if totalDueCount == 0 && hasFlashcards {
+                } else if totalDueCount == 0 && hasFlashcards && savedStudySessionSnapshot == nil {
                     // All caught up state
                     allCaughtUpState
                 } else {
@@ -101,6 +103,16 @@ struct FlashcardListView: View {
             .sheet(isPresented: $showingStatistics) {
                 FlashcardStatisticsView()
             }
+            .task {
+                refreshSavedStudySession()
+            }
+            .onChange(of: scenePhase) { _, newValue in
+                guard newValue == .active else { return }
+                refreshSavedStudySession()
+            }
+            .onChange(of: flashcardSets.map(\.id)) { _, _ in
+                refreshSavedStudySession()
+            }
         }
     }
 
@@ -119,8 +131,7 @@ struct FlashcardListView: View {
                 title: "Generate from Content",
                 icon: "sparkles",
                 action: {
-                    // Navigate to Study tab
-                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToStudyTab"), object: nil)
+                    NotificationCenter.default.post(name: .switchToStudyTab, object: nil)
                 }
             ),
             secondaryAction: .init(
@@ -183,69 +194,120 @@ struct FlashcardListView: View {
 
     @ViewBuilder
     private var mainContent: some View {
-        if #available(iOS 26.0, *) {
-            ScrollView {
-                // Wrap all glass elements in GlassEffectContainer to prevent glass-on-glass sampling
-                GlassEffectContainer {
-                    VStack(spacing: 24) {
-                        GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
-
-                        // Study Suggestion Banner - shows when 5+ cards due
-                        if totalDueCount >= 5 {
-                            studySuggestionBanner
-                        }
-
-                        // Quick Play Section - NEW!
-                        if !flashcardSets.isEmpty {
-                            quickPlaySection
-                        }
-
-                        // Daily Review Section
-                        if totalDueCount > 0 {
-                            dailyReviewSection
-                        }
-
-                        // Statistics Summary
-                        statisticsSection
-
-                        // Flashcard Sets List
-                        flashcardSetsSection
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, Spacing.lg)
-                }
-            }
-        } else {
-            // Legacy fallback for iOS 25
-            ScrollView {
+        ScrollView {
+            GlassEffectContainer {
                 VStack(spacing: 24) {
                     GlassSearchBar(text: $searchText, placeholder: "Search flashcard sets")
 
-                    // Study Suggestion Banner - shows when 5+ cards due
+                    if hasFlashcards {
+                        studyLaunchSection
+                    }
+
                     if totalDueCount >= 5 {
                         studySuggestionBanner
                     }
 
-                    // Quick Play Section - NEW!
                     if !flashcardSets.isEmpty {
                         quickPlaySection
                     }
 
-                    // Daily Review Section
                     if totalDueCount > 0 {
                         dailyReviewSection
                     }
 
-                    // Statistics Summary
                     statisticsSection
-
-                    // Flashcard Sets List
                     flashcardSetsSection
                 }
                 .padding(.horizontal)
                 .padding(.vertical, Spacing.lg)
             }
         }
+    }
+
+    // MARK: - Launch Summary
+
+    private var studyLaunchSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Label("Today", systemImage: "bolt.badge.clock")
+                    .font(.headline)
+                    .foregroundStyle(Color.primaryText)
+
+                Spacer()
+
+                if savedStudySessionSnapshot != nil {
+                    Text("Resume available")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(Color.aiAccent)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Color.aiAccent.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+            }
+
+            HStack(spacing: 12) {
+                LaunchMetricCard(
+                    title: "Due Now",
+                    value: "\(totalDueCount)",
+                    caption: highestPrioritySet.map { "\($0.topicLabel) leads" } ?? "Nothing urgent",
+                    color: .aiAccent
+                )
+
+                LaunchMetricCard(
+                    title: "New Cards",
+                    value: "\(totalNewCount)",
+                    caption: totalNewCount == 0 ? "No backlog" : "Ready to learn",
+                    color: .green
+                )
+
+                LaunchMetricCard(
+                    title: "Mastered",
+                    value: "\(masteredCardCount)",
+                    caption: totalCardCount == 0 ? "Start studying" : "\(Int(masteryCompletion * 100))% of library",
+                    color: .cosmicPurple
+                )
+            }
+
+            if let snapshot = savedStudySessionSnapshot {
+                Button {
+                    resumeSavedStudySession()
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "arrow.clockwise.circle.fill")
+                            .font(.title3)
+                            .foregroundStyle(Color.aiAccent)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Resume \(snapshot.set.topicLabel)")
+                                .font(.subheadline.bold())
+                                .foregroundStyle(Color.primaryText)
+
+                            Text("\(snapshot.cards.count) card\(snapshot.cards.count == 1 ? "" : "s") left in your last offline study session")
+                                .font(.caption)
+                                .foregroundStyle(Color.secondaryText)
+                        }
+
+                        Spacer()
+
+                        Image(systemName: "play.fill")
+                            .foregroundStyle(Color.aiAccent)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                }
+                .buttonStyle(.plain)
+                .glassPanel()
+                .cornerRadius(16)
+            } else if let highestPrioritySet {
+                Text("\(highestPrioritySet.topicLabel) has \(highestPrioritySet.dueCount) due card\(highestPrioritySet.dueCount == 1 ? "" : "s"), so it should be your next review block.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.secondaryText)
+            }
+        }
+        .padding()
+        .glassPanel()
+        .cornerRadius(20)
     }
 
     // MARK: - Study Suggestion Banner
@@ -301,26 +363,15 @@ struct FlashcardListView: View {
         }
         .padding()
         .background {
-            if #available(iOS 26.0, *) {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
-            } else {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.cosmicPurple.opacity(0.08), Color.mysticBlue.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
+                )
+                .glassEffect(.regular, in: .rect(cornerRadius: 16))
         }
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
@@ -593,6 +644,48 @@ struct FlashcardListView: View {
         flashcardSets.reduce(0) { $0 + $1.cardCount }
     }
 
+    private var totalNewCount: Int {
+        flashcardSets.reduce(0) { $0 + $1.newCount }
+    }
+
+    private var masteredCardCount: Int {
+        flashcardSets.reduce(0) { partial, set in
+            partial + set.cards.filter { $0.masteryLevel == .mastered }.count
+        }
+    }
+
+    private var masteryCompletion: Double {
+        guard totalCardCount > 0 else { return 0 }
+        return Double(masteredCardCount) / Double(totalCardCount)
+    }
+
+    private var highestPrioritySet: FlashcardSet? {
+        flashcardSets.max { lhs, rhs in
+            if lhs.dueCount == rhs.dueCount {
+                return lhs.newCount < rhs.newCount
+            }
+            return lhs.dueCount < rhs.dueCount
+        }
+    }
+
+    private var savedStudySessionSnapshot: (state: SavedFlashcardStudySession, set: FlashcardSet, cards: [Flashcard])? {
+        guard let savedStudySession else { return nil }
+        guard let set = flashcardSets.first(where: { $0.id == savedStudySession.setID }) else {
+            FlashcardStudyResumeStore.clear()
+            return nil
+        }
+
+        let cardsByID = Dictionary(uniqueKeysWithValues: set.cards.map { ($0.id, $0) })
+        let cards = savedStudySession.remainingCardIDs.compactMap { cardsByID[$0] }
+
+        guard !cards.isEmpty else {
+            FlashcardStudyResumeStore.clear()
+            return nil
+        }
+
+        return (savedStudySession, set, cards)
+    }
+
     private var dailyReviewQueue: [Flashcard] {
         cache.get(
             key: CacheManager.dailyQueueKey(date: Date()),
@@ -683,6 +776,32 @@ struct FlashcardListView: View {
         // Store the selected game mode and flashcard set for navigation
         // This will be handled by the QuickGameButton's NavigationLink
     }
+
+    private func refreshSavedStudySession() {
+        guard let saved = FlashcardStudyResumeStore.load() else {
+            savedStudySession = nil
+            return
+        }
+
+        savedStudySession = saved
+        if savedStudySessionSnapshot == nil {
+            FlashcardStudyResumeStore.clear()
+            savedStudySession = nil
+        }
+    }
+
+    private func resumeSavedStudySession() {
+        guard let snapshot = savedStudySessionSnapshot else {
+            savedStudySession = FlashcardStudyResumeStore.load()
+            return
+        }
+
+        activeSession = FlashcardStudySession(
+            set: snapshot.set,
+            title: snapshot.state.title,
+            cards: snapshot.cards
+        )
+    }
 }
 
 // MARK: - Stat Card Component
@@ -713,6 +832,34 @@ private struct StatCard: View {
         .padding()
         .glassPanel()
         .cornerRadius(12)
+    }
+}
+
+private struct LaunchMetricCard: View {
+    let title: String
+    let value: String
+    let caption: String
+    let color: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(Color.secondaryText)
+
+            Text(value)
+                .font(.title2.bold())
+                .foregroundStyle(color)
+
+            Text(caption)
+                .font(.caption2)
+                .foregroundStyle(Color.secondaryText)
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(color.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
 
@@ -811,6 +958,31 @@ private struct FlashcardStudySession: Identifiable {
     let cards: [Flashcard]
 }
 
+private struct SavedFlashcardStudySession: Codable, Equatable {
+    let setID: UUID
+    let title: String?
+    let remainingCardIDs: [UUID]
+    let updatedAt: Date
+}
+
+private enum FlashcardStudyResumeStore {
+    private static let key = "cardgenie.savedStudySession"
+
+    static func load() -> SavedFlashcardStudySession? {
+        guard let data = UserDefaults.standard.data(forKey: key) else { return nil }
+        return try? JSONDecoder().decode(SavedFlashcardStudySession.self, from: data)
+    }
+
+    static func save(_ session: SavedFlashcardStudySession) {
+        guard let data = try? JSONEncoder().encode(session) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
+
+    static func clear() {
+        UserDefaults.standard.removeObject(forKey: key)
+    }
+}
+
 // MARK: - FlashcardStudyView
 
 
@@ -878,6 +1050,21 @@ struct FlashcardStudyView: View {
             .sheet(isPresented: $showingClarification) {
                 clarificationSheet
             }
+        }
+        .task {
+            persistStudySessionProgress()
+        }
+        .onChange(of: currentCardIndex) { _, _ in
+            persistStudySessionProgress()
+        }
+        .onChange(of: sessionCards.map(\.id)) { _, _ in
+            persistStudySessionProgress()
+        }
+        .onChange(of: showingSummary) { _, _ in
+            persistStudySessionProgress()
+        }
+        .onDisappear {
+            persistStudySessionProgress()
         }
     }
 
@@ -961,14 +1148,9 @@ struct FlashcardStudyView: View {
             .frame(maxWidth: .infinity)
             .padding()
             .background {
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.aiAccent)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                } else {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.aiAccent)
-                }
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.aiAccent)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
             }
         }
         .accessibilityLabel("Reveal answer")
@@ -1058,75 +1240,9 @@ struct FlashcardStudyView: View {
                 Color.clear
                     .ignoresSafeArea()
 
-                if #available(iOS 26.0, *) {
-                    ScrollView {
-                        // Wrap glass elements in GlassEffectContainer
-                        GlassEffectContainer {
-                            VStack(alignment: .leading, spacing: 20) {
-                                // Original Flashcard
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text("Question")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.secondaryText)
-                                        .textCase(.uppercase)
-
-                                    Text(currentCard.question)
-                                        .font(.body)
-                                        .foregroundStyle(Color.primaryText)
-
-                                    Divider()
-                                        .padding(.vertical, 4)
-
-                                    Text("Answer")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.secondaryText)
-                                        .textCase(.uppercase)
-
-                                    Text(currentCard.answer)
-                                        .font(.body)
-                                        .foregroundStyle(Color.aiAccent)
-                                }
-                                .padding()
-                                .glassPanel()
-                                .cornerRadius(12)
-
-                                // AI Explanation
-                                if isLoadingClarification {
-                                    HStack {
-                                        ProgressView()
-                                        Text("Generating explanation...")
-                                            .foregroundStyle(Color.secondaryText)
-                                    }
-                                    .frame(maxWidth: .infinity)
-                                    .padding()
-                                } else if !clarificationText.isEmpty {
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        HStack {
-                                            Image(systemName: "sparkles")
-                                                .foregroundStyle(Color.aiAccent)
-                                            Text("AI Explanation")
-                                                .font(.headline)
-                                                .foregroundStyle(Color.primaryText)
-                                        }
-
-                                        Text(clarificationText)
-                                            .font(.body)
-                                            .foregroundStyle(Color.primaryText)
-                                            .lineSpacing(4)
-                                    }
-                                    .padding()
-                                    .glassPanel()
-                                    .cornerRadius(12)
-                                }
-                            }
-                            .padding()
-                        }
-                    }
-                } else {
-                    // Legacy fallback for iOS 25
-                    ScrollView {
+                ScrollView {
+                    GlassEffectContainer {
                         VStack(alignment: .leading, spacing: 20) {
-                            // Original Flashcard
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Question")
                                     .font(.caption)
@@ -1153,7 +1269,6 @@ struct FlashcardStudyView: View {
                             .glassPanel()
                             .cornerRadius(12)
 
-                            // AI Explanation
                             if isLoadingClarification {
                                 HStack {
                                     ProgressView()
@@ -1251,6 +1366,7 @@ struct FlashcardStudyView: View {
             streakValue = StudyStreakManager.shared.recordSessionCompletion()
             sessionRecorded = true
         }
+        FlashcardStudyResumeStore.clear()
         showingSummary = true
     }
 
@@ -1290,6 +1406,30 @@ struct FlashcardStudyView: View {
                 }
             }
         }
+    }
+
+    private func persistStudySessionProgress() {
+        guard !showingSummary, !sessionCards.isEmpty else {
+            FlashcardStudyResumeStore.clear()
+            return
+        }
+
+        let clampedIndex = min(currentCardIndex, sessionCards.count - 1)
+        let remainingCards = Array(sessionCards.dropFirst(clampedIndex))
+
+        guard !remainingCards.isEmpty else {
+            FlashcardStudyResumeStore.clear()
+            return
+        }
+
+        FlashcardStudyResumeStore.save(
+            SavedFlashcardStudySession(
+                setID: flashcardSet.id,
+                title: sessionTitle,
+                remainingCardIDs: remainingCards.map(\.id),
+                updatedAt: Date()
+            )
+        )
     }
 
 }
@@ -1996,26 +2136,15 @@ struct StudyResultsView: View {
         }
         .padding()
         .background {
-            if #available(iOS 26.0, *) {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
                     )
-                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
-            } else {
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.magicGold.opacity(0.1), Color.cosmicPurple.opacity(0.05)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-            }
+                )
+                .glassEffect(.regular, in: .rect(cornerRadius: 16))
         }
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)

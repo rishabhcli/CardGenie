@@ -32,7 +32,7 @@ struct VoiceAssistantView: View {
 
     // MARK: - Initialization
 
-    init(context: ConversationContext = ConversationContext()) {
+    init(context: ConversationContext? = nil) {
         _assistant = StateObject(wrappedValue: VoiceAssistant(context: context))
     }
 
@@ -482,12 +482,14 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
     // MARK: - Initialization
 
-    init(context: ConversationContext = ConversationContext()) {
-        self.context = context
+    @MainActor
+    init(context: ConversationContext? = nil) {
+        self.context = context ?? ConversationContext()
         // Initialize speech recognizer with fallback
         self.speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "en-US")) ?? SFSpeechRecognizer()!
         super.init()
         speechSynthesizer.delegate = self
+        fmClient.prewarmInteractiveSession()
         log.info("🎙️ Voice Assistant initialized (OFFLINE MODE)")
         log.info("✅ On-device speech recognition: ENABLED")
         log.info("✅ Apple Intelligence: \(self.fmClient.capability() == .available ? "AVAILABLE" : "UNAVAILABLE")")
@@ -548,7 +550,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         let audioSession = AVAudioSession.sharedInstance()
         do {
-            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetoothHFP])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
         } catch {
             log.error("❌ Failed to configure audio session: \(error.localizedDescription)")
@@ -666,15 +668,11 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     /// Stream AI response using Foundation Models
     private func streamAIResponse(to question: String) async {
         #if canImport(FoundationModels)
-        guard #available(iOS 26.0, *) else {
-            await handleFallbackResponse(to: question)
-            return
-        }
-
         // Check AI availability
         guard fmClient.capability() == .available else {
+            let availability = fmClient.availabilityPresentation(for: .voiceConversation)
             log.error("❌ Apple Intelligence not available")
-            lastError = "AI is not available right now"
+            lastError = availability.message
             await handleFallbackResponse(to: question)
             return
         }
@@ -682,92 +680,65 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         log.info("🧠 Starting streaming response...")
 
         do {
-            #if canImport(FoundationModels)
-            if #available(iOS 26.0, *) {
-                // Create session with context-aware system prompt
-                let session = LanguageModelSession {
-                    context.systemPrompt()
-                }
-
-                // Build prompt with conversation history
-                let conversationHistory = formatConversationHistory()
-                let prompt = """
-                Recent conversation:
-                \(conversationHistory)
-
-                Student's question: \(question)
-
-                Respond naturally and concisely (2-3 sentences). Ask follow-up questions to encourage deeper understanding.
-                """
-
-                let options = GenerationOptions(
-                    sampling: .greedy,
-                    temperature: 0.7 // Conversational warmth
-                )
-
-                // Stream the response
-                let stream = session.streamResponse(to: prompt, options: options)
-
-                // Start speaking as soon as we have content
-                isSpeaking = true
-
-                var fullResponse = ""
-
-                for try await partial in stream {
-                    // Update UI immediately
-                    streamingResponse = partial.content
-                    fullResponse = partial.content
-
-                    // Speak new sentences as they arrive
-                    let newText = extractNewText(from: partial.content, after: lastSpokenText)
-                    if !newText.isEmpty {
-                        speakTextIncremental(newText)
-                        lastSpokenText = partial.content
-                    }
-                }
-
-                // Finalize message
-                let assistantMessage = VoiceMessage(text: fullResponse, isUser: false)
-                conversation.append(assistantMessage)
-
-                log.info("✅ Streaming response complete: \(fullResponse.count) chars")
-
-                isProcessing = false
-
-                // Wait for speech to finish
-                while isSpeaking {
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                }
-            } else {
-                // Fallback for older iOS versions
-                await handleFallbackResponse(to: question)
+            // Create session with context-aware system prompt
+            let session = LanguageModelSession {
+                context.systemPrompt()
             }
-            #else
-            // FoundationModels not available
-            await handleFallbackResponse(to: question)
-            #endif
+
+            // Build prompt with conversation history
+            let conversationHistory = formatConversationHistory()
+            let prompt = """
+            Recent conversation:
+            \(conversationHistory)
+
+            Student's question: \(question)
+
+            Respond naturally and concisely (2-3 sentences). Ask follow-up questions to encourage deeper understanding.
+            """
+
+            let options = GenerationOptions(
+                sampling: .greedy,
+                temperature: 0.7 // Conversational warmth
+            )
+
+            // Stream the response
+            let stream = session.streamResponse(to: prompt, options: options)
+
+            // Start speaking as soon as we have content
+            isSpeaking = true
+
+            var fullResponse = ""
+
+            for try await partial in stream {
+                // Update UI immediately
+                streamingResponse = partial.content
+                fullResponse = partial.content
+
+                // Speak new sentences as they arrive
+                let newText = extractNewText(from: partial.content, after: lastSpokenText)
+                if !newText.isEmpty {
+                    speakTextIncremental(newText)
+                    lastSpokenText = partial.content
+                }
+            }
+
+            // Finalize message
+            let assistantMessage = VoiceMessage(text: fullResponse, isUser: false)
+            conversation.append(assistantMessage)
+
+            log.info("✅ Streaming response complete: \(fullResponse.count) chars")
+
+            isProcessing = false
+
+            // Wait for speech to finish
+            while isSpeaking {
+                try? await Task.sleep(nanoseconds: 100_000_000)
+            }
 
         } catch {
-            #if canImport(FoundationModels)
-            if #available(iOS 26.0, *) {
-                if let genError = error as? LanguageModelSession.GenerationError {
-                    switch genError {
-                    case .guardrailViolation:
-                        log.error("❌ Guardrail violation")
-                        lastError = "I can't help with that. Let's focus on your studies!"
-                    case .refusal:
-                        log.error("❌ Model refused request")
-                        lastError = "I'm not able to answer that question."
-                    default:
-                        log.error("❌ Streaming failed: \(error.localizedDescription)")
-                        lastError = "Something went wrong. Try asking again."
-                    }
-                } else {
-                    log.error("❌ Streaming failed: \(error.localizedDescription)")
-                    lastError = "Something went wrong. Try asking again."
-                }
-            }
-            #endif
+            let safety = fmClient.safetyPresentation(for: error, feature: .voiceConversation)
+            log.error("❌ Streaming failed: \(error.localizedDescription)")
+            lastError = safety.message
             await handleErrorResponse()
         }
 
@@ -797,7 +768,7 @@ class VoiceAssistant: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
     /// Fallback response when Apple Intelligence unavailable
     private func handleFallbackResponse(to question: String) async {
-        let fallbackResponse = "I'm currently unavailable. Apple Intelligence must be enabled for voice conversations. You can enable it in Settings > Apple Intelligence."
+        let fallbackResponse = fmClient.availabilityPresentation(for: .voiceConversation).message
         streamingResponse = fallbackResponse
 
         let message = VoiceMessage(text: fallbackResponse, isUser: false)
@@ -2425,7 +2396,7 @@ struct AIChatView: View {
 
             // Enhanced voice input button with iOS 26 glass
             Button {
-                chatEngine.toggleVoiceInput()
+                chatEngine.toggleVoiceInput(modelContext: modelContext)
             } label: {
                 ZStack {
                     // Glass background circle with state-based color
@@ -2539,7 +2510,7 @@ struct AIChatView: View {
                 }
             }
 
-            let success = await chatEngine.sendMessage(fullMessage, attachments: attachments)
+            let success = await chatEngine.sendMessage(fullMessage, attachments: attachments, modelContext: modelContext)
             if !success {
                 await MainActor.run {
                     showPermissionAlert = true
@@ -2785,6 +2756,27 @@ struct AIChatMessageBubble: View {
                         }
                     }
 
+                if !message.isUser && !message.citations.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Sources")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        ForEach(Array(message.citations.enumerated()), id: \.offset) { _, citation in
+                            Text(citation.displayText)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                        .fill(Color.secondary.opacity(0.08))
+                                )
+                        }
+                    }
+                    .padding(.horizontal, 8)
+                }
+
                 if !message.isUser && message.isStreaming {
                     HStack(spacing: 4) {
                         ForEach(0..<3) { index in
@@ -2913,6 +2905,7 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     override init() {
         super.init()
         speechSynthesizer.delegate = self
+        fmClient.prewarmInteractiveSession()
         checkAvailability()
         #if canImport(Speech)
         speechRecognizer = SFSpeechRecognizer(locale: Locale.current)
@@ -2931,7 +2924,11 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         messages.removeAll()
     }
 
-    func sendMessage(_ text: String, attachments: [ScanAttachment] = []) async -> Bool {
+    func sendMessage(
+        _ text: String,
+        attachments: [ScanAttachment] = [],
+        modelContext: ModelContext
+    ) async -> Bool {
         // Check availability
         guard fmClient.capability() == .available else {
             checkAvailability()
@@ -2960,6 +2957,21 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                 userMessage: text
             )
 
+            if let groundedResponse = try await groundedResponse(for: text, modelContext: modelContext) {
+                messages[assistantIndex] = AIChatMessage(
+                    text: groundedResponse.answer,
+                    isUser: false,
+                    isStreaming: false,
+                    citations: groundedResponse.citations
+                )
+
+                if autoSpeakEnabled {
+                    await speak(groundedResponse.answer)
+                }
+
+                return true
+            }
+
             // Stream response with sentence-by-sentence TTS
             var fullResponse = ""
             var lastSpokenPosition = 0 // Track what we've already spoken
@@ -2971,7 +2983,8 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                 messages[assistantIndex] = AIChatMessage(
                     text: fullResponse,
                     isUser: false,
-                    isStreaming: true
+                    isStreaming: true,
+                    citations: []
                 )
 
                 // Speak complete sentences as they arrive (queued for sequential playback)
@@ -2994,11 +3007,12 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
             #endif
 
             // Finalize message
-            messages[assistantIndex] = AIChatMessage(
-                text: fullResponse,
-                isUser: false,
-                isStreaming: false
-            )
+                messages[assistantIndex] = AIChatMessage(
+                    text: fullResponse,
+                    isUser: false,
+                    isStreaming: false,
+                    citations: []
+                )
 
             // Queue any remaining text that wasn't spoken during streaming
             if autoSpeakEnabled && lastSpokenPosition < fullResponse.count {
@@ -3014,8 +3028,8 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                 messages.remove(at: assistantIndex)
             }
 
-            // Add error message
-            let errorMessage = "Sorry, I encountered an error. Please try again."
+            let safety = fmClient.safetyPresentation(for: error, feature: .chat)
+            let errorMessage = safety.message
             messages.append(AIChatMessage(
                 text: errorMessage,
                 isUser: false
@@ -3030,20 +3044,20 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
         }
     }
 
-    func toggleVoiceInput() {
+    func toggleVoiceInput(modelContext: ModelContext) {
         #if canImport(Speech)
         if isListening {
             stopListening()
         } else {
             Task {
-                await startListening()
+                await startListening(modelContext: modelContext)
             }
         }
         #endif
     }
 
     #if canImport(Speech)
-    private func startListening() async {
+    private func startListening(modelContext: ModelContext) async {
         // Stop speaking if AI is currently talking (interruption handling)
         if isSpeaking {
             stopSpeaking()
@@ -3074,7 +3088,7 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
 
         do {
             let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+            try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetoothHFP])
             try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
             recognitionRequest = SFSpeechAudioBufferRecognitionRequest()
@@ -3102,7 +3116,7 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
                         if result.isFinal {
                             let finalText = self.currentTranscript
                             self.currentTranscript = "" // Clear preview
-                            _ = await self.sendMessage(finalText)
+                            _ = await self.sendMessage(finalText, modelContext: modelContext)
                             self.stopListening()
                         }
                     }
@@ -3314,18 +3328,30 @@ class AIChatEngine: NSObject, ObservableObject, AVSpeechSynthesizerDelegate {
     // MARK: - Private Helpers
 
     private func checkAvailability() {
-        let status = fmClient.capability()
-        switch status {
+        switch fmClient.capability() {
         case .available:
             availabilityMessage = ""
-        case .notEnabled:
-            availabilityMessage = "Please enable AI features in Settings"
-        case .notSupported:
-            availabilityMessage = "AI features require iPhone 15 Pro or newer"
-        case .modelNotReady:
-            availabilityMessage = "AI model is downloading"
-        case .unknown:
-            availabilityMessage = "AI status unknown"
+        default:
+            availabilityMessage = fmClient.availabilityPresentation(for: .chat).message
         }
+    }
+
+    private func groundedResponse(
+        for question: String,
+        modelContext: ModelContext
+    ) async throws -> ChatResponse? {
+        let descriptor = FetchDescriptor<NoteChunk>(
+            predicate: #Predicate { chunk in
+                chunk.embedding != nil
+            }
+        )
+
+        let indexedChunkCount = try modelContext.fetch(descriptor).count
+        guard indexedChunkCount > 0 else {
+            return nil
+        }
+
+        let ragManager = RAGChatManager(vectorStore: VectorStore(modelContext: modelContext))
+        return try await ragManager.ask(question: question)
     }
 }

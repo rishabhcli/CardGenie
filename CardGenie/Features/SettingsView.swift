@@ -19,6 +19,7 @@ struct SettingsView: View {
     @StateObject private var fmClient = FMClient()
 
     @Query private var allContent: [StudyContent]
+    @Query private var allFlashcards: [Flashcard]
     @Query private var flashcardSets: [FlashcardSet]
 
     @AppStorage("studyRemindersEnabled") private var studyRemindersEnabled = false
@@ -216,28 +217,35 @@ struct SettingsView: View {
                     Text("Export your flashcards to backup or share. Imports will merge with existing cards.")
                 }
 
-                // About Section
                 Section {
                     HStack {
                         Label("Version", systemImage: "info.circle")
                         Spacer()
-                        Text("1.0.0")
+                        Text(appVersion)
                             .foregroundStyle(Color.secondaryText)
                     }
 
                     HStack {
-                        Label("iOS Requirement", systemImage: "iphone")
+                        Label("Build", systemImage: "hammer")
                         Spacer()
-                        Text("26.0+")
+                        Text(buildNumber)
                             .foregroundStyle(Color.secondaryText)
                     }
 
-                    Link(destination: URL(string: "https://apple.com/privacy")!) {
-                        Label("Privacy Policy", systemImage: "hand.raised.fill")
+                    HStack(alignment: .top) {
+                        Label("Privacy", systemImage: "hand.raised.fill")
+                        Spacer()
+                        Text("All notes, cards, and AI output stay on device.")
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.secondaryText)
                     }
 
-                    Link(destination: URL(string: "https://github.com")!) {
-                        Label("Open Source Licenses", systemImage: "doc.text.fill")
+                    HStack(alignment: .top) {
+                        Label("Experience", systemImage: "wand.and.stars")
+                        Spacer()
+                        Text("Study, scan, record, and review from one app shell.")
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(Color.secondaryText)
                     }
                 } header: {
                     Text("About")
@@ -306,6 +314,14 @@ struct SettingsView: View {
         flashcardSets.reduce(0) { $0 + $1.cardCount }
     }
 
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "Unknown"
+    }
+
+    private var buildNumber: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "Unknown"
+    }
+
     // MARK: - Actions
 
     private func openSystemSettings() {
@@ -317,6 +333,12 @@ struct SettingsView: View {
     private func clearAllData() {
         for content in allContent {
             modelContext.delete(content)
+        }
+        for flashcard in allFlashcards {
+            modelContext.delete(flashcard)
+        }
+        for set in flashcardSets {
+            modelContext.delete(set)
         }
         try? modelContext.save()
     }

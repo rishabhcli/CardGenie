@@ -767,20 +767,60 @@ final class ScanQueue: ObservableObject {
     private let userDefaults = UserDefaults.standard
     private let queueKey = "com.cardgenie.scanQueue"
 
-    @Published private(set) var pendingScans: [PendingScan] = []
+    @Published private(set) var pendingScans: [PendingScanJob] = []
     @Published private(set) var isProcessing = false
 
-    private init() {
-        loadQueue()
-    }
+    private init() {}
 
     // MARK: - Queue Management
 
-    /// Add a scan to the offline queue
-    func enqueueScan(_ scan: PendingScan) {
-        pendingScans.append(scan)
-        saveQueue()
-        logger.info("Enqueued scan: \(scan.id) - \(scan.text.prefix(50))...")
+    func refresh(modelContext: ModelContext) {
+        do {
+            try migrateLegacyQueueIfNeeded(modelContext: modelContext)
+            let descriptor = FetchDescriptor<PendingScanJob>(
+                sortBy: [SortDescriptor(\.createdAt, order: .forward)]
+            )
+            pendingScans = try modelContext.fetch(descriptor)
+        } catch {
+            logger.error("Failed to refresh scan queue: \(error.localizedDescription)")
+        }
+    }
+
+    /// Add a scan to the persistent offline queue
+    func enqueueScan(_ scan: PendingScan, modelContext: ModelContext) {
+        let fingerprint = PendingScanJob.makeFingerprint(text: scan.text, topic: scan.topic, deck: scan.deck)
+        let descriptor = FetchDescriptor<PendingScanJob>(
+            predicate: #Predicate { job in
+                job.textFingerprint == fingerprint && job.statusRawValue != "completed"
+            }
+        )
+
+        do {
+            if let existing = try modelContext.fetch(descriptor).first {
+                existing.markQueued()
+                existing.updatedAt = Date()
+                try modelContext.save()
+                refresh(modelContext: modelContext)
+                logger.info("Re-queued existing scan job: \(existing.id)")
+                return
+            }
+
+            let job = PendingScanJob(
+                id: scan.id,
+                text: scan.text,
+                topic: scan.topic,
+                deck: scan.deck,
+                imageDataArray: scan.imageDataArray,
+                pageCount: scan.pageCount,
+                formats: scan.flashcardFormats
+            )
+            modelContext.insert(job)
+            try modelContext.save()
+            refresh(modelContext: modelContext)
+            logger.info("Enqueued scan job: \(job.id)")
+        } catch {
+            logger.error("Failed to enqueue scan job: \(error.localizedDescription)")
+        }
     }
 
     /// Add a scan from ScanReviewView data
@@ -789,7 +829,8 @@ final class ScanQueue: ObservableObject {
         topic: String?,
         deck: String?,
         images: [UIImage],
-        formats: Set<FlashcardType>
+        formats: Set<FlashcardType>,
+        modelContext: ModelContext
     ) {
         let imageData = images.compactMap { $0.jpegData(compressionQuality: 0.8) }
         let scan = PendingScan(
@@ -800,21 +841,38 @@ final class ScanQueue: ObservableObject {
             pageCount: images.count,
             formats: formats
         )
-        enqueueScan(scan)
+        enqueueScan(scan, modelContext: modelContext)
     }
 
     /// Remove a specific scan from queue
-    func removeScan(_ scanID: UUID) {
-        pendingScans.removeAll { $0.id == scanID }
-        saveQueue()
-        logger.info("Removed scan from queue: \(scanID)")
+    func removeScan(_ scanID: UUID, modelContext: ModelContext) {
+        let descriptor = FetchDescriptor<PendingScanJob>(
+            predicate: #Predicate { job in
+                job.id == scanID
+            }
+        )
+
+        do {
+            try modelContext.fetch(descriptor).forEach { modelContext.delete($0) }
+            try modelContext.save()
+            refresh(modelContext: modelContext)
+            logger.info("Removed scan job from queue: \(scanID)")
+        } catch {
+            logger.error("Failed to remove scan job \(scanID): \(error.localizedDescription)")
+        }
     }
 
     /// Clear all pending scans
-    func clearQueue() {
-        pendingScans.removeAll()
-        saveQueue()
-        logger.info("Cleared scan queue")
+    func clearQueue(modelContext: ModelContext) {
+        pendingScans.forEach { modelContext.delete($0) }
+
+        do {
+            try modelContext.save()
+            pendingScans.removeAll()
+            logger.info("Cleared scan queue")
+        } catch {
+            logger.error("Failed to clear scan queue: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - Processing
@@ -824,6 +882,8 @@ final class ScanQueue: ObservableObject {
     /// - Returns: Number of successfully processed scans
     @discardableResult
     func processQueue(modelContext: ModelContext, fmClient: FMClient) async -> Int {
+        refresh(modelContext: modelContext)
+
         guard !pendingScans.isEmpty else {
             logger.info("Queue is empty, nothing to process")
             return 0
@@ -834,31 +894,47 @@ final class ScanQueue: ObservableObject {
             return 0
         }
 
+        guard canProcessQueue(fmClient: fmClient) else {
+            logger.info("On-device AI unavailable, leaving \(self.pendingScans.count) jobs queued")
+            return 0
+        }
+
         isProcessing = true
         defer { isProcessing = false }
 
         logger.info("Starting queue processing: \(self.pendingScans.count) scans")
         var successCount = 0
 
-        for scan in self.pendingScans {
+        let jobs = pendingScans
+            .filter { $0.status != .completed }
+            .sorted { $0.createdAt < $1.createdAt }
+
+        for job in jobs {
             do {
-                try await processScan(scan, modelContext: modelContext, fmClient: fmClient)
-                removeScan(scan.id)
+                job.markProcessing()
+                try modelContext.save()
+
+                try await processScan(job, modelContext: modelContext, fmClient: fmClient)
+                job.markCompleted()
+                modelContext.delete(job)
+                try modelContext.save()
                 successCount += 1
-                logger.info("Successfully processed scan: \(scan.id)")
+                logger.info("Successfully processed scan job: \(job.id)")
             } catch {
-                logger.error("Failed to process scan \(scan.id): \(error.localizedDescription)")
-                // Keep failed scan in queue for retry
+                job.markFailure(error.localizedDescription)
+                try? modelContext.save()
+                logger.error("Failed to process scan job \(job.id): \(error.localizedDescription)")
             }
         }
 
-        logger.info("Queue processing complete: \(successCount)/\(self.pendingScans.count) successful")
+        refresh(modelContext: modelContext)
+        logger.info("Queue processing complete: \(successCount)/\(jobs.count) successful")
         return successCount
     }
 
     /// Process a single pending scan
     private func processScan(
-        _ scan: PendingScan,
+        _ scan: PendingScanJob,
         modelContext: ModelContext,
         fmClient: FMClient
     ) async throws {
@@ -903,26 +979,44 @@ final class ScanQueue: ObservableObject {
         try modelContext.save()
     }
 
-    // MARK: - Persistence
+    // MARK: - Legacy Migration
 
-    private func loadQueue() {
+    private func migrateLegacyQueueIfNeeded(modelContext: ModelContext) throws {
         guard let data = userDefaults.data(forKey: queueKey),
               let decoded = try? JSONDecoder().decode([PendingScan].self, from: data) else {
-            logger.info("No existing queue found")
             return
         }
 
-        pendingScans = decoded
-        logger.info("Loaded queue: \(decoded.count) pending scans")
-    }
-
-    private func saveQueue() {
-        guard let encoded = try? JSONEncoder().encode(pendingScans) else {
-            logger.error("Failed to encode queue")
+        guard !decoded.isEmpty else {
+            userDefaults.removeObject(forKey: queueKey)
             return
         }
 
-        userDefaults.set(encoded, forKey: queueKey)
+        for scan in decoded {
+            let fingerprint = PendingScanJob.makeFingerprint(text: scan.text, topic: scan.topic, deck: scan.deck)
+            let descriptor = FetchDescriptor<PendingScanJob>(
+                predicate: #Predicate { job in
+                    job.textFingerprint == fingerprint && job.statusRawValue != "completed"
+                }
+            )
+
+            if try modelContext.fetch(descriptor).isEmpty {
+                let job = PendingScanJob(
+                    id: scan.id,
+                    text: scan.text,
+                    topic: scan.topic,
+                    deck: scan.deck,
+                    imageDataArray: scan.imageDataArray,
+                    pageCount: scan.pageCount,
+                    formats: scan.flashcardFormats
+                )
+                modelContext.insert(job)
+            }
+        }
+
+        try modelContext.save()
+        userDefaults.removeObject(forKey: queueKey)
+        logger.info("Migrated \(decoded.count) legacy scan queue item(s) into SwiftData")
     }
 
     // MARK: - Helper Methods

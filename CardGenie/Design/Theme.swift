@@ -31,34 +31,6 @@ enum Glass {
     static let contentBackgroundCornerRadius: CGFloat = 12
 }
 
-/// Legacy fallback for iOS 25 and earlier
-enum LegacyGlass {
-    /// Material for navigation bars and toolbars (iOS 25 fallback)
-    static var bar: Material {
-        .ultraThinMaterial
-    }
-
-    /// Material for floating panels, sheets, and cards (iOS 25 fallback)
-    static var panel: Material {
-        .thinMaterial
-    }
-
-    /// Material for subtle overlays and backgrounds (iOS 25 fallback)
-    static var overlay: Material {
-        .ultraThinMaterial
-    }
-
-    /// Material for grouped content areas (iOS 25 fallback)
-    static var contentBackground: Material {
-        .regularMaterial
-    }
-
-    /// Opaque fallback when Reduce Transparency is enabled
-    static var solid: Color {
-        Color(.secondarySystemBackground)
-    }
-}
-
 // MARK: - View Modifiers (iOS 26+)
 
 /// Applies native Liquid Glass panel effect with automatic accessibility fallback
@@ -90,102 +62,30 @@ struct GlassOverlay: ViewModifier {
     }
 }
 
-// MARK: - Legacy View Modifiers (iOS 25 fallback)
-
-/// Legacy Liquid Glass panel styling for iOS 25 (Material-based)
-struct LegacyGlassPanel: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content.background(LegacyGlass.solid)
-        } else {
-            content.background(LegacyGlass.panel)
-        }
-    }
-}
-
-/// Legacy Liquid Glass content background for iOS 25
-struct LegacyGlassContentBackground: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content.background(Color(.tertiarySystemBackground))
-        } else {
-            content.background(LegacyGlass.contentBackground)
-        }
-    }
-}
-
-/// Legacy Liquid Glass overlay for iOS 25
-struct LegacyGlassOverlay: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
-    var cornerRadius: CGFloat = 12
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(LegacyGlass.solid)
-                .cornerRadius(cornerRadius)
-        } else {
-            content
-                .background(LegacyGlass.overlay)
-                .cornerRadius(cornerRadius)
-                .shadow(color: .black.opacity(0.1), radius: 10, y: 5)
-        }
-    }
-}
-
 // MARK: - View Extensions
 
 extension View {
     /// Apply Liquid Glass panel material
-    /// Uses native iOS 26 API with automatic accessibility fallback
-    @ViewBuilder
     func glassPanel() -> some View {
-        if #available(iOS 26.0, *) {
-            modifier(GlassPanel())
-        } else {
-            modifier(LegacyGlassPanel())
-        }
+        modifier(GlassPanel())
     }
 
     /// Apply Liquid Glass content background
-    @ViewBuilder
     func glassContentBackground() -> some View {
-        if #available(iOS 26.0, *) {
-            modifier(GlassContentBackground())
-        } else {
-            modifier(LegacyGlassContentBackground())
-        }
+        modifier(GlassContentBackground())
     }
 
     /// Apply Liquid Glass overlay with rounded corners
-    @ViewBuilder
     func glassOverlay(cornerRadius: CGFloat = 12) -> some View {
-        if #available(iOS 26.0, *) {
-            modifier(GlassOverlay(cornerRadius: cornerRadius))
-        } else {
-            modifier(LegacyGlassOverlay(cornerRadius: cornerRadius))
-        }
+        modifier(GlassOverlay(cornerRadius: cornerRadius))
     }
 
     /// Apply a floating card style with Liquid Glass
-    @ViewBuilder
     func glassCard(cornerRadius: CGFloat = 16) -> some View {
-        if #available(iOS 26.0, *) {
-            self
-                .padding()
-                .glassEffect(in: .rect(cornerRadius: cornerRadius))
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
-        } else {
-            self
-                .padding()
-                .modifier(LegacyGlassPanel())
-                .cornerRadius(cornerRadius)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
-        }
+        self
+            .padding()
+            .glassEffect(in: .rect(cornerRadius: cornerRadius))
+            .shadow(color: .black.opacity(0.08), radius: 12, y: 6)
     }
 
     /// Apply glass effect to interactive buttons (iOS 26+)

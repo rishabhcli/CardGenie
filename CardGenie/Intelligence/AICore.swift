@@ -29,12 +29,53 @@ enum FMCapabilityState {
     case unknown                    // Unable to determine state
 }
 
+enum AIFeature {
+    case contentTools
+    case contentGeneration
+    case studyAssistant
+    case chat
+    case voiceConversation
+    case tutoring
+}
+
+struct AIAvailabilityPresentation {
+    let title: String
+    let message: String
+}
+
+struct AISafetyPresentation {
+    let title: String
+    let message: String
+}
+
+extension FMCapabilityState {
+    var badgeText: String {
+        switch self {
+        case .available:
+            return "On-Device AI Ready"
+        case .notEnabled:
+            return "AI Turned Off"
+        case .notSupported:
+            return "AI Unsupported"
+        case .modelNotReady:
+            return "AI Preparing"
+        case .unknown:
+            return "AI Status Unknown"
+        }
+    }
+}
+
 // MARK: - Foundation Models Client
 
 /// Client for interacting with Apple's on-device Foundation Models.
 /// All AI operations run locally on the Neural Engine, preserving privacy.
+@MainActor
 final class FMClient: ObservableObject {
     private let log = Logger(subsystem: "com.smartjournal.app", category: "FMClient")
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, *)
+    private var prewarmedInteractiveSession: LanguageModelSession?
+    #endif
 
     // MARK: - Capability Checking
 
@@ -67,7 +108,104 @@ final class FMClient: ObservableObject {
         }
         #else
         log.info("FoundationModels framework not available; using fallback mode")
-        return .modelNotReady
+        return .notSupported
+        #endif
+    }
+
+    func availabilityPresentation(for feature: AIFeature) -> AIAvailabilityPresentation {
+        let featureName: String
+        switch feature {
+        case .contentTools:
+            featureName = "This AI study tool"
+        case .contentGeneration:
+            featureName = "Flashcard generation"
+        case .studyAssistant:
+            featureName = "This AI assistant"
+        case .chat:
+            featureName = "Chat"
+        case .voiceConversation:
+            featureName = "Voice tutoring"
+        case .tutoring:
+            featureName = "Tutoring"
+        }
+
+        switch capability() {
+        case .available:
+            return AIAvailabilityPresentation(
+                title: "On-Device AI Ready",
+                message: "\(featureName) is ready to run entirely on this device."
+            )
+        case .notEnabled:
+            return AIAvailabilityPresentation(
+                title: "On-Device AI Turned Off",
+                message: "\(featureName) needs Apple Intelligence enabled on this device. CardGenie stays offline and cannot fall back to a network service."
+            )
+        case .notSupported:
+            return AIAvailabilityPresentation(
+                title: "On-Device AI Unsupported",
+                message: "\(featureName) is not available on this device or in the current language because the required on-device model is unsupported."
+            )
+        case .modelNotReady:
+            return AIAvailabilityPresentation(
+                title: "On-Device AI Preparing",
+                message: "\(featureName) is still preparing its local model on this device. Try again in a moment."
+            )
+        case .unknown:
+            return AIAvailabilityPresentation(
+                title: "On-Device AI Status Unknown",
+                message: "\(featureName) could not confirm local AI availability right now."
+            )
+        }
+    }
+
+    func safetyPresentation(for error: Error, feature: AIFeature) -> AISafetyPresentation {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *),
+           let generationError = error as? LanguageModelSession.GenerationError {
+            switch generationError {
+            case .guardrailViolation:
+                return AISafetyPresentation(
+                    title: "Request Blocked",
+                    message: "That request can't be completed safely on-device. Try rephrasing it as a study or note-taking question."
+                )
+            case .refusal:
+                return AISafetyPresentation(
+                    title: "Request Refused",
+                    message: "The on-device model declined that request. Try asking for a summary, explanation, or practice help instead."
+                )
+            default:
+                break
+            }
+        }
+        #endif
+
+        if let fmError = error as? FMError, fmError == .modelUnavailable {
+            let presentation = availabilityPresentation(for: feature)
+            return AISafetyPresentation(title: presentation.title, message: presentation.message)
+        }
+
+        if let safetyError = error as? SafetyError,
+           case .guardrailViolation(let event) = safetyError {
+            return AISafetyPresentation(title: "Request Blocked", message: event.userMessage)
+        }
+
+        return AISafetyPresentation(
+            title: "Request Failed",
+            message: "The on-device request could not be completed. Try again with a shorter or more specific prompt."
+        )
+    }
+
+    func prewarmInteractiveSession() {
+        #if canImport(FoundationModels)
+        guard capability() == .available else { return }
+        guard #available(iOS 26.0, *) else { return }
+
+        if prewarmedInteractiveSession == nil {
+            prewarmedInteractiveSession = LanguageModelSession {
+                self.interactiveSystemInstructions
+            }
+            log.info("Prewarmed interactive session")
+        }
         #endif
     }
 
@@ -281,13 +419,7 @@ final class FMClient: ObservableObject {
         log.info("Generating completion...")
 
         do {
-            let session = LanguageModelSession {
-                """
-                You are a helpful AI assistant for studying and learning.
-                Provide accurate, concise, and well-structured responses.
-                When answering questions about lecture notes or study materials, cite sources if provided.
-                """
-            }
+            let session = consumeInteractiveSession()
 
             let options = GenerationOptions(
                 sampling: .greedy,
@@ -309,8 +441,7 @@ final class FMClient: ObservableObject {
         }
         #else
         log.info("Using fallback completion implementation")
-        // Fallback: return a generic response
-        return "I'm unable to process this request without Apple Intelligence enabled."
+        return availabilityPresentation(for: .studyAssistant).message
         #endif
     }
 
@@ -592,14 +723,7 @@ final class FMClient: ObservableObject {
                 log.info("Starting chat streaming...")
 
                 do {
-                    let session = LanguageModelSession {
-                        """
-                        You are a helpful, friendly AI assistant.
-                        Provide clear, concise, and accurate responses.
-                        Be conversational but professional.
-                        Keep responses focused and relevant.
-                        """
-                    }
+                    let session = self.consumeInteractiveSession()
 
                     let options = GenerationOptions(
                         sampling: .greedy,
@@ -626,17 +750,40 @@ final class FMClient: ObservableObject {
                 }
                 #else
                 log.info("Using fallback chat implementation")
-                continuation.yield("I'm currently unavailable. Apple Intelligence is not enabled on this device.")
+                continuation.yield(availabilityPresentation(for: .chat).message)
                 continuation.finish()
                 #endif
             }
         }
     }
+
+    #if canImport(FoundationModels)
+    @available(iOS 26.0, *)
+    private func consumeInteractiveSession() -> LanguageModelSession {
+        if let session = prewarmedInteractiveSession {
+            prewarmedInteractiveSession = nil
+            return session
+        }
+
+        return LanguageModelSession {
+            self.interactiveSystemInstructions
+        }
+    }
+    #endif
+
+    private var interactiveSystemInstructions: String {
+        """
+        You are CardGenie, a helpful on-device study assistant.
+        Provide accurate, concise, and well-structured responses.
+        When answering from provided study material, cite the supplied sources.
+        If the answer is not in the provided material, say so directly.
+        """
+    }
 }
 
 // MARK: - Error Types
 
-enum FMError: LocalizedError {
+enum FMError: LocalizedError, Equatable {
     case unsupportedOS
     case modelUnavailable
     case processingFailed
@@ -645,9 +792,9 @@ enum FMError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .unsupportedOS:
-            return "iOS 26 or later is required for Apple Intelligence features."
+            return "CardGenie requires iOS 26 or later."
         case .modelUnavailable:
-            return "Apple Intelligence is not available. Please enable it in Settings."
+            return "The required on-device AI model is unavailable for this request."
         case .processingFailed:
             return "Failed to process your request. Please try again."
         case .textTooShort:
@@ -710,7 +857,7 @@ enum LLMError: LocalizedError {
 
 // MARK: - Apple On-Device Provider
 
-/// Apple Intelligence / Foundation Models provider (iOS 18.1+)
+/// Apple Intelligence / Foundation Models provider (iOS 26+)
 final class AppleOnDeviceLLM: LLMEngine {
     private let fmClient = FMClient()
 
@@ -1292,10 +1439,10 @@ final class LocaleManager {
     /// Present fallback message for unsupported locales
     func getUnsupportedLocaleMessage() -> String {
         return """
-        Apple Intelligence is not yet available in your language. \
-        CardGenie's AI features require Apple Intelligence to be enabled \
-        in a supported language. You can still use manual flashcard creation \
-        and study features.
+        On-device AI is not available in your current language yet. \
+        CardGenie stays fully offline, so this feature remains unavailable \
+        until Apple ships local support for that language. You can still use \
+        manual flashcard creation and study features.
         """
     }
 }

@@ -17,25 +17,21 @@ import FoundationModels
 
 /// Main view displaying the list of study content
 struct ContentListView: View {
-    // SwiftData
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.persistenceMode) private var persistenceMode
     @Query(sort: \StudyContent.createdAt, order: .reverse) private var allContent: [StudyContent]
+    @Query private var flashcardSets: [FlashcardSet]
 
-    // Search & Filtering
     @State private var searchText: String = ""
     @State private var selectedFilters: Set<ContentFilter> = []
     @State private var sortOrder: SortOrder = .dateDescending
     @State private var showingFilters = false
 
-    // Navigation
-    @State private var selectedContent: StudyContent?
     @State private var showingSettings = false
 
-    // App Intent integration
     @Binding var pendingGenerationText: String?
     @State private var showingGenerationSheet = false
 
-    // Animation
     @Environment(\.accessibilityReduceMotion) var reduceMotion
 
     init(pendingGenerationText: Binding<String?> = .constant(nil)) {
@@ -45,6 +41,14 @@ struct ContentListView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section {
+                    studyOverview
+                }
+                .listSectionSeparator(.hidden)
+                .listRowSeparator(.hidden)
+                .listRowInsets(.init(top: Spacing.md, leading: Spacing.md, bottom: Spacing.sm, trailing: Spacing.md))
+                .listRowBackground(Color.clear)
+
                 Section {
                     GlassSearchBar(text: $searchText, placeholder: "Search your study materials...")
                 }
@@ -202,24 +206,80 @@ struct ContentListView: View {
                 title: "Scan",
                 icon: "doc.viewfinder",
                 action: {
-                    // User can navigate to scan tab manually
-                    // Or we could post a notification to switch tabs
-                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToScanTab"), object: nil)
+                    NotificationCenter.default.post(name: .switchToScanTab, object: nil)
                 }
             ),
             tertiaryAction: .init(
                 title: "Record",
                 icon: "mic.circle",
                 action: {
-                    NotificationCenter.default.post(name: NSNotification.Name("SwitchToRecordTab"), object: nil)
+                    NotificationCenter.default.post(name: .switchToRecordTab, object: nil)
                 }
             )
         )
     }
 
-    // MARK: - Computed Properties
+    private var studyOverview: some View {
+        VStack(alignment: .leading, spacing: Spacing.md) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("Study Hub")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.cosmicPurple)
 
-    /// Filtered and sorted content based on search, filters, and sort order
+                Text("Everything you need for capture, review, and practice in one place.")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(.primary)
+
+                Text(overviewSubtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: Spacing.sm) {
+                OverviewStatCard(title: "Materials", value: allContent.count.formatted(), systemImage: "doc.text", tint: .cosmicPurple)
+                OverviewStatCard(title: "Due Cards", value: totalDueCards.formatted(), systemImage: "clock.badge.checkmark", tint: .magicGold)
+                OverviewStatCard(title: "Cards", value: totalFlashcards.formatted(), systemImage: "rectangle.stack", tint: .mysticBlue)
+            }
+
+            HStack(spacing: Spacing.sm) {
+                OverviewActionButton(title: "New Note", systemImage: "square.and.pencil", tint: .cosmicPurple) {
+                    createNewContent(source: .text)
+                }
+                OverviewActionButton(title: "Scan", systemImage: "doc.viewfinder", tint: .mysticBlue) {
+                    NotificationCenter.default.post(name: .switchToScanTab, object: nil)
+                }
+                OverviewActionButton(title: "Record", systemImage: "mic.fill", tint: .genieGreen) {
+                    NotificationCenter.default.post(name: .switchToRecordTab, object: nil)
+                }
+            }
+
+            if persistenceMode == .inMemoryTemporary {
+                Label("Temporary mode: new notes and generated cards will be lost when the app closes.", systemImage: "externaldrive.badge.exclamationmark")
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(.orange)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color.cosmicPurple.opacity(0.14),
+                            Color.mysticBlue.opacity(0.08),
+                            Color.magicGold.opacity(0.10)
+                        ],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: CornerRadius.xl)
+                .stroke(Color.cosmicPurple.opacity(0.15), lineWidth: 1)
+        )
+    }
+
     private var filteredContent: [StudyContent] {
         var content = allContent
 
@@ -246,9 +306,22 @@ struct ContentListView: View {
         return content.sorted(by: sortOrder.comparator)
     }
 
-    // MARK: - Actions
+    private var totalFlashcards: Int {
+        flashcardSets.reduce(0) { $0 + $1.cardCount }
+    }
 
-    /// Create new study content
+    private var totalDueCards: Int {
+        flashcardSets.reduce(0) { $0 + $1.dueCount }
+    }
+
+    private var overviewSubtitle: String {
+        if allContent.isEmpty {
+            return "Add notes, scan pages, or record lessons to start building your study system."
+        }
+
+        return "You have \(allContent.count) study material\(allContent.count == 1 ? "" : "s") and \(totalDueCards) card\(totalDueCards == 1 ? "" : "s") ready to review."
+    }
+
     private func createNewContent(source: ContentSource) {
         withAnimation(reduceMotion ? .none : .glass) {
             let newContent = StudyContent(source: source, rawContent: "")
@@ -256,14 +329,12 @@ struct ContentListView: View {
 
             do {
                 try modelContext.save()
-                selectedContent = newContent
             } catch {
                 print("Failed to create content: \(error)")
             }
         }
     }
 
-    /// Delete content at the specified offsets
     private func deleteContent(at offsets: IndexSet) {
         withAnimation(reduceMotion ? .none : .glassQuick) {
             for index in offsets {
@@ -277,6 +348,54 @@ struct ContentListView: View {
                 print("Failed to delete content: \(error)")
             }
         }
+    }
+}
+
+private struct OverviewStatCard: View {
+    let title: String
+    let value: String
+    let systemImage: String
+    let tint: Color
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            Image(systemName: systemImage)
+                .font(.headline)
+                .foregroundStyle(tint)
+
+            Text(value)
+                .font(.title3.weight(.semibold))
+                .foregroundStyle(.primary)
+
+            Text(title)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.lg))
+    }
+}
+
+private struct OverviewActionButton: View {
+    let title: String
+    let systemImage: String
+    let tint: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: Spacing.xs) {
+                Image(systemName: systemImage)
+                    .font(.headline)
+                Text(title)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundStyle(tint)
+            .frame(maxWidth: .infinity, minHeight: 68)
+            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: CornerRadius.lg))
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -628,20 +747,7 @@ struct ContentDetailView: View {
 
     /// Prewarm the AI session for faster first response
     private func prewarmAISession() async {
-        #if canImport(FoundationModels)
-        guard #available(iOS 26.0, *) else { return }
-
-        // Check if AI is available
-        guard fmClient.capability() == .available else { return }
-
-        // Initialize a lightweight session in background to prepare the model
-        Task(priority: .utility) {
-            // Creating a session helps prepare the model for later use
-            _ = LanguageModelSession {
-                "You are a helpful journaling assistant."
-            }
-        }
-        #endif
+        fmClient.prewarmInteractiveSession()
     }
 
     /// Summarize the content using Foundation Models
@@ -840,18 +946,7 @@ struct ContentDetailView: View {
     // MARK: - Computed Properties
 
     private var aiUnavailableMessage: String {
-        switch fmClient.capability() {
-        case .available:
-            return ""
-        case .notEnabled:
-            return "AI features are disabled. Enable them in Settings to use AI features."
-        case .notSupported:
-            return "This device doesn't support AI features. An iPhone 15 Pro or newer is required."
-        case .modelNotReady:
-            return "AI is loading. Please try again in a moment."
-        case .unknown:
-            return "Unable to determine AI availability."
-        }
+        fmClient.availabilityPresentation(for: .contentTools).message
     }
 }
 
@@ -897,11 +992,7 @@ struct AIFeatureGate<Content: View>: View {
 
     var body: some View {
         #if canImport(FoundationModels)
-        if #available(iOS 26.0, *) {
-            AIAvailabilityWrapper(feature: feature, content: content)
-        } else {
-            DeviceNotSupportedView()
-        }
+        AIAvailabilityWrapper(feature: feature, content: content)
         #else
         DeviceNotSupportedView()
         #endif
@@ -951,7 +1042,7 @@ struct DeviceNotSupportedView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("AI features require an iPhone 15 Pro or later")
+                Text("This device or language cannot run the on-device model required for this feature.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -991,7 +1082,7 @@ struct EnableAIView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("AI-powered features need to be enabled in Settings")
+                Text("On-device AI is turned off for this device. CardGenie stays offline and will not switch to a cloud service.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -1047,7 +1138,7 @@ struct ModelDownloadingView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("AI model is downloading or initializing. This may take a few minutes.")
+                Text("The required on-device model is still preparing on this device. Manual study tools remain available while it finishes.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -1059,9 +1150,9 @@ struct ModelDownloadingView: View {
                     .fontWeight(.medium)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    StatusRow(icon: "arrow.down.circle.fill", text: "Downloading model files")
-                    StatusRow(icon: "gear.circle.fill", text: "Optimizing for your device")
-                    StatusRow(icon: "checkmark.circle.fill", text: "Preparing Neural Engine")
+                    StatusRow(icon: "gear.circle.fill", text: "Preparing the local model")
+                    StatusRow(icon: "cpu.fill", text: "Verifying device support")
+                    StatusRow(icon: "checkmark.circle.fill", text: "Keeping study data fully on-device")
                 }
             }
             .padding()
@@ -1107,7 +1198,7 @@ struct GenericUnavailableView: View {
                     .font(.title2)
                     .fontWeight(.semibold)
 
-                Text("AI features are currently unavailable. Please try again later.")
+                Text("The on-device model is unavailable right now. CardGenie will keep your study data local and you can continue with manual review.")
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -1514,7 +1605,7 @@ struct FlashcardGenerationSheet: View {
                     generateFlashcards()
                 } label: {
                     HStack {
-                        if isGenerating {
+                if isGenerating {
                             ProgressView()
                                 .controlSize(.small)
                         } else {
@@ -1527,14 +1618,9 @@ struct FlashcardGenerationSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding()
                     .background {
-                        if #available(iOS 26.0, *) {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.aiAccent)
-                                .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                        } else {
-                            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                .fill(Color.aiAccent)
-                        }
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.aiAccent)
+                            .glassEffect(.regular, in: .rect(cornerRadius: 16))
                     }
                 }
                 .disabled(isGenerating || selectedSet == nil)

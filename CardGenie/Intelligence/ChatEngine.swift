@@ -223,7 +223,7 @@ final class ChatEngine: ObservableObject {
     // MARK: - Error Handling
 
     private func handleFallbackResponse() async {
-        let fallback = "I'm currently unavailable. Apple Intelligence must be enabled for chat features."
+        let fallback = FMClient().availabilityPresentation(for: .chat).message
         streamingResponse = fallback
 
         let message = ChatMessageModel(role: .assistant, content: fallback)
@@ -234,7 +234,9 @@ final class ChatEngine: ObservableObject {
     }
 
     private func handleGuardrailError() async {
-        let error = "I can't help with that. Let's focus on your studies!"
+        let error = FMClient().safetyPresentation(for: SafetyError.guardrailViolation(
+            SafetyEvent(type: .guardrailViolation, userMessage: "I can't help with that. Let's focus on your studies!")
+        ), feature: .chat).message
         streamingResponse = error
 
         let message = ChatMessageModel(role: .assistant, content: error)
@@ -245,7 +247,7 @@ final class ChatEngine: ObservableObject {
     }
 
     private func handleRefusalError() async {
-        let error = "I'm not able to answer that question. Try asking something else about your study materials."
+        let error = "The on-device model declined that request. Try asking something else about your study materials."
         streamingResponse = error
 
         let message = ChatMessageModel(role: .assistant, content: error)
@@ -321,17 +323,8 @@ enum ChatEngineError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .aiNotAvailable(let state):
-            switch state {
-            case .notEnabled:
-                return "Apple Intelligence is not enabled. Enable it in Settings."
-            case .notSupported:
-                return "Your device doesn't support Apple Intelligence. Requires iPhone 15 Pro or later."
-            case .modelNotReady:
-                return "AI model is downloading. Try again in a few minutes."
-            default:
-                return "AI is currently unavailable."
-            }
+        case .aiNotAvailable:
+            return "Chat is unavailable because the required on-device AI model is not ready on this device."
         case .noActiveSession:
             return "No active chat session. Please start a new chat."
         }

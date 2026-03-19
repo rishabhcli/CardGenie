@@ -320,12 +320,20 @@ struct AIChatMessage: Identifiable {
     let isUser: Bool
     var isStreaming: Bool
     var scanAttachments: [ScanAttachment]
+    var citations: [Citation]
 
-    init(text: String, isUser: Bool, isStreaming: Bool = false, scanAttachments: [ScanAttachment] = []) {
+    init(
+        text: String,
+        isUser: Bool,
+        isStreaming: Bool = false,
+        scanAttachments: [ScanAttachment] = [],
+        citations: [Citation] = []
+    ) {
         self.id = UUID()
         self.text = text
         self.isUser = isUser
         self.isStreaming = isStreaming
         self.scanAttachments = scanAttachments
+        self.citations = citations
     }
 }
