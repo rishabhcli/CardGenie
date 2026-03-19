@@ -459,12 +459,10 @@ struct ContentRow: View {
 #Preview {
     // Create a preview container with sample data
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
-        // Fallback to default container if creation fails
-        try! ModelContainer(for: StudyContent.self)
+    let container = (try? ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self, configurations: config)) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self)
     }()
 
-    // Add sample content
     let context = ModelContext(container)
 
     let content1 = StudyContent(
@@ -497,10 +495,9 @@ struct ContentRow: View {
 }
 
 #Preview("Empty State") {
-    // Empty container for empty state preview
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
-        try! ModelContainer(for: StudyContent.self)
+    let container = (try? ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self, configurations: config)) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self)
     }()
 
     return ContentListView()
@@ -954,9 +951,8 @@ struct ContentDetailView: View {
 
 #Preview {
     let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = (try? ModelContainer(for: StudyContent.self, configurations: config)) ?? {
-        // Fallback to default container if creation fails
-        try! ModelContainer(for: StudyContent.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let container = (try? ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self, configurations: config)) ?? {
+        try! ModelContainer(for: StudyContent.self, Flashcard.self, FlashcardSet.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
     }()
     let context = ModelContext(container)
 
