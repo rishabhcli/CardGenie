@@ -12,7 +12,7 @@ import UIKit
 /// A text editor that bridges UIKit's UITextView to SwiftUI and enables
 /// Apple Intelligence Writing Tools for on-device text assistance.
 ///
-/// On iOS 26+ devices with Apple Intelligence:
+/// On iOS 26 devices where the system exposes Apple Intelligence Writing Tools:
 /// - Users can select text and see "Proofread", "Rewrite", "Summarize" options
 /// - All processing happens on-device via the Neural Engine
 /// - No network connection required
@@ -50,12 +50,9 @@ struct WritingTextEditor: UIViewRepresentable {
         textView.autocorrectionType = .yes
         textView.spellCheckingType = .yes
 
-        // Enable Apple Intelligence Writing Tools (iOS 26+)
-        if #available(iOS 26.0, *) {
-            // Enable Apple Intelligence Writing Tools using KVC so the project still compiles on pre-iOS 26 SDKs.
-            if textView.responds(to: Selector(("setWritingToolsEnabled:"))) {
-                textView.setValue(true, forKey: "writingToolsEnabled")
-            }
+        // Enable Apple Intelligence Writing Tools when the runtime exposes them.
+        if textView.responds(to: Selector(("setWritingToolsEnabled:"))) {
+            textView.setValue(true, forKey: "writingToolsEnabled")
         }
 
         // Set initial text
@@ -185,8 +182,8 @@ struct WritingTextEditor: UIViewRepresentable {
 
  Requirements:
  - iOS 26 or later
- - Apple Intelligence-capable device (iPhone 15 Pro+)
- - Apple Intelligence enabled in Settings
+ - A device and language supported by Apple's on-device Writing Tools
+ - Apple Intelligence enabled in Settings, if the system requires it
 
  Privacy:
  - All processing happens on-device

@@ -213,6 +213,8 @@ final class NoteChunk {
     // Embedding for RAG
     var embedding: Data? // Encoded [Float]
     var embeddingVersion: Int // Track embedding model version
+    var embeddingUpdatedAt: Date?
+    var embeddingSourceSignature: String?
 
     // Relationships
     var sourceDocument: SourceDocument?
@@ -230,13 +232,18 @@ final class NoteChunk {
         self.pageNumber = pageNumber
         self.timestampRange = timestampRange
         self.embeddingVersion = 1
+        self.embeddingUpdatedAt = nil
+        self.embeddingSourceSignature = nil
     }
 
     // MARK: - Embedding Helpers
 
-    func setEmbedding(_ vector: [Float]) {
+    func setEmbedding(_ vector: [Float], sourceText: String? = nil) {
         // Encode Float array to Data
         self.embedding = vector.withUnsafeBytes { Data($0) }
+        self.embeddingUpdatedAt = Date()
+        let signatureSource = sourceText ?? text
+        self.embeddingSourceSignature = Self.makeEmbeddingSignature(for: signatureSource)
     }
 
     func getEmbedding() -> [Float]? {
@@ -245,6 +252,13 @@ final class NoteChunk {
         return data.withUnsafeBytes { buffer in
             Array(buffer.bindMemory(to: Float.self).prefix(count))
         }
+    }
+
+    static func makeEmbeddingSignature(for text: String) -> String {
+        text
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
     }
 }
 

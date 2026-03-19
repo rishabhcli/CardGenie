@@ -322,7 +322,7 @@ final class SpeechToTextConverter: NSObject, ObservableObject {
 
         // Configure audio session
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetoothHFP])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
         // Setup recording URL
@@ -536,7 +536,7 @@ enum SpeechError: LocalizedError {
         case .notAuthorized:
             return "Go to Settings > Privacy & Security > Microphone and enable access for CardGenie."
         case .recognizerUnavailable:
-            return "Make sure you have an internet connection for the first transcription, then it will work offline."
+            return "Use a language and device that support on-device speech recognition for fully local transcription."
         case .unableToCreateRequest:
             return "Restart the app and try again."
         case .transcriptionFailed:
@@ -544,7 +544,7 @@ enum SpeechError: LocalizedError {
         case .audioEngineError:
             return "Check that your microphone is working and not being used by another app."
         case .onDeviceNotSupported:
-            return "Use a device that supports on-device speech recognition or connect to a newer Apple Intelligence-compatible device."
+            return "Use a device and language that support on-device speech recognition. CardGenie does not use a network fallback."
         }
     }
 }

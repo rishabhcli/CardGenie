@@ -98,7 +98,7 @@ final class LectureRecorder: NSObject {
         audioFileURL = documentsPath.appendingPathComponent("lecture_\(UUID().uuidString).m4a")
 
         let audioSession = AVAudioSession.sharedInstance()
-        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetooth])
+        try audioSession.setCategory(.record, mode: .voiceChat, options: [.duckOthers, .allowBluetoothHFP])
         try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
 
         do {
@@ -247,7 +247,7 @@ final class LectureRecorder: NSObject {
             )
             noteChunk.setTimeRange(chunk.timestampRange)
             if let emb = chunk.embedding {
-                noteChunk.setEmbedding(emb)
+                noteChunk.setEmbedding(emb, sourceText: noteChunk.text)
             }
             session.chunks.append(noteChunk)
         }

@@ -11,243 +11,205 @@ import SwiftData
 
 @main
 struct CardGenieApp: App {
-    /// SwiftData container configured for local storage only
-    /// All study content and flashcards are stored in the app's private sandbox
-    /// with no iCloud sync or external file access.
-    /// Falls back to in-memory storage if persistent storage fails.
-    var modelContainer: ModelContainer = {
-        // Create schema with all models including conversation history
-        let schema = Schema([
-            StudyContent.self,
-            Flashcard.self,
-            FlashcardSet.self,
-            ConversationSession.self,
-            VoiceConversationMessage.self,
-            ChatSession.self,
-            ChatMessageModel.self,
-            ScanAttachment.self
-        ])
+    @StateObject private var runtimeState: AppRuntimeState
+    private let modelContainer: ModelContainer
 
-        let modelConfiguration = ModelConfiguration(
-            schema: schema,
-            isStoredInMemoryOnly: false,
-            allowsSave: true
-        )
-
-        do {
-            let container = try ModelContainer(
-                for: schema,
-                configurations: [modelConfiguration]
-            )
-            print("✅ ModelContainer created successfully with core models")
-            return container
-        } catch {
-            print("⚠️ Failed to create persistent ModelContainer: \(error)")
-            print("⚠️ Error details: \(error.localizedDescription)")
-            print("⚠️ Falling back to in-memory storage.")
-
-            let memoryConfig = ModelConfiguration(
-                schema: schema,
-                isStoredInMemoryOnly: true
-            )
-
-            do {
-                return try ModelContainer(
-                    for: schema,
-                    configurations: [memoryConfig]
-                )
-            } catch {
-                fatalError("Could not create even in-memory ModelContainer: \(error)")
-            }
-        }
-    }()
+    init() {
+        let bootstrap = AppBootstrapper.bootstrap()
+        self.modelContainer = bootstrap.modelContainer
+            ?? AppBootstrapper.makeDisplayContainer()
+            ?? {
+                let schema = CardGenieSchemaProvider.schema
+                let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+                return try! ModelContainer(for: schema, configurations: [configuration])
+            }()
+        self._runtimeState = StateObject(wrappedValue: bootstrap.runtimeState)
+    }
 
     var body: some Scene {
         WindowGroup {
-            ZStack {
-                MainTabView()
-                    .environment(\.font, .system(.body, design: .rounded)) // Rounded font for genie theme
-                    .tint(.cosmicPurple) // Genie theme accent color
-                    .onAppear {
-                        // Setup notifications on first launch
-                        Task {
-                            await NotificationManager.shared.setupNotificationsIfNeeded()
-                        }
-                    }
-                    .onOpenURL { url in
-                        handleDeepLink(url)
-                    }
+            Group {
+                if runtimeState.bootstrapState == .unavailable {
+                    AppBootstrapUnavailableView()
+                } else {
+                    MainTabView()
+                }
             }
+            .environmentObject(runtimeState)
+            .environment(\.font, .system(.body, design: .rounded))
+            .environment(\.persistenceMode, runtimeState.persistenceMode)
+            .environment(\.appBootstrapState, runtimeState.bootstrapState)
+            .tint(.cosmicPurple)
+            .task {
+                await NotificationManager.shared.setupNotificationsIfNeeded()
+            }
+            .onOpenURL { url in
+                handleDeepLink(url)
+            }
+            .preferredColorScheme(appColorScheme)
         }
-        .modelContainer(modelContainer) // Inject SwiftData container
+        .modelContainer(modelContainer)
     }
 
-    // MARK: - Deep Link Handling
+    private var appColorScheme: ColorScheme? {
+        switch UserDefaults.standard.string(forKey: "preferredTheme") {
+        case "light":
+            return .light
+        case "dark":
+            return .dark
+        default:
+            return nil
+        }
+    }
 
     private func handleDeepLink(_ url: URL) {
         guard url.scheme == "cardgenie" else { return }
 
-        switch url.host {
-        case "flashcards":
-            if url.path == "/due" {
-                // Navigate to Flashcards tab and start study session with due cards
-                NotificationCenter.default.post(name: NSNotification.Name("StartStudySession"), object: nil)
-            }
-        case "study":
-            if url.path == "/start" {
-                // Navigate to Flashcards tab and start study session
-                NotificationCenter.default.post(name: NSNotification.Name("StartStudySession"), object: nil)
-            }
+        switch (url.host, url.path) {
+        case ("flashcards", "/due"), ("study", "/start"):
+            NotificationCenter.default.post(name: .startStudySession, object: nil)
         default:
             break
         }
     }
 }
 
-// MARK: - Main Tab View
+extension Notification.Name {
+    static let startStudySession = Notification.Name("StartStudySession")
+    static let openAIChat = Notification.Name("OpenAIChat")
+    static let openAIChatWithQuestion = Notification.Name("OpenAIChatWithQuestion")
+    static let generateFlashcardsFromText = Notification.Name("GenerateFlashcardsFromText")
+    static let switchToStudyTab = Notification.Name("SwitchToStudyTab")
+    static let switchToRecordTab = Notification.Name("SwitchToRecordTab")
+    static let switchToScanTab = Notification.Name("SwitchToScanTab")
+}
 
-/// Main navigation with Study Materials, Flashcards, and Scan tabs
-/// iOS 26+ uses 3 tabs + floating AI assistant button
-/// iOS 25 uses legacy 5-tab layout for compatibility
+private enum AppTab: Int {
+    case study
+    case flashcards
+    case ai
+    case record
+    case scan
+}
+
 struct MainTabView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
+    @EnvironmentObject private var runtimeState: AppRuntimeState
     @Query private var flashcardSets: [FlashcardSet]
-    @State private var selectedTab: Int = 0
+    @SceneStorage("selectedTab") private var selectedTabRawValue = AppTab.study.rawValue
     @State private var showingSettings = false
-
-    // App Intent handling
-    @State private var shouldStartStudySession = false
-    @State private var aiChatQuestion: String?
     @State private var pendingGenerationText: String?
+    @State private var showingPersistenceRecovery = false
+    @StateObject private var scanQueue = ScanQueue.shared
+    @StateObject private var fmClient = FMClient()
+
+    private var selectedTab: Binding<Int> {
+        Binding(
+            get: { selectedTabRawValue },
+            set: { selectedTabRawValue = $0 }
+        )
+    }
 
     var body: some View {
-        if #available(iOS 26.0, *) {
-            // iOS 26+ with 3 tabs + floating AI assistant
-            modernTabView
-                .onAppear {
-                    setupIntentObservers()
+        ZStack(alignment: .top) {
+            tabView
+
+            VStack(spacing: 8) {
+                if runtimeState.persistenceMode == .inMemoryTemporary {
+                    AppStatusBanner(
+                        systemImage: "externaldrive.badge.exclamationmark",
+                        title: runtimeState.persistenceMode.bannerTitle,
+                        message: runtimeState.bootstrapMessage ?? runtimeState.persistenceMode.bannerMessage,
+                        tint: .orange
+                    )
                 }
-        } else {
-            // Fallback for iOS 25 (5 tabs)
-            legacyTabView
-                .onAppear {
-                    setupIntentObservers()
+
+                if !scanQueue.pendingScans.isEmpty {
+                    AppStatusBanner(
+                        systemImage: "clock.arrow.trianglehead.counterclockwise.rotate.90",
+                        title: "\(scanQueue.pendingScans.count) Scan Job\(scanQueue.pendingScans.count == 1 ? "" : "s") Queued",
+                        message: "Pending scans will retry automatically when on-device AI is ready.",
+                        tint: .mysticBlue
+                    )
                 }
+            }
+            .padding(.top, 8)
+            .padding(.horizontal, 12)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .startStudySession)) { _ in
+            selectedTabRawValue = AppTab.flashcards.rawValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAIChat)) { _ in
+            selectedTabRawValue = AppTab.ai.rawValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openAIChatWithQuestion)) { _ in
+            selectedTabRawValue = AppTab.ai.rawValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .generateFlashcardsFromText)) { notification in
+            selectedTabRawValue = AppTab.study.rawValue
+            pendingGenerationText = notification.userInfo?["text"] as? String
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToStudyTab)) { _ in
+            selectedTabRawValue = AppTab.study.rawValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToRecordTab)) { _ in
+            selectedTabRawValue = AppTab.record.rawValue
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToScanTab)) { _ in
+            selectedTabRawValue = AppTab.scan.rawValue
+        }
+        .task {
+            refreshPendingScans()
+            await processPendingScansIfPossible()
+            if runtimeState.persistenceMode == .inMemoryTemporary,
+               !runtimeState.hasPresentedPersistenceNotice {
+                showingPersistenceRecovery = true
+            }
+        }
+        .onChange(of: scenePhase) { _, newValue in
+            guard newValue == .active else { return }
+
+            refreshPendingScans()
+            Task {
+                await processPendingScansIfPossible()
+            }
+        }
+        .sheet(isPresented: $showingPersistenceRecovery, onDismiss: {
+            runtimeState.markPersistenceNoticePresented()
+        }) {
+            PersistenceRecoverySheet()
         }
     }
 
-    // MARK: - App Intent Handling
-
-    private func setupIntentObservers() {
-        // Start study session intent
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("StartStudySession"),
-            object: nil,
-            queue: .main
-        ) { _ in
-            selectedTab = 1 // Switch to Flashcards tab
-            shouldStartStudySession = true
-        }
-
-        // Open AI chat intent
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("OpenAIChat"),
-            object: nil,
-            queue: .main
-        ) { _ in
-            selectedTab = 2 // Switch to AI tab (iOS 26+) or tab 2 (iOS 25)
-        }
-
-        // Open AI chat with question
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("OpenAIChatWithQuestion"),
-            object: nil,
-            queue: .main
-        ) { notification in
-            if let question = notification.userInfo?["question"] as? String {
-                selectedTab = 2 // Switch to AI tab
-                aiChatQuestion = question
-            }
-        }
-
-        // Generate flashcards from text
-        NotificationCenter.default.addObserver(
-            forName: NSNotification.Name("GenerateFlashcardsFromText"),
-            object: nil,
-            queue: .main
-        ) { notification in
-            if let text = notification.userInfo?["text"] as? String {
-                selectedTab = 0 // Switch to Study tab
-                pendingGenerationText = text
-            }
-        }
-    }
-
-    // MARK: - iOS 26+ Modern Tab View
-
-    @available(iOS 26.0, *)
     @ViewBuilder
-    private var modernTabView: some View {
-        TabView(selection: $selectedTab) {
-            Tab("Study", systemImage: "book.fill", value: 0) {
-                NavigationStack {
-                    ContentListView(pendingGenerationText: $pendingGenerationText)
-                        .navigationTitle("Study")
-                        .navigationBarTitleDisplayMode(.large)
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button {
-                                    showingSettings = true
-                                } label: {
-                                    Image(systemName: "gearshape")
-                                }
-                                .accessible(label: "Settings")
-                            }
-                        }
-                }
+    private var tabView: some View {
+        TabView(selection: selectedTab) {
+            Tab("Study", systemImage: "book.fill", value: AppTab.study.rawValue) {
+                ContentListView(pendingGenerationText: $pendingGenerationText)
             }
 
             if let badge = flashcardBadge {
-                Tab("Cards", systemImage: "rectangle.on.rectangle", value: 1) {
-                    NavigationStack {
-                        FlashcardListView()
-                            .navigationTitle("Flashcards")
-                            .navigationBarTitleDisplayMode(.large)
-                    }
+                Tab("Cards", systemImage: "rectangle.on.rectangle", value: AppTab.flashcards.rawValue) {
+                    FlashcardListView()
                 }
                 .badge(badge)
             } else {
-                Tab("Cards", systemImage: "rectangle.on.rectangle", value: 1) {
-                    NavigationStack {
-                        FlashcardListView()
-                            .navigationTitle("Flashcards")
-                            .navigationBarTitleDisplayMode(.large)
-                    }
+                Tab("Cards", systemImage: "rectangle.on.rectangle", value: AppTab.flashcards.rawValue) {
+                    FlashcardListView()
                 }
             }
 
-            Tab("AI", systemImage: "sparkles", value: 2) {
-                NavigationStack {
-                    AIChatView()
-                        .navigationTitle("AI Assistant")
-                        .navigationBarTitleDisplayMode(.large)
-                }
+            Tab("AI", systemImage: "sparkles", value: AppTab.ai.rawValue) {
+                AIChatView()
             }
 
-            Tab("Record", systemImage: "mic.circle.fill", value: 3) {
-                NavigationStack {
-                    VoiceRecordView()
-                        .navigationTitle("Record")
-                        .navigationBarTitleDisplayMode(.large)
-                }
+            Tab("Record", systemImage: "mic.circle.fill", value: AppTab.record.rawValue) {
+                VoiceRecordView()
             }
 
-            Tab("Scan", systemImage: "doc.viewfinder", value: 4) {
-                NavigationStack {
-                    PhotoScanView()
-                        .navigationTitle("Scan")
-                        .navigationBarTitleDisplayMode(.large)
-                }
+            Tab("Scan", systemImage: "doc.viewfinder", value: AppTab.scan.rawValue) {
+                PhotoScanView()
             }
         }
         .tabViewStyle(.sidebarAdaptable)
@@ -259,107 +221,114 @@ struct MainTabView: View {
         }
     }
 
-    // MARK: - Legacy Tab View (iOS 25)
-
-    @ViewBuilder
-    private var legacyTabView: some View {
-        TabView(selection: $selectedTab) {
-            ContentListView(pendingGenerationText: $pendingGenerationText)
-                .tabItem {
-                    Label("Study", systemImage: "sparkles")
-                }
-                .tag(0)
-
-            flashcardsTabLegacy
-
-            AIChatView()
-                .tabItem {
-                    Label("AI Chat", systemImage: "bubble.left.and.bubble.right.fill")
-                }
-                .tag(2)
-
-            VoiceRecordView()
-                .tabItem {
-                    Label("Record", systemImage: "mic.circle.fill")
-                }
-                .tag(3)
-
-            PhotoScanView()
-                .tabItem {
-                    Label("Scan", systemImage: "camera.fill")
-                }
-                .tag(4)
-        }
-        .accentColor(.cosmicPurple)
-    }
-
-    @ViewBuilder
-    private var flashcardsTabLegacy: some View {
-        if let badge = flashcardBadge {
-            FlashcardListView()
-                .tabItem {
-                    Label("Flashcards", systemImage: "rectangle.on.rectangle.angled")
-                }
-                .badge(badge)
-                .tag(1)
-        } else {
-            FlashcardListView()
-                .tabItem {
-                    Label("Flashcards", systemImage: "rectangle.on.rectangle.angled")
-                }
-                .tag(1)
-        }
-    }
-
-    // MARK: - Helper Properties
-
-    /// Total due flashcards across all sets
     private var totalDueCount: Int {
         flashcardSets.reduce(0) { $0 + $1.dueCount }
     }
 
-    /// Badge value for flashcards tab (nil when 0)
     private var flashcardBadge: Int? {
         let count = totalDueCount
         return count > 0 ? count : nil
     }
+
+    private func refreshPendingScans() {
+        scanQueue.refresh(modelContext: modelContext)
+    }
+
+    private func processPendingScansIfPossible() async {
+        guard runtimeState.persistenceMode != .unavailable else { return }
+        _ = await scanQueue.processQueue(modelContext: modelContext, fmClient: fmClient)
+    }
 }
 
-// MARK: - App Configuration Notes
-/*
- iOS 26 Configuration Requirements:
+private struct AppStatusBanner: View {
+    let systemImage: String
+    let title: String
+    let message: String
+    let tint: Color
 
- 1. Deployment Target: Set to iOS 26.0 in Xcode project settings
- 2. Minimum Device: iPhone 15 Pro or newer (for Apple Intelligence)
- 3. Required Frameworks:
-    - SwiftUI (for UI)
-    - SwiftData (for local persistence)
-    - FoundationModels (for on-device AI - iOS 26+)
-    - UIKit (for Writing Tools bridge)
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: systemImage)
+                .font(.headline)
+                .foregroundStyle(tint)
 
- 4. Tab Bar Layout:
-    iOS 26+ Modern Layout (5 tabs):
-    - Study: View and manage study content
-    - Cards: Flashcard sets and spaced repetition
-    - AI: AI chat assistant powered by Foundation Models
-    - Record: Voice recording for lecture capture
-    - Scan: Document and photo scanning
-    
-    iOS 25 Legacy Layout (5 tabs):
-    - Study, Cards, AI Chat, Record, Scan (same functionality)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.primary)
 
- 5. Capabilities:
-    - No special entitlements needed for offline features
-    - Apple Intelligence features work automatically on supported devices
-    - Writing Tools are enabled at the text view level
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
- 6. Info.plist Keys (if adding media later):
-    - NSCameraUsageDescription (for photos)
-    - NSMicrophoneUsageDescription (for voice notes)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(tint.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(tint.opacity(0.22), lineWidth: 1)
+        )
+    }
+}
 
- 7. Privacy:
-    - All data stays on device
-    - No network calls
-    - No analytics
-    - AI processing is entirely on-device
- */
+private struct PersistenceRecoverySheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var runtimeState: AppRuntimeState
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Text(runtimeState.bootstrapMessage ?? runtimeState.persistenceMode.bannerMessage)
+                        .font(.body)
+                        .foregroundStyle(.primary)
+                } header: {
+                    Text("Current Mode")
+                }
+
+                Section {
+                    Label("New notes, flashcards, and scan jobs will only live in memory.", systemImage: "externaldrive.badge.exclamationmark")
+                    Label("If the app closes, temporary changes are lost.", systemImage: "trash.slash")
+                    Label("Restart the app after storage becomes available again to resume normal local saving.", systemImage: "arrow.clockwise")
+                } header: {
+                    Text("Recovery")
+                }
+            }
+            .navigationTitle("Temporary Storage")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Continue") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .presentationDragIndicator(.visible)
+    }
+}
+
+private struct AppBootstrapUnavailableView: View {
+    @EnvironmentObject private var runtimeState: AppRuntimeState
+
+    var body: some View {
+        NavigationStack {
+            ContentUnavailableView(
+                "CardGenie Couldn’t Open Local Storage",
+                systemImage: "externaldrive.badge.xmark",
+                description: Text(
+                    runtimeState.bootstrapMessage ??
+                    "Restart the app after local storage becomes available again."
+                )
+            )
+            .navigationTitle("CardGenie")
+        }
+    }
+}

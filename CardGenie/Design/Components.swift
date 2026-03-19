@@ -620,18 +620,7 @@ struct AvailabilityBadge: View {
     }
 
     private var text: String {
-        switch state {
-        case .available:
-            return "AI Ready"
-        case .notEnabled:
-            return "AI Disabled"
-        case .notSupported:
-            return "AI Unavailable"
-        case .modelNotReady:
-            return "AI Loading..."
-        case .unknown:
-            return "Unknown"
-        }
+        state.badgeText
     }
 
     private var backgroundColor: Color {
@@ -858,14 +847,9 @@ struct ReviewButton: View {
             .frame(maxWidth: .infinity)
             .padding()
             .background {
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(backgroundColor)
-                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                } else {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(backgroundColor)
-                }
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(backgroundColor)
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
             }
             .foregroundStyle(isEnabled ? foregroundColor : .gray)
         }
@@ -1091,13 +1075,8 @@ struct GlassSearchBar: View {
 
 extension View {
     /// Apply iOS 26 Liquid Glass search bar styling with capsule shape and interactive mode
-    @ViewBuilder
     func glassSearchBar() -> some View {
-        if #available(iOS 26.0, *) {
-            modifier(GlassSearchBarModifier())
-        } else {
-            modifier(LegacyGlassSearchBarModifier())
-        }
+        modifier(GlassSearchBarModifier())
     }
 }
 
@@ -1108,33 +1087,6 @@ struct GlassSearchBarModifier: ViewModifier {
         content
             .glassEffect(.regular.interactive(), in: .capsule)
             .shadow(color: .black.opacity(0.08), radius: 8, y: 4)
-    }
-}
-
-/// Legacy fallback for iOS 25 and earlier
-struct LegacyGlassSearchBarModifier: ViewModifier {
-    @Environment(\.accessibilityReduceTransparency) var reduceTransparency
-
-    func body(content: Content) -> some View {
-        if reduceTransparency {
-            content
-                .background(Color(.secondarySystemBackground))
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.05), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
-        } else {
-            content
-                .background(.ultraThinMaterial)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule()
-                        .stroke(Color.white.opacity(0.2), lineWidth: 1)
-                )
-                .shadow(color: .black.opacity(0.15), radius: 12, y: 6)
-        }
     }
 }
 
@@ -1405,26 +1357,15 @@ struct EmptyStateView: View {
                         .frame(maxWidth: .infinity)
                         .padding()
                         .background {
-                            if #available(iOS 26.0, *) {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.cosmicPurple, .mysticBlue],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(
+                                    LinearGradient(
+                                        colors: [.cosmicPurple, .mysticBlue],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
                                     )
-                                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                            } else {
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(
-                                        LinearGradient(
-                                            colors: [.cosmicPurple, .mysticBlue],
-                                            startPoint: .leading,
-                                            endPoint: .trailing
-                                        )
-                                    )
-                            }
+                                )
+                                .glassEffect(.regular, in: .rect(cornerRadius: 16))
                         }
                     }
                     .padding(.horizontal)
@@ -1445,14 +1386,9 @@ struct EmptyStateView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background {
-                                if #available(iOS 26.0, *) {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.cosmicPurple.opacity(0.1))
-                                        .glassEffect(.regular, in: .rect(cornerRadius: 12))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.cosmicPurple.opacity(0.1))
-                                }
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color.cosmicPurple.opacity(0.1))
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
                             }
                         }
                     }
@@ -1471,14 +1407,9 @@ struct EmptyStateView: View {
                             .frame(maxWidth: .infinity)
                             .padding()
                             .background {
-                                if #available(iOS 26.0, *) {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.cosmicPurple.opacity(0.1))
-                                        .glassEffect(.regular, in: .rect(cornerRadius: 12))
-                                } else {
-                                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                                        .fill(Color.cosmicPurple.opacity(0.1))
-                                }
+                                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                    .fill(Color.cosmicPurple.opacity(0.1))
+                                    .glassEffect(.regular, in: .rect(cornerRadius: 12))
                             }
                         }
                     }

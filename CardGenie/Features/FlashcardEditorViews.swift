@@ -334,14 +334,9 @@ struct FlashcardEditorView: View {
             .frame(maxWidth: .infinity)
             .padding()
             .background {
-                if #available(iOS 26.0, *) {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.aiAccent.opacity(0.1))
-                        .glassEffect(.regular, in: .rect(cornerRadius: 16))
-                } else {
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(Color.aiAccent.opacity(0.1))
-                }
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .fill(Color.aiAccent.opacity(0.1))
+                    .glassEffect(.regular, in: .rect(cornerRadius: 16))
             }
         }
         .disabled(!isValid)

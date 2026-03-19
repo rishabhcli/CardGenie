@@ -182,6 +182,17 @@ struct ConversationContext {
         - Use the Socratic method: guide learning through questions
         """
 
+        let groundedReferences = sourceReferences
+        if !groundedReferences.isEmpty {
+            prompt += """
+
+
+            Use the provided study material as your only factual source.
+            Cite supporting material inline using labels like [Source 1] or [Card 1].
+            If the material does not contain the answer, say that clearly instead of guessing.
+            """
+        }
+
         // Add study content context
         if let content = studyContent {
             let contentPreview = content.displayText.prefix(300)
@@ -219,6 +230,15 @@ struct ConversationContext {
             """
         }
 
+        if !groundedReferences.isEmpty {
+            prompt += """
+
+
+            Available sources:
+            \(groundedReferences.joined(separator: "\n"))
+            """
+        }
+
         return prompt
     }
 
@@ -228,5 +248,24 @@ struct ConversationContext {
             .suffix(limit)
             .map { "\($0.role.rawValue.capitalized): \($0.content)" }
             .joined(separator: "\n\n")
+    }
+
+    private var sourceReferences: [String] {
+        var references: [String] = []
+
+        if let content = studyContent {
+            let snippet = String(content.displayText.prefix(220))
+            references.append("[Source 1] \(snippet)")
+        }
+
+        if let set = flashcardSet {
+            references.append("[Set 1] Flashcard set: \(set.topicLabel). Due cards: \(set.dueCount).")
+        }
+
+        for (index, card) in recentFlashcards.prefix(3).enumerated() {
+            references.append("[Card \(index + 1)] Q: \(card.question.prefix(120)) A: \(card.answer.prefix(160))")
+        }
+
+        return references
     }
 }

@@ -48,7 +48,7 @@ struct StartStudySessionIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         // Post notification to trigger study session
         NotificationCenter.default.post(
-            name: NSNotification.Name("StartStudySession"),
+            name: .startStudySession,
             object: nil
         )
 
@@ -71,7 +71,7 @@ struct AskStudyQuestionIntent: AppIntent {
         if let question = question {
             // Post notification with question
             NotificationCenter.default.post(
-                name: NSNotification.Name("OpenAIChatWithQuestion"),
+                name: .openAIChatWithQuestion,
                 object: nil,
                 userInfo: ["question": question]
             )
@@ -79,7 +79,7 @@ struct AskStudyQuestionIntent: AppIntent {
         } else {
             // Just open AI chat
             NotificationCenter.default.post(
-                name: NSNotification.Name("OpenAIChat"),
+                name: .openAIChat,
                 object: nil
             )
             return .result(dialog: "Opening AI chat")
@@ -130,21 +130,13 @@ struct GetDueCardsCountIntent: AppIntent {
     }
 
     private func getModelContainer() async throws -> ModelContainer {
-        let schema = Schema([
-            StudyContent.self,
-            Flashcard.self,
-            FlashcardSet.self,
-            SourceDocument.self,
-            NoteChunk.self
-        ])
-
         let modelConfiguration = ModelConfiguration(
-            schema: schema,
+            schema: CardGenieSchemaProvider.schema,
             isStoredInMemoryOnly: false,
             allowsSave: true
         )
 
-        return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        return try ModelContainer(for: CardGenieSchemaProvider.schema, configurations: [modelConfiguration])
     }
 }
 
@@ -162,7 +154,7 @@ struct GenerateFlashcardsIntent: AppIntent {
     func perform() async throws -> some IntentResult {
         // Post notification with text
         NotificationCenter.default.post(
-            name: NSNotification.Name("GenerateFlashcardsFromText"),
+            name: .generateFlashcardsFromText,
             object: nil,
             userInfo: ["text": text]
         )
@@ -213,21 +205,13 @@ struct QuickAddFlashcardIntent: AppIntent {
     }
 
     private func getModelContainer() async throws -> ModelContainer {
-        let schema = Schema([
-            StudyContent.self,
-            Flashcard.self,
-            FlashcardSet.self,
-            SourceDocument.self,
-            NoteChunk.self
-        ])
-
         let modelConfiguration = ModelConfiguration(
-            schema: schema,
+            schema: CardGenieSchemaProvider.schema,
             isStoredInMemoryOnly: false,
             allowsSave: true
         )
 
-        return try ModelContainer(for: schema, configurations: [modelConfiguration])
+        return try ModelContainer(for: CardGenieSchemaProvider.schema, configurations: [modelConfiguration])
     }
 }
 

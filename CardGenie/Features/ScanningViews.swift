@@ -501,6 +501,26 @@ struct PhotoScanView: View {
         HapticFeedback.heavy()
 
         Task {
+            let flashcardFormats: Set<FlashcardType> = [.cloze, .qa, .definition]
+
+            guard fmClient.capability() == .available else {
+                ScanQueue.shared.enqueueScan(
+                    text: extractedText,
+                    topic: nil,
+                    deck: nil,
+                    images: isMultiPage ? selectedImages : selectedImage.map { [$0] } ?? [],
+                    formats: flashcardFormats,
+                    modelContext: modelContext
+                )
+
+                await MainActor.run {
+                    isGeneratingCards = false
+                    errorMessage = fmClient.availabilityPresentation(for: .contentGeneration).message + " The scan was queued for automatic retry."
+                    showError = true
+                }
+                return
+            }
+
             do {
                 // Create StudyContent from photo
                 let content = StudyContent(
@@ -521,7 +541,6 @@ struct PhotoScanView: View {
                 modelContext.insert(content)
 
                 // Generate flashcards using AI
-                let flashcardFormats: Set<FlashcardType> = [.cloze, .qa, .definition]
                 let result = try await fmClient.generateFlashcards(
                     from: content,
                     formats: flashcardFormats,
@@ -530,10 +549,21 @@ struct PhotoScanView: View {
 
                 // Find or create flashcard set for this topic
                 let flashcardSet = modelContext.findOrCreateFlashcardSet(topicLabel: result.topicTag)
+                let newFlashcards = uniqueGeneratedFlashcards(result.flashcards, against: flashcardSet)
+
+                guard !newFlashcards.isEmpty else {
+                    modelContext.delete(content)
+                    await MainActor.run {
+                        isGeneratingCards = false
+                        errorMessage = "No new flashcards were saved because matching cards already exist in this set."
+                        showError = true
+                    }
+                    return
+                }
 
                 // Link flashcards to content and set
-                content.flashcards.append(contentsOf: result.flashcards)
-                for flashcard in result.flashcards {
+                content.flashcards.append(contentsOf: newFlashcards)
+                for flashcard in newFlashcards {
                     flashcardSet.addCard(flashcard)
                     modelContext.insert(flashcard)
                 }
@@ -549,9 +579,17 @@ struct PhotoScanView: View {
                 }
 
             } catch {
+                ScanQueue.shared.enqueueScan(
+                    text: extractedText,
+                    topic: nil,
+                    deck: nil,
+                    images: isMultiPage ? selectedImages : selectedImage.map { [$0] } ?? [],
+                    formats: flashcardFormats,
+                    modelContext: modelContext
+                )
                 await MainActor.run {
                     isGeneratingCards = false
-                    errorMessage = "Failed to generate flashcards. Please try again."
+                    errorMessage = "Flashcard generation didn’t finish locally. The scan was queued and will retry automatically when on-device AI is ready."
                     showError = true
                     HapticFeedback.error()
                 }
@@ -1065,13 +1103,31 @@ struct ScanReviewView: View {
         HapticFeedback.heavy()
 
         Task {
-            do {
-                // Combine selected sections
-                let selectedText = sections
-                    .filter(\.isSelected)
-                    .map(\.text)
-                    .joined(separator: "\n\n")
+            let flashcardFormats = recommendFlashcardFormats()
+            let selectedText = sections
+                .filter(\.isSelected)
+                .map(\.text)
+                .joined(separator: "\n\n")
 
+            guard fmClient.capability() == .available else {
+                ScanQueue.shared.enqueueScan(
+                    text: selectedText,
+                    topic: selectedTopic.isEmpty ? nil : selectedTopic,
+                    deck: selectedDeck.isEmpty ? nil : selectedDeck,
+                    images: images,
+                    formats: flashcardFormats,
+                    modelContext: modelContext
+                )
+
+                await MainActor.run {
+                    isGenerating = false
+                    errorMessage = fmClient.availabilityPresentation(for: .contentGeneration).message + " The scan was queued for automatic retry."
+                    showError = true
+                }
+                return
+            }
+
+            do {
                 // Create StudyContent
                 let content = StudyContent(
                     source: .photo,
@@ -1092,7 +1148,6 @@ struct ScanReviewView: View {
                 modelContext.insert(content)
 
                 // Generate flashcards
-                let flashcardFormats: Set<FlashcardType> = recommendFlashcardFormats()
                 let result = try await fmClient.generateFlashcards(
                     from: content,
                     formats: flashcardFormats,
@@ -1102,10 +1157,21 @@ struct ScanReviewView: View {
                 // Find or create flashcard set
                 let deckName = selectedDeck.isEmpty ? (selectedTopic.isEmpty ? result.topicTag : selectedTopic) : selectedDeck
                 let flashcardSet = modelContext.findOrCreateFlashcardSet(topicLabel: deckName)
+                let newFlashcards = uniqueGeneratedFlashcards(result.flashcards, against: flashcardSet)
+
+                guard !newFlashcards.isEmpty else {
+                    modelContext.delete(content)
+                    await MainActor.run {
+                        isGenerating = false
+                        errorMessage = "No new flashcards were saved because matching cards already exist in this set."
+                        showError = true
+                    }
+                    return
+                }
 
                 // Link flashcards
-                content.flashcards.append(contentsOf: result.flashcards)
-                for flashcard in result.flashcards {
+                content.flashcards.append(contentsOf: newFlashcards)
+                for flashcard in newFlashcards {
                     flashcardSet.addCard(flashcard)
                     modelContext.insert(flashcard)
                 }
@@ -1120,9 +1186,17 @@ struct ScanReviewView: View {
                 }
 
             } catch {
+                ScanQueue.shared.enqueueScan(
+                    text: selectedText,
+                    topic: selectedTopic.isEmpty ? nil : selectedTopic,
+                    deck: selectedDeck.isEmpty ? nil : selectedDeck,
+                    images: images,
+                    formats: flashcardFormats,
+                    modelContext: modelContext
+                )
                 await MainActor.run {
                     isGenerating = false
-                    errorMessage = "Failed to generate flashcards. Please try again."
+                    errorMessage = "Flashcard generation didn’t finish locally. The scan was queued and will retry automatically when on-device AI is ready."
                     showError = true
                     HapticFeedback.error()
                 }
@@ -1411,4 +1485,31 @@ struct DocumentScanningCapability {
         }
         return false
     }
+}
+
+private func uniqueGeneratedFlashcards(_ generated: [Flashcard], against set: FlashcardSet) -> [Flashcard] {
+    let existingPairs = Set(set.cards.map(normalizedFlashcardIdentity))
+    var seenPairs = existingPairs
+
+    return generated.filter { flashcard in
+        let identity = normalizedFlashcardIdentity(flashcard)
+        guard !seenPairs.contains(identity) else { return false }
+        seenPairs.insert(identity)
+        return true
+    }
+}
+
+private func normalizedFlashcardIdentity(_ flashcard: Flashcard) -> String {
+    [
+        flashcard.question,
+        flashcard.answer,
+        flashcard.type.rawValue
+    ]
+    .map {
+        $0
+            .lowercased()
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    .joined(separator: "|")
 }

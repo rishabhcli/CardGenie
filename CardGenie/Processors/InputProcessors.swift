@@ -90,7 +90,7 @@ final class PDFProcessor {
 
             // Store embedding
             if index < embeddings.count {
-                noteChunk.setEmbedding(embeddings[index])
+                noteChunk.setEmbedding(embeddings[index], sourceText: chunkTexts[index])
             }
 
             // Generate summary for chunk
@@ -314,7 +314,7 @@ final class ImageProcessor {
 
             // Store embedding
             if index < embeddings.count {
-                noteChunk.setEmbedding(embeddings[index])
+                noteChunk.setEmbedding(embeddings[index], sourceText: chunkTexts[index])
             }
 
             // Generate summary
@@ -884,7 +884,7 @@ final class VideoProcessor {
                 noteChunk.setTimeRange(chunk.timeRange)
 
                 if index < embeddings.count {
-                    noteChunk.setEmbedding(embeddings[index])
+                    noteChunk.setEmbedding(embeddings[index], sourceText: noteChunk.text)
                 }
 
                 // Summarize chunk
